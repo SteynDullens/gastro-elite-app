@@ -66,25 +66,25 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   return (
     <div className="space-y-6">
       {/* Search Bar */}
-      <div className="mb-4">
+      <div className="mb-6">
         <input
           type="text"
           placeholder={t.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="w-full px-5 py-3 border border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 shadow-md bg-white text-gray-700 placeholder-gray-500"
         />
       </div>
 
       {/* Horizontal Scrollable Filter Bar */}
-      <div className="mb-6">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="mb-8">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => setSelectedCategory("")}
-            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
+            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
               selectedCategory === ""
-                ? "bg-orange-500 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg"
+                : "bg-white text-gray-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-300"
             }`}
           >
             {t.allCategories}
@@ -93,10 +93,10 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
+              className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
                 selectedCategory === category
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg"
+                  : "bg-white text-gray-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-300"
               }`}
             >
               {category}
@@ -107,40 +107,40 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
       {/* Recipe Grid */}
       {filteredRecipes.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-16">
           {searchTerm || selectedCategory ? (
-            <>
-              <div className="text-gray-500 text-lg mb-2">{t.noRecipesFound}</div>
-              <p className="text-gray-400">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 shadow-lg border border-orange-200">
+              <div className="text-orange-600 text-xl font-semibold mb-3">{t.noRecipesFound}</div>
+              <p className="text-orange-500">
                 {t.tryAdjustingSearch}
               </p>
-            </>
+            </div>
           ) : (
-            <>
-              <div className="text-6xl mb-4">🍽️</div>
-              <div className="text-gray-600 text-xl font-semibold mb-2">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-12 shadow-lg border border-orange-200">
+              <div className="text-6xl mb-6">🍽️</div>
+              <div className="text-gray-800 text-2xl font-bold mb-4">
                 Er zijn nog geen recepturen toegevoegd
               </div>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-600 mb-8 text-lg">
                 Begin snel met het toevoegen van je eerste recept!
               </p>
               <a 
                 href="/add"
-                className="inline-block px-6 py-3 text-white rounded-xl font-medium transition-all duration-200"
-                style={{ backgroundColor: '#FF8C00' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
+                className="inline-block px-8 py-4 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                style={{ backgroundColor: '#ff6b35' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
               >
                 Eerste recept toevoegen
               </a>
-            </>
+            </div>
           )}
         </div>
       ) : (
         <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
           {filteredRecipes.map((recipe) => (
-            <div key={recipe.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow h-full flex flex-col">
-              <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden flex items-center justify-center">
+            <div key={recipe.id} className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
+              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
                 {recipe.image ? (
                   <img
                     src={recipe.image}
@@ -161,19 +161,19 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 </div>
               </div>
               
-              <div className="p-4 flex flex-col flex-grow">
-                <h3 className="font-semibold text-lg mb-2 text-center">{recipe.name}</h3>
+              <div className="p-5 flex flex-col flex-grow">
+                <h3 className="font-bold text-lg mb-3 text-center text-gray-800">{recipe.name}</h3>
                 
                 <div className="space-y-2 text-sm text-gray-600 text-center flex-grow">
                   {/* Recipe details removed for cleaner preview */}
                 </div>
 
                 {recipe.categories.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1 justify-center">
+                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
                     {recipe.categories.map((category) => (
                       <span
                         key={typeof category === 'string' ? category : (category as any).id}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                        className="px-3 py-1 bg-orange-200 text-orange-800 text-xs rounded-full font-medium shadow-sm"
                       >
                         {typeof category === 'string' ? category : (category as any).name}
                       </span>
@@ -181,17 +181,17 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   </div>
                 )}
 
-                <div className="mt-4 flex gap-2 justify-center">
+                <div className="mt-5 flex gap-2 justify-center">
                   <a 
                     href={`/recipes/${recipe.id}`}
-                    className="flex-1 px-3 py-2 text-white text-sm rounded-md text-center"
-                    style={{ backgroundColor: '#FF8C00' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
+                    className="flex-1 px-4 py-2 text-white text-sm rounded-lg text-center font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                    style={{ backgroundColor: '#ff6b35' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
                   >
                     {t.view}
                   </a>
-                  <button className="px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300">
+                  <button className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200">
                     {t.edit}
                   </button>
                 </div>
