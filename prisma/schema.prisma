@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String   @id @default(cuid())
+  firstName               String
+  lastName                String
+  email                   String   @unique
+  password                String
+  phone                   String
+  company                 Company? @relation("CompanyEmployees", fields: [companyId], references: [id])
+  companyId               String?
+  ownedCompany            Company? @relation("CompanyOwner")
+  recipes                 Recipe[]
+  originalRecipes         Recipe[] @relation("OriginalRecipeOwner")
+  isBlocked               Boolean  @default(false)
+  isAdmin                 Boolean  @default(false)
+  emailVerificationToken  String?
+  emailVerified           Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model Company {
+  id          String  @id @default(cuid())
+  name        String
+  address     String
+  kvkNumber   String
+  status      String  @default("pending") // pending, approved, rejected
+  owner       User    @relation("CompanyOwner", fields: [ownerId], references: [id])
+  ownerId     String  @unique
+  employees   User[]  @relation("CompanyEmployees")
+  recipes     Recipe[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  recipes  Recipe[]  @relation("RecipeCategories")
+}
+
+model Recipe {
+  id          String       @id @default(cuid())
+  name        String
+  image       String?
+  batchSize   Int?
+  servings    Int?
+  company     Company?     @relation(fields: [companyId], references: [id])
+  companyId   String?
+  user        User?        @relation(fields: [userId], references: [id])
+  userId      String?
+  categories  Category[]   @relation("RecipeCategories")
+  ingredients Ingredient[]
+  instructions String?
+  // Recipe sharing and ownership
+  isSharedWithBusiness Boolean @default(false)
+  originalOwner        User?   @relation("OriginalRecipeOwner", fields: [originalOwnerId], references: [id])
+  originalOwnerId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([companyId, name])
+  @@index([userId, name])
+  @@index([originalOwnerId])
+}
+
+model Ingredient {
+  id         String  @id @default(cuid())
+  recipe     Recipe  @relation(fields: [recipeId], references: [id])
+  recipeId   String
+  quantity   Float
+  unit       Unit
+  name       String
+}
+
+enum Unit {
+  stuks
+  gram
+  kg
+  l
+  ml
+  personen
+  portie
+}

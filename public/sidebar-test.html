@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sidebar Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .desktop-sidebar {
+            background: #333333 !important;
+            background-color: #333333 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 256px !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            color: white;
+            padding: 20px;
+            border: 3px solid red !important;
+        }
+        
+        .main-content {
+            margin-left: 256px;
+            padding: 20px;
+            background: #f0f0f0;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="desktop-sidebar">
+        <h2>Desktop Sidebar Test</h2>
+        <p>This should be visible on the left side with a red border.</p>
+        <ul>
+            <li><a href="/" style="color: white;">Home</a></li>
+            <li><a href="/recipes" style="color: white;">Recipes</a></li>
+            <li><a href="/add" style="color: white;">Add</a></li>
+            <li><a href="/account" style="color: white;">Account</a></li>
+        </ul>
+    </div>
+    
+    <div class="main-content">
+        <h1>Main Content</h1>
+        <p>If you can see a dark sidebar with a red border on the left, the sidebar is working.</p>
+        <p>The sidebar should be 256px wide and dark gray (#333333).</p>
+    </div>
+</body>
+</html>
+

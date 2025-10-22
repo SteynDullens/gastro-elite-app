@@ -1,0 +1,214 @@
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
+import { 
+  sendBusinessRegistrationNotification, 
+  sendPersonalRegistrationConfirmation,
+  sendBusinessRegistrationConfirmation,
+  BusinessRegistrationData,
+  PersonalRegistrationData
+} from '@/lib/email';
+import crypto from 'crypto';
+
+export async function POST(request: NextRequest) {
+  try {
+    const registrationData = await request.json();
+    const { 
+      email, 
+      password, 
+      firstName, 
+      lastName, 
+      phone, 
+      role, 
+      companyName,
+      kvkNumber,
+      vatNumber,
+      companyPhone,
+      businessAddress,
+      kvkDocumentPath
+    } = registrationData;
+
+    if (!email || !password || !firstName || !lastName) {
+      return NextResponse.json(
+        { error: 'Email, password, first name, and last name are required' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      );
+    }
+
+    // Validate business account requirements
+    if (role === 'business') {
+      if (!companyName || !kvkNumber) {
+        return NextResponse.json(
+          { error: 'Company name and KvK number are required for business accounts' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User with this email already exists' },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    let user, company = null;
+
+    if (role === 'business') {
+      // Create business user with company
+      const result = await prisma.$transaction(async (tx) => {
+        // Create user first
+        const newUser = await tx.user.create({
+          data: {
+            firstName,
+            lastName,
+            email,
+            password: hashedPassword,
+            phone: phone || '',
+            isAdmin: false,
+            isBlocked: false,
+            emailVerificationToken: verificationToken,
+          }
+        });
+
+        // Create company with owner ID
+        const addressString = businessAddress ? 
+          `${businessAddress.street || ''}, ${businessAddress.postalCode || ''} ${businessAddress.city || ''}, ${businessAddress.country || ''}`.replace(/^,\s*|,\s*$/g, '') : '';
+        
+        const newCompany = await tx.company.create({
+          data: {
+            name: companyName!,
+            address: addressString,
+            kvkNumber: kvkNumber!,
+            ownerId: newUser.id,
+          }
+        });
+
+        // Update user with company ID
+        await tx.user.update({
+          where: { id: newUser.id },
+          data: { companyId: newCompany.id }
+        });
+
+        return { user: newUser, company: newCompany };
+      });
+
+      user = result.user;
+      company = result.company;
+    } else {
+      // Create regular user
+      user = await prisma.user.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          password: hashedPassword,
+          phone: phone || '',
+          isAdmin: false,
+          isBlocked: false,
+          emailVerificationToken: verificationToken,
+        }
+      });
+    }
+
+    // Send appropriate email notifications (only if email is configured)
+    try {
+      // Check if email is configured
+      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        if (role === 'business' && company) {
+          // Send business registration data to admin
+          const businessData: BusinessRegistrationData = {
+            firstName,
+            lastName,
+            email,
+            phone: phone || '',
+            companyName: companyName!,
+            kvkNumber: kvkNumber!,
+            vatNumber: vatNumber || '',
+            companyPhone: companyPhone || '',
+            address: {
+              country: 'Netherlands',
+              postalCode: '',
+              street: businessAddress || '',
+              city: '',
+            },
+            kvkDocumentPath
+          };
+          
+          // Send emails asynchronously
+          Promise.all([
+            sendBusinessRegistrationNotification(businessData, kvkDocumentPath),
+            sendBusinessRegistrationConfirmation(businessData, verificationToken)
+          ]).catch(error => {
+            console.error('Error sending business registration emails:', error);
+          });
+        } else {
+          // Send personal registration confirmation
+          const personalData: PersonalRegistrationData = {
+            firstName,
+            lastName,
+            email,
+            phone: phone || ''
+          };
+          
+          sendPersonalRegistrationConfirmation(personalData, verificationToken).catch(error => {
+            console.error('Error sending personal registration email:', error);
+          });
+        }
+      } else {
+        console.log('Email not configured - skipping email notifications');
+      }
+    } catch (emailError) {
+      console.error('Error sending email notifications:', emailError);
+      // Continue with registration even if email sending fails
+    }
+
+    // Check if email is configured to determine verification status
+    const emailConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
+    
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailVerified: false // Always require verification
+      },
+      message: role === 'business' 
+        ? 'Bedrijfsaccount registratie succesvol. Controleer je e-mail voor verificatie en noteer dat je account binnen 24 uur wordt beoordeeld.'
+        : 'Account registratie succesvol. Controleer je e-mail voor verificatie.'
+    });
+
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+    return NextResponse.json(
+      { error: error.message || 'Registration failed' },
+      { status: 500 }
+    );
+  }
+}

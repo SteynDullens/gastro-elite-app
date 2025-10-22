@@ -1,0 +1,14 @@
+# Email Configuration for starprojects.nl
+# Add these lines to your .env.local file:
+
+# Email Configuration
+SMTP_HOST=smtp.starprojects.nl
+SMTP_PORT=587
+SMTP_USER=noreply@starprojects.nl
+SMTP_PASS=your-email-password
+
+# Admin Configuration
+ADMIN_EMAIL=admin@starprojects.nl
+
+# App Configuration
+APP_URL=http://localhost:3000
