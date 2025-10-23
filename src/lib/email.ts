@@ -2,14 +2,14 @@ import nodemailer from 'nodemailer';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Email configuration
+// Email configuration for ZXCS DirectAdmin
 const emailConfig = {
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  host: process.env.SMTP_HOST || 'mail.zxcs.nl',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.SMTP_USER || 'your-email@gmail.com',
-    pass: process.env.SMTP_PASS || 'your-app-password'
+    user: process.env.SMTP_USER || 'noreply@gastro-elite.com',
+    pass: process.env.SMTP_PASS || 'your-password'
   }
 };
 
