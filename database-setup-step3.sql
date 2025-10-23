@@ -9,3 +9,4 @@ ALTER TABLE companies ADD CONSTRAINT fk_companies_owner FOREIGN KEY (ownerId) RE
 
 
 
+

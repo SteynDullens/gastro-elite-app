@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SimpleDesktopSidebar() {
   return (
@@ -20,7 +21,7 @@ export default function SimpleDesktopSidebar() {
       }}
     >
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <img src="/logo.svg" alt="Logo" style={{ width: '100%', maxWidth: '200px', height: 'auto' }} />
+        <Image src="/logo.svg" alt="Logo" width={200} height={60} style={{ width: '100%', maxWidth: '200px', height: 'auto' }} />
       </div>
       
       <nav>

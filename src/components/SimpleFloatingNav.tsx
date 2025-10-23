@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
@@ -44,9 +45,11 @@ function SimpleNavItem({ href, iconPath, label }: NavItem) {
       style={isDisabled ? { pointerEvents: 'none', opacity: 0.5 } : {}}
     >
       <div className="nav-icon">
-        <img
+        <Image
           src={iconPath}
           alt={`${label} icon`}
+          width={24}
+          height={24}
           className="nav-icon-img"
         />
       </div>

@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser();
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [loading]);
 
   const value: AuthContextType = {
     user: isHydrated ? user : null,
