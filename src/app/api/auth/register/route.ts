@@ -132,7 +132,14 @@ export async function POST(request: NextRequest) {
     // Send appropriate email notifications (only if email is configured)
     try {
       // Check if email is configured
+      console.log('Email configuration check:');
+      console.log('SMTP_USER:', process.env.SMTP_USER ? 'SET' : 'NOT SET');
+      console.log('SMTP_PASS:', process.env.SMTP_PASS ? 'SET' : 'NOT SET');
+      console.log('SMTP_HOST:', process.env.SMTP_HOST || 'NOT SET');
+      console.log('SMTP_PORT:', process.env.SMTP_PORT || 'NOT SET');
+      
       if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        console.log('Email is configured, sending verification email...');
         if (role === 'business' && company) {
           // Send business registration data to admin
           const businessData: BusinessRegistrationData = {
@@ -171,6 +178,7 @@ export async function POST(request: NextRequest) {
           
           sendPersonalRegistrationConfirmation(personalData, verificationToken).catch(error => {
             console.error('Error sending personal registration email:', error);
+            console.error('Error details:', error.message, error.code);
           });
         }
       } else {
