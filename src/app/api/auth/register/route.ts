@@ -184,6 +184,14 @@ export async function POST(request: NextRequest) {
     // Check if email is configured to determine verification status
     const emailConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
     
+    // For testing: auto-verify if email is not configured
+    if (!emailConfigured) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true }
+      });
+    }
+    
     return NextResponse.json({
       success: true,
       user: {
@@ -191,7 +199,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        emailVerified: false // Always require verification
+        emailVerified: emailConfigured ? false : true // Auto-verify if no email config
       },
       message: role === 'business' 
         ? 'Bedrijfsaccount registratie succesvol. Controleer je e-mail voor verificatie en noteer dat je account binnen 24 uur wordt beoordeeld.'
