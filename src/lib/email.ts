@@ -374,11 +374,20 @@ async function fileExists(filePath: string): Promise<boolean> {
 // Test email configuration
 export async function testEmailConfiguration(): Promise<boolean> {
   try {
+    console.log('Testing email configuration...');
+    console.log('SMTP_HOST:', emailConfig.host);
+    console.log('SMTP_PORT:', emailConfig.port);
+    console.log('SMTP_USER:', emailConfig.auth.user);
+    console.log('SMTP_PASS:', emailConfig.auth.pass ? 'SET' : 'NOT SET');
+    
     await transporter.verify();
-    console.log('Email configuration is valid');
+    console.log('✅ Email configuration is valid');
     return true;
   } catch (error) {
-    console.error('Email configuration error:', error);
+    console.error('❌ Email configuration error:', error);
+    console.error('Error code:', (error as any).code);
+    console.error('Error message:', (error as any).message);
+    console.error('Error response:', (error as any).response);
     return false;
   }
 }
