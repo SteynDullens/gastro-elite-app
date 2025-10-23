@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 async function testZxcsEmail() {
   console.log('🧪 Testing ZXCS email configuration...');
   
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     host: 'mail.zxcs.nl',
     port: 587,
     secure: false, // true for 465, false for other ports
