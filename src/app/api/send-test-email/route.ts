@@ -1,48 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { sendPersonalRegistrationConfirmation } from '@/lib/email';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email } = await request.json();
     
     if (!email) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Email address is required' 
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Send a test email (using personal registration confirmation as template)
+    console.log('🧪 Sending test email to:', email);
+    
+    // Send a test verification email
     const testData = {
       firstName: 'Test',
       lastName: 'User',
       email: email,
-      phone: '+31 6 12345678'
+      phone: '1234567890'
     };
-
-    const testToken = 'test-verification-token-12345';
     
-    const emailSent = await sendPersonalRegistrationConfirmation(testData, testToken);
+    const verificationToken = 'test-token-' + Date.now();
+    const success = await sendPersonalRegistrationConfirmation(testData, verificationToken);
     
-    if (emailSent) {
+    if (success) {
+      console.log('✅ Test email sent successfully to:', email);
       return NextResponse.json({ 
         success: true, 
-        message: `Test email sent successfully to ${email}!` 
+        message: `Test email sent to ${email}`,
+        verificationToken: verificationToken
       });
     } else {
+      console.log('❌ Failed to send test email to:', email);
       return NextResponse.json({ 
         success: false, 
-        error: 'Failed to send test email' 
+        message: 'Failed to send test email' 
       }, { status: 500 });
     }
+    
   } catch (error) {
-    console.error('Send test email error:', error);
+    console.error('Test email error:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to send test email' 
+      message: 'Test email failed',
+      error: (error as any).message 
     }, { status: 500 });
   }
 }
-
-
-
