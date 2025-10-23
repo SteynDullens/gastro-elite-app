@@ -3,5 +3,8 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "npm install",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "env": {
+    "DATABASE_URL": "@database_url"
+  }
 }
