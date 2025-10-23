@@ -177,9 +177,12 @@ export async function POST(request: NextRequest) {
             phone: phone || ''
           };
           
-          sendPersonalRegistrationConfirmation(personalData, verificationToken).catch(error => {
-            console.error('Error sending personal registration email:', error);
+          sendPersonalRegistrationConfirmation(personalData, verificationToken).then(result => {
+            console.log('✅ Personal registration email sent successfully:', result);
+          }).catch(error => {
+            console.error('❌ Error sending personal registration email:', error);
             console.error('Error details:', error.message, error.code);
+            console.error('Full error:', error);
           });
         }
       } else {

@@ -134,7 +134,12 @@ export async function sendPersonalRegistrationConfirmation(
   verificationToken: string
 ): Promise<boolean> {
   try {
+    console.log('📧 Sending personal registration confirmation to:', data.email);
+    console.log('📧 From:', emailConfig.auth.user);
+    console.log('📧 Verification token:', verificationToken);
+    
     const verificationUrl = `${APP_URL}/verify-email?token=${verificationToken}`;
+    console.log('📧 Verification URL:', verificationUrl);
     
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
