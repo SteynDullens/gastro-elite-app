@@ -9,9 +9,9 @@ const prisma = new PrismaClient({
   }
 });
 
-async function forceCleanDatabase() {
+async function manualCleanup() {
   try {
-    console.log('🔍 Force cleaning database...');
+    console.log('🔍 Manual database cleanup...');
     
     // Get all users first
     const users = await prisma.user.findMany({
@@ -29,6 +29,12 @@ async function forceCleanDatabase() {
       console.log('✅ Database is already clean');
       return;
     }
+    
+    // List all users
+    console.log('👥 Users to be deleted:');
+    users.forEach((user, index) => {
+      console.log(`${index + 1}. ${user.email} (${user.firstName} ${user.lastName})`);
+    });
     
     // Delete all data in the correct order
     console.log('🗑️  Deleting all data...');
@@ -49,17 +55,17 @@ async function forceCleanDatabase() {
     const deletedUsers = await prisma.user.deleteMany({});
     console.log(`✅ Deleted ${deletedUsers.count} users`);
     
-    console.log('🎉 Database force cleaned successfully!');
+    console.log('🎉 Database manually cleaned successfully!');
     
     // Verify cleanup
     const remainingUsers = await prisma.user.count();
     console.log(`📊 Remaining users: ${remainingUsers}`);
     
   } catch (error) {
-    console.error('❌ Error force cleaning database:', error);
+    console.error('❌ Error manually cleaning database:', error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-forceCleanDatabase();
+manualCleanup();

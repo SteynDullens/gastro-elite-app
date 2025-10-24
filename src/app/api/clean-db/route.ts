@@ -33,14 +33,6 @@ export async function POST() {
     const deletedRecipes = await prisma.recipe.deleteMany({});
     console.log(`✅ Deleted ${deletedRecipes.count} recipes`);
     
-    // Delete business applications
-    const deletedBusinessApps = await prisma.businessApplication.deleteMany({});
-    console.log(`✅ Deleted ${deletedBusinessApps.count} business applications`);
-    
-    // Delete companies
-    const deletedCompanies = await prisma.company.deleteMany({});
-    console.log(`✅ Deleted ${deletedCompanies.count} companies`);
-    
     // Delete users
     const deletedUsers = await prisma.user.deleteMany({});
     console.log(`✅ Deleted ${deletedUsers.count} users`);
@@ -56,8 +48,6 @@ export async function POST() {
       message: 'Database force cleaned successfully',
       deletedUsers: deletedUsers.count,
       deletedRecipes: deletedRecipes.count,
-      deletedBusinessApps: deletedBusinessApps.count,
-      deletedCompanies: deletedCompanies.count,
       remainingUsers
     });
     
