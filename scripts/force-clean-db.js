@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+const { PrismaClient } = require('@prisma/client');
 
-export async function POST() {
+const prisma = new PrismaClient();
+
+async function forceCleanDatabase() {
   try {
-    console.log('🔍 Force cleaning Vercel database...');
+    console.log('🔍 Force cleaning database...');
     
     // Get all users first
     const users = await prisma.user.findMany({
@@ -19,11 +20,7 @@ export async function POST() {
     
     if (users.length === 0) {
       console.log('✅ Database is already clean');
-      return NextResponse.json({
-        success: true,
-        message: 'Database is already clean',
-        userCount: 0
-      });
+      return;
     }
     
     // Delete all data in the correct order
@@ -45,27 +42,17 @@ export async function POST() {
     const deletedUsers = await prisma.user.deleteMany({});
     console.log(`✅ Deleted ${deletedUsers.count} users`);
     
-    console.log('🎉 Vercel database force cleaned successfully!');
+    console.log('🎉 Database force cleaned successfully!');
     
     // Verify cleanup
     const remainingUsers = await prisma.user.count();
     console.log(`📊 Remaining users: ${remainingUsers}`);
     
-    return NextResponse.json({
-      success: true,
-      message: 'Database force cleaned successfully',
-      deletedUsers: deletedUsers.count,
-      deletedRecipes: deletedRecipes.count,
-      deletedBusinessApps: deletedBusinessApps.count,
-      deletedCompanies: deletedCompanies.count,
-      remainingUsers
-    });
-    
   } catch (error) {
     console.error('❌ Error force cleaning database:', error);
-    return NextResponse.json({
-      success: false,
-      error: (error as any).message
-    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
+
+forceCleanDatabase();
