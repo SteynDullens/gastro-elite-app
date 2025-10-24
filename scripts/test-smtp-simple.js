@@ -21,7 +21,7 @@ async function testSMTP() {
     console.log('Sending test email...');
     const info = await transporter.sendMail({
       from: '"Gastro-Elite Test" <test4@gastro-elite.com>',
-      to: 'test7@gastro-elite.com',
+      to: 'test10@gastro-elite.com',
       subject: 'Welkom bij Gastro-Elite - Verifieer je account',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
