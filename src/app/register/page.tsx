@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import Bubble, { BackBubble } from "@/components/Bubble";
+import Bubble from "@/components/Bubble";
 
 interface BusinessAddress {
   country: string;
@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const { t } = useLanguage();
   const { register } = useAuth();
   const router = useRouter();
+  const [showBackArrow, setShowBackArrow] = useState(false);
   
   // Account type selection
   const [accountType, setAccountType] = useState<'personal' | 'business'>('personal');
@@ -53,6 +54,26 @@ export default function RegisterPage() {
   const [debugInfo, setDebugInfo] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle scroll to show/hide back arrow
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setShowBackArrow(scrollY > 100); // Show arrow after scrolling 100px down
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Handle back navigation
+  const handleBackClick = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -220,7 +241,28 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
-        <BackBubble showCondition={true} />
+        {/* Sticky Back Arrow */}
+        <button
+          onClick={handleBackClick}
+          className={`fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 ${
+            showBackArrow ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`}
+          title="Terug"
+        >
+          <svg 
+            className="w-5 h-5 text-gray-700" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M15 19l-7-7 7-7" 
+            />
+          </svg>
+        </button>
         
         <div className="bg-orange-50 border border-orange-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
           <div className="text-center mb-6">

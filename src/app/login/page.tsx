@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import { BackBubble } from "@/components/Bubble";
 import UnifiedLoginForm from "@/components/UnifiedLoginForm";
 
 export default function LoginPage() {
   const { t } = useLanguage();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [showBackArrow, setShowBackArrow] = useState(false);
   
   // Redirect logged-in users to homepage
   useEffect(() => {
@@ -18,6 +18,26 @@ export default function LoginPage() {
       router.push('/');
     }
   }, [user, authLoading, router]);
+
+  // Handle scroll to show/hide back arrow
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setShowBackArrow(scrollY > 100); // Show arrow after scrolling 100px down
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Handle back navigation
+  const handleBackClick = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
   
   // Show loading state while checking authentication
   if (authLoading) {
@@ -38,7 +58,28 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md">
-        <BackBubble href="/" className="absolute top-4 left-4 z-10" />
+        {/* Sticky Back Arrow */}
+        <button
+          onClick={handleBackClick}
+          className={`fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 ${
+            showBackArrow ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`}
+          title="Terug"
+        >
+          <svg 
+            className="w-5 h-5 text-gray-700" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M15 19l-7-7 7-7" 
+            />
+          </svg>
+        </button>
         
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t.login}</h1>
