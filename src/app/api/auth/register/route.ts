@@ -170,13 +170,17 @@ export async function POST(request: NextRequest) {
             kvkDocumentPath
           };
           
-          // Send emails asynchronously
-          Promise.all([
-            sendBusinessRegistrationNotification(businessData, kvkDocumentPath),
-            sendBusinessRegistrationConfirmation(businessData, verificationToken)
-          ]).catch(error => {
-            console.error('Error sending business registration emails:', error);
-          });
+          // Send emails synchronously
+          try {
+            console.log('📧 Sending business registration emails...');
+            await Promise.all([
+              sendBusinessRegistrationNotification(businessData, kvkDocumentPath),
+              sendBusinessRegistrationConfirmation(businessData, verificationToken)
+            ]);
+            console.log('✅ Business registration emails sent successfully');
+          } catch (error) {
+            console.error('❌ Error sending business registration emails:', error);
+          }
         } else {
           // Send personal registration confirmation
           const personalData: PersonalRegistrationData = {
@@ -186,13 +190,15 @@ export async function POST(request: NextRequest) {
             phone: phone || ''
           };
           
-          sendPersonalRegistrationConfirmation(personalData, verificationToken).then(result => {
-            console.log('✅ Personal registration email sent successfully:', result);
-          }).catch(error => {
+          try {
+            console.log('📧 Sending personal registration email...');
+            const emailResult = await sendPersonalRegistrationConfirmation(personalData, verificationToken);
+            console.log('✅ Personal registration email sent successfully:', emailResult);
+          } catch (error) {
             console.error('❌ Error sending personal registration email:', error);
-            console.error('Error details:', error.message, error.code);
+            console.error('Error details:', (error as any).message, (error as any).code);
             console.error('Full error:', error);
-          });
+          }
         }
       } else {
         console.log('Email not configured - skipping email notifications');
