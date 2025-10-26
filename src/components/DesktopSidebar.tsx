@@ -16,25 +16,29 @@ export default function DesktopSidebar() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const pathname = usePathname();
+  
+  // Debug logging
+  console.log('DesktopSidebar rendering, t:', t, 'user:', user);
+  
   const navItems: NavItem[] = [
     {
       href: "/",
-      label: t.home,
+      label: t.home || "Home",
       iconPath: "/homepage-icon.png"
     },
     {
       href: "/recipes",
-      label: t.recipes,
+      label: t.recipes || "Recipes",
       iconPath: "/recipes-icon.png"
     },
     {
       href: "/add",
-      label: t.add,
+      label: t.add || "Add",
       iconPath: "/add-icon.png"
     },
     {
       href: "/account",
-      label: t.account,
+      label: t.account || "Account",
       iconPath: "/account-icon.png"
     }
   ];
