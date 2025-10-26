@@ -486,7 +486,7 @@ export default function AccountPage() {
         router.refresh();
       } else {
         const errorData = await response.json();
-        setLoginError(errorData.message || "Inloggen mislukt");
+        setLoginError(errorData.message || "Uw account is nog niet geverifieerd");
       }
     } catch (error) {
       setLoginError("Er is een fout opgetreden bij het inloggen");

@@ -138,7 +138,7 @@ button:active, a:active {
 }
 
 .bubble-secondary {
-  background: linear-gradient(135deg, rgba(52, 152, 219, 0.9), rgba(41, 128, 185, 0.8));
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.9), rgba(229, 90, 43, 0.8));
   color: white;
 }
 
