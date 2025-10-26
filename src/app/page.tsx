@@ -54,7 +54,7 @@ export default function Home() {
     return (
       <div className="bubble-grid">
         <Bubble variant="light" className="col-span-full text-center">
-          <div className="text-gray-500">{t.loading}</div>
+          <div className="text-gray-500">Loading... (AuthContext loading: {loading.toString()})</div>
         </Bubble>
       </div>
     );
