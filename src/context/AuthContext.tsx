@@ -59,7 +59,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isHydrated, setIsHydrated] = useState(false);
 
       const refreshUser = async () => {
         try {
@@ -159,31 +158,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Mark as hydrated on client side
-    setIsHydrated(true);
-    
-    // Add timeout to prevent hanging
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.log('Authentication timeout - setting loading to false');
-        setLoading(false);
-      }
-    }, 5000); // 5 second timeout
-
     refreshUser();
-
-    return () => clearTimeout(timeout);
-  }, [loading]);
+  }, []);
 
   const value: AuthContextType = {
-    user: isHydrated ? user : null,
-    loading: isHydrated ? loading : true,
+    user,
+    loading,
     login,
     register,
     logout,
     refreshUser,
-    isAdmin: isHydrated ? (user?.isAdmin || false) : false,
-    isBusiness: isHydrated ? (user?.ownedCompany ? true : false) : false,
+    isAdmin: user?.isAdmin || false,
+    isBusiness: user?.ownedCompany ? true : false,
   };
 
   return (
