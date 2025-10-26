@@ -42,14 +42,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md">
-        {/* Sticky Back Arrow */}
-        <button
-          onClick={handleBackClick}
-          className={`fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 ${
-            showBackArrow ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-          }`}
+        {/* Simple Back Arrow - Always Visible */}
+        <a
+          href="javascript:history.back()"
+          className="fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 opacity-100"
           title="Terug"
-          style={{ display: 'block' }} // Force display for debugging
         >
           <svg 
             className="w-5 h-5 text-gray-700" 
@@ -64,7 +61,7 @@ export default function LoginPage() {
               d="M15 19l-7-7 7-7" 
             />
           </svg>
-        </button>
+        </a>
         
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Inloggen</h1>
