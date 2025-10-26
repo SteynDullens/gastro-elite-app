@@ -218,39 +218,43 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="bubble-grid max-w-4xl mx-auto">
-      <BackBubble showCondition={true} />
-      
-      <div className="bubble col-span-full text-center">
-        <h1 className="text-3xl font-bold mb-6">Account Aanmaken</h1>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        <BackBubble showCondition={true} />
         
-        {/* Account Type Selection */}
-        <div className="mb-8">
-          <div className="flex justify-center space-x-4">
-            <button
-              type="button"
-              onClick={() => setAccountType('personal')}
-              className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                accountType === 'personal'
-                  ? 'bg-orange-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Persoonlijk Account
-            </button>
-            <button
-              type="button"
-              onClick={() => setAccountType('business')}
-              className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                accountType === 'business'
-                  ? 'bg-orange-500 text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Bedrijfsaccount
-            </button>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Account Aanmaken</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Maak uw Gastro-Elite account aan</p>
           </div>
-        </div>
+        
+          {/* Account Type Selection */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => setAccountType('personal')}
+                className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
+                  accountType === 'personal'
+                    ? 'bg-orange-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Persoonlijk Account
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('business')}
+                className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
+                  accountType === 'business'
+                    ? 'bg-orange-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Bedrijfsaccount
+              </button>
+            </div>
+          </div>
 
         {/* Debug Info */}
         {debugInfo && (
@@ -273,267 +277,268 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Voornaam *
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Achternaam *
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              E-mailadres *
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Telefoonnummer *
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Wachtwoord *
-              </label>
-              <div className="relative">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Personal Information */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Voornaam *
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 pr-10"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </button>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Bevestig Wachtwoord *
-              </label>
-              <div className="relative">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Achternaam *
+                </label>
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 pr-10"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-                </button>
               </div>
             </div>
-          </div>
 
-          {/* Business Information */}
-          {accountType === 'business' && (
-            <>
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Bedrijfsinformatie</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedrijfsnaam *
-                    </label>
-                    <input
-                      type="text"
-                      name="companyName"
-                      value={formData.companyName}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      KvK Nummer *
-                    </label>
-                    <input
-                      type="text"
-                      name="kvkNumber"
-                      value={formData.kvkNumber}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                E-mailadres *
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+              />
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      BTW Nummer
-                    </label>
-                    <input
-                      type="text"
-                      name="vatNumber"
-                      value={formData.vatNumber}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedrijfstelefoon
-                    </label>
-                    <input
-                      type="tel"
-                      name="companyPhone"
-                      value={formData.companyPhone}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Telefoonnummer *
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+              />
+            </div>
 
-                <div className="mt-4">
-                  <h4 className="text-md font-medium text-gray-700 mb-3">Bedrijfsadres</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Straat
-                      </label>
-                      <input
-                        type="text"
-                        name="businessAddress.street"
-                        value={formData.businessAddress.street}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Postcode
-                      </label>
-                      <input
-                        type="text"
-                        name="businessAddress.postalCode"
-                        value={formData.businessAddress.postalCode}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Plaats
-                      </label>
-                      <input
-                        type="text"
-                        name="businessAddress.city"
-                        value={formData.businessAddress.city}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Land
-                      </label>
-                      <input
-                        type="text"
-                        name="businessAddress.country"
-                        value={formData.businessAddress.country}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    KvK Uittreksel (optioneel)
-                  </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Wachtwoord *
+                </label>
+                <div className="relative">
                   <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Alleen PDF, JPG en PNG bestanden. Maximaal 5MB.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
                 </div>
               </div>
-            </>
-          )}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Bevestig Wachtwoord *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  >
+                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+              </div>
+            </div>
 
-          <div className="pt-6">
-            <button
-              type="submit"
-              disabled={loading || uploadingDocument}
-              className="w-full bg-orange-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading || uploadingDocument ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  {uploadingDocument ? 'Document uploaden...' : 'Account aanmaken...'}
-                </span>
-              ) : (
-                'Account Aanmaken'
-              )}
-            </button>
-          </div>
-        </form>
+            {/* Business Information */}
+            {accountType === 'business' && (
+              <>
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-6">Bedrijfsinformatie</h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Bedrijfsnaam *
+                      </label>
+                      <input
+                        type="text"
+                        name="companyName"
+                        value={formData.companyName}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        KvK Nummer *
+                      </label>
+                      <input
+                        type="text"
+                        name="kvkNumber"
+                        value={formData.kvkNumber}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        BTW Nummer
+                      </label>
+                      <input
+                        type="text"
+                        name="vatNumber"
+                        value={formData.vatNumber}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Bedrijfstelefoon
+                      </label>
+                      <input
+                        type="tel"
+                        name="companyPhone"
+                        value={formData.companyPhone}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <h4 className="text-md font-medium text-gray-700 mb-4">Bedrijfsadres</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Straat
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.street"
+                          value={formData.businessAddress.street}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Postcode
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.postalCode"
+                          value={formData.businessAddress.postalCode}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Plaats
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.city"
+                          value={formData.businessAddress.city}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Land
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.country"
+                          value={formData.businessAddress.country}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      KvK Uittreksel (optioneel)
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFileChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Alleen PDF, JPG en PNG bestanden. Maximaal 5MB.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="pt-6">
+              <button
+                type="submit"
+                disabled={loading || uploadingDocument}
+                className="w-full bg-orange-500 text-white py-3 px-6 rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading || uploadingDocument ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {uploadingDocument ? 'Document uploaden...' : 'Account aanmaken...'}
+                  </span>
+                ) : (
+                  'Account Aanmaken'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
