@@ -36,13 +36,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md">
         <BackBubble href="/" className="absolute top-4 left-4 z-10" />
         
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.login}</h1>
-          <p className="text-gray-600">Welkom terug bij Gastro-Elite</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t.login}</h1>
+          <p className="text-gray-600 text-sm sm:text-base">Welkom terug bij Gastro-Elite</p>
         </div>
         
         <UnifiedLoginForm />

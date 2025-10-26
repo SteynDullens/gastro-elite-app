@@ -53,18 +53,19 @@ export default function UnifiedLoginForm({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
-      <div className="text-center mb-6">
-        <div className="text-4xl mb-4">🔒</div>
-        <h2 className="text-xl font-semibold mb-2">Inloggen</h2>
-        <p className="text-gray-600 text-sm">
-          Log in om uw accountinformatie en instellingen te bekijken.
-        </p>
-      </div>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg max-w-md mx-auto">
+      <div className="p-6">
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-4">🔒</div>
+          <h2 className="text-xl font-semibold mb-2">Inloggen</h2>
+          <p className="text-gray-600 text-sm">
+            Log in om uw accountinformatie en instellingen te bekijken.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               {t.email}
             </label>
             <input
@@ -72,14 +73,14 @@ export default function UnifiedLoginForm({
               id="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               placeholder="Voer uw e-mailadres in"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Wachtwoord
             </label>
             <div className="relative">
@@ -88,7 +89,7 @@ export default function UnifiedLoginForm({
                 id="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                 placeholder="Voer uw wachtwoord in"
                 required
               />
@@ -113,7 +114,7 @@ export default function UnifiedLoginForm({
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">
+            <div className="text-red-600 text-sm text-center py-2">
               {error}
             </div>
           )}
@@ -121,7 +122,7 @@ export default function UnifiedLoginForm({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-6 text-white rounded-xl font-medium transition-all duration-200"
+            className="w-full py-3 px-6 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: '#ff6b35' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
@@ -131,18 +132,19 @@ export default function UnifiedLoginForm({
         </form>
 
         {showRegisterLink && (
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center pt-4 border-t border-gray-100">
             <p className="text-gray-600 text-sm">
               Nog geen account?{" "}
               <Link 
                 href="/register" 
-                className="text-orange-600 hover:text-orange-700 font-medium"
+                className="text-orange-600 hover:text-orange-700 font-medium transition-colors"
               >
                 Registreren
               </Link>
             </p>
           </div>
         )}
+      </div>
     </div>
   );
 }
