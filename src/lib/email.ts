@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport(emailConfig);
 
 // Admin email configuration
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@gastro-elite.com';
-const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+const APP_URL = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 export interface BusinessRegistrationData {
   firstName: string;
@@ -179,10 +179,15 @@ export async function sendPersonalRegistrationConfirmation(
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Personal registration email sent successfully!');
+    console.log('Message ID:', result.messageId);
     return true;
   } catch (error) {
-    console.error('Error sending personal registration confirmation:', error);
+    console.error('❌ Error sending personal registration confirmation:', error);
+    console.error('Error code:', (error as any).code);
+    console.error('Error message:', (error as any).message);
+    console.error('Error response:', (error as any).response);
     return false;
   }
 }
