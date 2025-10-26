@@ -16,13 +16,6 @@ export default function DesktopSidebar() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
-  // Prevent hydration mismatch by only rendering after mount
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const navItems: NavItem[] = [
     {
       href: "/",
@@ -45,39 +38,6 @@ export default function DesktopSidebar() {
       iconPath: "/account-icon.png"
     }
   ];
-
-  // Show loading state during hydration
-  if (!mounted) {
-    return (
-      <div className="desktop-sidebar">
-        <div className="sidebar-content">
-          <div className="sidebar-logo">
-            <img src="/logo.svg" alt="Gastro-Elite Logo" />
-          </div>
-          <nav className="sidebar-nav">
-            <ul className="nav-list">
-              {[1, 2, 3, 4].map((i) => (
-                <li key={i} className="nav-item-wrapper">
-                  <div className="nav-link">
-                    <div className="nav-icon">
-                      <div className="w-5 h-5 bg-gray-400 rounded animate-pulse"></div>
-                    </div>
-                    <span className="nav-label">
-                      <div className="w-16 h-4 bg-gray-400 rounded animate-pulse"></div>
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <div className="sidebar-footer">
-            <p>© 2024 Gastro-Elite</p>
-            <p>Professioneel receptenbeheer</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="desktop-sidebar">

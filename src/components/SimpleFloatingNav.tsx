@@ -64,12 +64,6 @@ export default function SimpleFloatingNav() {
   const { showModal, handleCloseModal, handleLogin } = useAuthGuard();
   const [isScrollingUp, setIsScrollingUp] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  // Prevent hydration mismatch by only rendering after mount
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   
   const navItems: NavItem[] = [
     { href: "/", iconPath: "/homepage-icon.png", label: t.home },
@@ -127,20 +121,6 @@ export default function SimpleFloatingNav() {
     }
   }, [lastScrollY]);
 
-  // Show loading state during hydration
-  if (!mounted) {
-    return (
-      <div className="simple-floating-nav">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="simple-nav-item">
-            <div className="nav-icon">
-              <div className="w-6 h-6 bg-gray-400 rounded animate-pulse"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <>
