@@ -6,7 +6,7 @@ import UnifiedLoginForm from "@/components/UnifiedLoginForm";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [showBackArrow, setShowBackArrow] = useState(false);
+  const [showBackArrow, setShowBackArrow] = useState(true); // Always show for testing
   const [mounted, setMounted] = useState(false);
   
   // Handle mount and scroll
