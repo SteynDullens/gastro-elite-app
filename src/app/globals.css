@@ -347,6 +347,7 @@ button:active, a:active {
   padding-bottom: 150px; /* Increased space for mobile nav to ensure content clears sidebar */
   padding-left: 0px; /* No left padding on mobile */
   transition: padding-left 0.3s ease;
+  min-height: 100vh;
 }
 
 @media (min-width: 1024px) {
@@ -691,6 +692,7 @@ button:active, a:active {
   z-index: 1000;
   display: none; /* Hidden by default */
   flex-direction: column;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 }
 
