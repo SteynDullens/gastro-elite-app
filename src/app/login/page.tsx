@@ -43,8 +43,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md">
         {/* Simple Back Arrow - Always Visible */}
-        <a
-          href="javascript:history.back()"
+        <button
+          onClick={() => window.history.back()}
           className="fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 opacity-100"
           title="Terug"
         >
@@ -61,7 +61,7 @@ export default function LoginPage() {
               d="M15 19l-7-7 7-7" 
             />
           </svg>
-        </a>
+        </button>
         
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Inloggen</h1>
