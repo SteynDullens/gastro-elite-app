@@ -53,8 +53,8 @@ export default function UnifiedLoginForm({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg max-w-md mx-auto">
-      <div className="p-6">
+    <div className="bg-orange-50 border border-orange-200 rounded-xl shadow-lg max-w-md mx-auto">
+      <div className="p-4 sm:p-6">
         <div className="text-center mb-6">
           <div className="text-4xl mb-4">🔒</div>
           <h2 className="text-xl font-semibold mb-2">Inloggen</h2>
@@ -73,7 +73,7 @@ export default function UnifiedLoginForm({
               id="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+              className="w-full max-w-sm mx-auto px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               placeholder="Voer uw e-mailadres in"
               required
             />
@@ -83,7 +83,7 @@ export default function UnifiedLoginForm({
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Wachtwoord
             </label>
-            <div className="relative">
+            <div className="relative max-w-sm mx-auto">
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
@@ -119,16 +119,18 @@ export default function UnifiedLoginForm({
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 px-6 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#ff6b35' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
-          >
-            {loading ? "Inloggen..." : t.login}
-          </button>
+          <div className="flex justify-center">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full max-w-sm py-3 px-6 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#ff6b35' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
+            >
+              {loading ? "Inloggen..." : t.login}
+            </button>
+          </div>
         </form>
 
         {showRegisterLink && (

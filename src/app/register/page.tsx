@@ -222,7 +222,7 @@ export default function RegisterPage() {
       <div className="max-w-4xl mx-auto">
         <BackBubble showCondition={true} />
         
-        <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
           <div className="text-center mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Account Aanmaken</h1>
             <p className="text-gray-600 text-sm sm:text-base">Maak uw Gastro-Elite account aan</p>
@@ -318,7 +318,7 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                className="w-full max-w-sm mx-auto px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               />
             </div>
 
@@ -332,16 +332,16 @@ export default function RegisterPage() {
                 value={formData.phone}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                className="w-full max-w-sm mx-auto px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:gap-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Wachtwoord *
                 </label>
-                <div className="relative">
+                <div className="relative max-w-sm mx-auto sm:max-w-none">
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
@@ -363,7 +363,7 @@ export default function RegisterPage() {
                 <label className="block text-sm font-medium text-gray-700">
                   Bevestig Wachtwoord *
                 </label>
-                <div className="relative">
+                <div className="relative max-w-sm mx-auto sm:max-w-none">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
@@ -518,11 +518,11 @@ export default function RegisterPage() {
               </>
             )}
 
-            <div className="pt-6">
+            <div className="pt-6 flex justify-center">
               <button
                 type="submit"
                 disabled={loading || uploadingDocument}
-                className="w-full bg-orange-500 text-white py-3 px-6 rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full max-w-sm bg-orange-500 text-white py-3 px-6 rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading || uploadingDocument ? (
                   <span className="flex items-center justify-center">
