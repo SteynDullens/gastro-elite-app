@@ -17,6 +17,7 @@ export default function LoginPage() {
       const scrollY = window.scrollY;
       // Show arrow if there's history OR if scrolled down
       const hasHistory = window.history.length > 1;
+      console.log('Scroll check:', { scrollY, hasHistory, historyLength: window.history.length });
       setShowBackArrow(hasHistory || scrollY > 100);
     };
 
@@ -67,6 +68,7 @@ export default function LoginPage() {
             showBackArrow ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
           }`}
           title="Terug"
+          style={{ display: 'block' }} // Force display for debugging
         >
           <svg 
             className="w-5 h-5 text-gray-700" 
