@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export async function GET() {
+  return await forceCleanDatabase();
+}
+
 export async function POST() {
+  return await forceCleanDatabase();
+}
+
+async function forceCleanDatabase() {
   try {
     console.log('🔍 Force cleaning Vercel database...');
     
