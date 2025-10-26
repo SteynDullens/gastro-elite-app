@@ -23,9 +23,14 @@ export default function LoginPage() {
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      setShowBackArrow(scrollY > 100); // Show arrow after scrolling 100px down
+      // Show arrow if there's history OR if scrolled down
+      const hasHistory = window.history.length > 1;
+      setShowBackArrow(hasHistory || scrollY > 100);
     };
 
+    // Initial check
+    handleScroll();
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
