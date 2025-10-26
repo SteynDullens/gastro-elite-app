@@ -244,32 +244,29 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-white">
       <div className="max-w-4xl mx-auto">
-        {/* Sticky Back Arrow */}
-        <button
-          onClick={handleBackClick}
-          className={`fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 ${
-            showBackArrow ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-          }`}
-          title="Terug"
-        >
-          <svg 
-            className="w-5 h-5 text-gray-700" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
+        <div className="bg-white border border-orange-300 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 relative">
+          {/* Sticky Back Arrow - Above the form */}
+          <button
+            onClick={handleBackClick}
+            className="absolute -top-4 -left-4 z-50 bg-white hover:bg-gray-50 border border-orange-300 rounded-full p-3 shadow-lg transition-all duration-300"
+            title="Terug"
           >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M15 19l-7-7 7-7" 
-            />
-          </svg>
-        </button>
-        
-        <div className="bg-orange-50 border border-orange-200 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+            <svg 
+              className="w-5 h-5 text-orange-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M15 19l-7-7 7-7" 
+              />
+            </svg>
+          </button>
           <div className="text-center mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Account Aanmaken</h1>
             <p className="text-gray-600 text-sm sm:text-base">Maak uw Gastro-Elite account aan</p>
@@ -365,7 +362,7 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full max-w-sm mx-auto px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               />
             </div>
 
@@ -379,7 +376,7 @@ export default function RegisterPage() {
                 value={formData.phone}
                 onChange={handleInputChange}
                 required
-                className="w-full max-w-sm mx-auto px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
               />
             </div>
 
@@ -504,7 +501,7 @@ export default function RegisterPage() {
                           name="businessAddress.street"
                           value={formData.businessAddress.street}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                         />
                       </div>
                       <div className="space-y-2">
@@ -516,7 +513,7 @@ export default function RegisterPage() {
                           name="businessAddress.postalCode"
                           value={formData.businessAddress.postalCode}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                         />
                       </div>
                       <div className="space-y-2">
@@ -528,7 +525,7 @@ export default function RegisterPage() {
                           name="businessAddress.city"
                           value={formData.businessAddress.city}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                         />
                       </div>
                       <div className="space-y-2">
@@ -540,7 +537,7 @@ export default function RegisterPage() {
                           name="businessAddress.country"
                           value={formData.businessAddress.country}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                         />
                       </div>
                     </div>

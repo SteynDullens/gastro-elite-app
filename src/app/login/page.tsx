@@ -40,35 +40,34 @@ export default function LoginPage() {
   // Always render the main content
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
       <div className="w-full max-w-md">
-        {/* Simple Back Arrow - Always Visible */}
-        <button
-          onClick={() => window.history.back()}
-          className="fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-3 shadow-lg transition-all duration-300 opacity-100"
-          title="Terug"
-        >
-          <svg 
-            className="w-5 h-5 text-gray-700" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M15 19l-7-7 7-7" 
-            />
-          </svg>
-        </button>
-        
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Inloggen</h1>
           <p className="text-gray-600 text-sm sm:text-base">Welkom terug bij Gastro-Elite</p>
         </div>
         
-        <div className="bg-orange-50 border border-orange-200 rounded-xl shadow-lg max-w-md mx-auto">
+        <div className="bg-white border border-orange-300 rounded-xl shadow-lg max-w-md mx-auto relative">
+          {/* Sticky Back Arrow - Above the form */}
+          <button
+            onClick={() => window.history.back()}
+            className="absolute -top-4 -left-4 z-50 bg-white hover:bg-gray-50 border border-orange-300 rounded-full p-3 shadow-lg transition-all duration-300"
+            title="Terug"
+          >
+            <svg 
+              className="w-5 h-5 text-orange-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M15 19l-7-7 7-7" 
+              />
+            </svg>
+          </button>
           <div className="p-4 sm:p-6">
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">🔒</div>
@@ -86,7 +85,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   id="email"
-                  className="w-full max-w-sm mx-auto px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                   placeholder="Voer uw e-mailadres in"
                   required
                 />
@@ -100,7 +99,7 @@ export default function LoginPage() {
                   <input
                     type="password"
                     id="password"
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    className="w-full px-4 py-3 pr-12 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                     placeholder="Voer uw wachtwoord in"
                     required
                   />
