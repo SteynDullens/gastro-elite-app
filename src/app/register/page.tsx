@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import Bubble from "@/components/Bubble";
@@ -246,6 +247,18 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-white">
       <div className="max-w-4xl mx-auto">
+        {/* Mobile Logo - Only visible on mobile */}
+        <div className="text-center mb-6 sm:hidden">
+          <Image 
+            src="/logo.svg" 
+            alt="Gastro-Elite Logo" 
+            width={64}
+            height={64}
+            className="mx-auto mb-4"
+            priority
+          />
+        </div>
+        
         <div className="bg-white border border-orange-300 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 relative">
           {/* Sticky Back Arrow - Above the form */}
           <button

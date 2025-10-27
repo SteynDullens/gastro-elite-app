@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import UnifiedLoginForm from "@/components/UnifiedLoginForm";
 
 export default function LoginPage() {
@@ -42,6 +43,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
       <div className="w-full max-w-md">
+        {/* Mobile Logo - Only visible on mobile */}
+        <div className="text-center mb-6 sm:hidden">
+          <Image 
+            src="/logo.svg" 
+            alt="Gastro-Elite Logo" 
+            width={64}
+            height={64}
+            className="mx-auto mb-4"
+            priority
+          />
+        </div>
+        
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Inloggen</h1>
           <p className="text-gray-600 text-sm sm:text-base">Welkom terug bij Gastro-Elite</p>
