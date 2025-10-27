@@ -31,19 +31,10 @@ export default function LoginPage() {
     };
   }, []);
 
-  // Check if mobile and redirect after mount
+  // Always redirect to mobile page for testing
   useEffect(() => {
     if (mounted) {
-      const checkMobile = () => {
-        const isMobileDevice = window.innerWidth < 768;
-        if (isMobileDevice) {
-          router.push('/mobile-startup');
-        }
-      };
-      
-      // Small delay to prevent hydration issues
-      const timer = setTimeout(checkMobile, 100);
-      return () => clearTimeout(timer);
+      router.push('/mobile');
     }
   }, [mounted, router]);
 
