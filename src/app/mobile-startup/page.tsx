@@ -1,3 +1,5 @@
+"use client";
+
 export default function MobileStartupPage() {
   const handleLoginClick = () => {
     window.location.href = '/login';
