@@ -20,7 +20,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const [showBackArrow, setShowBackArrow] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   
   // Account type selection
   const [accountType, setAccountType] = useState<'personal' | 'business'>('personal');
@@ -58,17 +57,9 @@ export default function RegisterPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle mount, mobile detection, and scroll
+  // Handle mount and scroll
   useEffect(() => {
     setMounted(true);
-    
-    // Check if device is mobile
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
     
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -82,17 +73,25 @@ export default function RegisterPage() {
     
     window.addEventListener('scroll', handleScroll);
     return () => {
-      window.removeEventListener('resize', checkMobile);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
-  // Redirect mobile users to startup page
+  // Check if mobile and redirect after mount
   useEffect(() => {
-    if (mounted && isMobile) {
-      router.push('/login/mobile-startup');
+    if (mounted) {
+      const checkMobile = () => {
+        const isMobileDevice = window.innerWidth < 768;
+        if (isMobileDevice) {
+          router.push('/login/mobile-startup');
+        }
+      };
+      
+      // Small delay to prevent hydration issues
+      const timer = setTimeout(checkMobile, 100);
+      return () => clearTimeout(timer);
     }
-  }, [mounted, isMobile, router]);
+  }, [mounted, router]);
 
   // Handle back navigation
   const handleBackClick = () => {
@@ -266,8 +265,8 @@ export default function RegisterPage() {
     }
   };
 
-  // Show loading state while mounting or if mobile (will redirect)
-  if (!mounted || isMobile) {
+  // Show loading state while mounting
+  if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
         <div className="text-center">

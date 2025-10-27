@@ -7,16 +7,6 @@ import Link from "next/link";
 
 export default function MobileStartupPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Only render on mobile devices
-  if (!mounted) {
-    return null;
-  }
 
   const handleLoginClick = () => {
     router.push('/login');
