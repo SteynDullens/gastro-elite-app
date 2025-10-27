@@ -83,7 +83,7 @@ export default function RegisterPage() {
       const checkMobile = () => {
         const isMobileDevice = window.innerWidth < 768;
         if (isMobileDevice) {
-          router.push('/login/mobile-startup');
+          router.push('/mobile-startup');
         }
       };
       
