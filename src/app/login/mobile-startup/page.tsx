@@ -1,32 +1,20 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-
 export default function MobileStartupPage() {
-  const router = useRouter();
-
   const handleLoginClick = () => {
-    router.push('/login');
+    window.location.href = '/login';
   };
 
   const handleRegisterClick = () => {
-    router.push('/register');
+    window.location.href = '/register';
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-center items-center p-6">
       {/* Logo with fade-in animation */}
       <div className="animate-fade-in mb-8">
-        <Image 
+        <img 
           src="/logo.svg" 
           alt="Gastro-Elite Logo" 
-          width={120}
-          height={120}
-          className="mx-auto"
-          priority
+          className="w-32 h-32 mx-auto"
         />
       </div>
 
