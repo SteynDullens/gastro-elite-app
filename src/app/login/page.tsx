@@ -9,10 +9,19 @@ export default function LoginPage() {
   const router = useRouter();
   const [showBackArrow, setShowBackArrow] = useState(true); // Always show for testing
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
-  // Handle mount and scroll
+  // Handle mount, mobile detection, and scroll
   useEffect(() => {
     setMounted(true);
+    
+    // Check if device is mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
     
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -26,8 +35,18 @@ export default function LoginPage() {
     handleScroll();
     
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
+
+  // Redirect mobile users to startup page
+  useEffect(() => {
+    if (mounted && isMobile) {
+      router.push('/login/mobile-startup');
+    }
+  }, [mounted, isMobile, router]);
 
   // Handle back navigation
   const handleBackClick = () => {
@@ -38,8 +57,18 @@ export default function LoginPage() {
     }
   };
   
-  // Always render the main content
+  // Show loading state while mounting or if mobile (will redirect)
+  if (!mounted || isMobile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
+        <div className="text-center">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
+  // Desktop content only
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
       <div className="w-full max-w-md">

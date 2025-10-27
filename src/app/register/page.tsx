@@ -19,6 +19,8 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
   const [showBackArrow, setShowBackArrow] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Account type selection
   const [accountType, setAccountType] = useState<'personal' | 'business'>('personal');
@@ -56,8 +58,18 @@ export default function RegisterPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle scroll to show/hide back arrow
+  // Handle mount, mobile detection, and scroll
   useEffect(() => {
+    setMounted(true);
+    
+    // Check if device is mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
     const handleScroll = () => {
       const scrollY = window.scrollY;
       // Show arrow if there's history OR if scrolled down
@@ -69,8 +81,18 @@ export default function RegisterPage() {
     handleScroll();
     
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
+
+  // Redirect mobile users to startup page
+  useEffect(() => {
+    if (mounted && isMobile) {
+      router.push('/login/mobile-startup');
+    }
+  }, [mounted, isMobile, router]);
 
   // Handle back navigation
   const handleBackClick = () => {
@@ -243,6 +265,17 @@ export default function RegisterPage() {
       setUploadingDocument(false);
     }
   };
+
+  // Show loading state while mounting or if mobile (will redirect)
+  if (!mounted || isMobile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
+        <div className="text-center">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-white">
