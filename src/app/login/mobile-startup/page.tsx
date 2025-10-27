@@ -17,7 +17,7 @@ export default function MobileStartupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center items-center p-6 md:hidden">
+    <div className="min-h-screen bg-white flex flex-col justify-center items-center p-6">
       {/* Logo with fade-in animation */}
       <div className="animate-fade-in mb-8">
         <Image 
