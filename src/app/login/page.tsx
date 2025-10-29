@@ -36,7 +36,7 @@ export default function LoginPage() {
         setIsMobile(isMobileDevice);
                     if (isMobileDevice) {
                       // Use window.location for more reliable redirect
-                      window.location.href = '/mobile';
+                      window.location.href = '/mobile-startup';
                     }
       };
       
