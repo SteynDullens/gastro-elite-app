@@ -34,10 +34,10 @@ export default function LoginPage() {
       const checkMobile = () => {
         const isMobileDevice = window.innerWidth < 768;
         setIsMobile(isMobileDevice);
-                    if (isMobileDevice) {
-                      // Use window.location for more reliable redirect
-                      window.location.href = '/mobile-startup';
-                    }
+        if (isMobileDevice) {
+          // Use window.location for more reliable redirect to static HTML
+          window.location.href = '/mobile-startup.html';
+        }
       };
       
       // Small delay to prevent hydration issues
