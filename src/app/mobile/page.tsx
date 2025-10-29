@@ -2,25 +2,16 @@
 
 export default function MobilePage() {
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <title>Gastro-Elite</title>
-        <meta name="description" content="Professioneel receptenbeheer voor de horeca" />
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16" />
-        <link rel="icon" href="/favicon.svg" />
-      </head>
-      <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-        <div style={{ 
-          minHeight: '100vh', 
-          backgroundColor: '#A0A0A0', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          padding: '24px'
-        }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#A0A0A0', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      padding: '24px',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
           {/* Logo */}
           <div style={{ marginBottom: '32px' }}>
             <img 
@@ -182,8 +173,6 @@ export default function MobilePage() {
               </div>
             </div>
           </div>
-        </div>
-      </body>
-    </html>
+    </div>
   );
 }
