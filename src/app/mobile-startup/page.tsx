@@ -1,7 +1,5 @@
 "use client";
 
-import Image from 'next/image';
-
 export default function MobileStartupPage() {
   return (
     <div style={{ 
@@ -21,13 +19,29 @@ export default function MobileStartupPage() {
     }}>
       {/* Logo */}
       <div style={{ marginBottom: '32px' }}>
-        <Image 
+        <img 
           src="/logo.svg" 
           alt="Gastro-Elite Logo" 
-          width={128}
-          height={128}
-          style={{ margin: '0 auto' }}
-          priority
+          style={{ 
+            width: '128px', 
+            height: '128px', 
+            margin: '0 auto',
+            display: 'block',
+            maxWidth: '100%'
+          }}
+          loading="eager"
+          onError={(e) => {
+            console.log('Logo failed to load:', e);
+            // Fallback to a text logo if image fails
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextSibling?.remove();
+            const fallback = document.createElement('div');
+            fallback.textContent = 'Gastro-Elite';
+            fallback.style.fontSize = '24px';
+            fallback.style.fontWeight = 'bold';
+            fallback.style.color = '#ff6b35';
+            e.currentTarget.parentNode?.appendChild(fallback);
+          }}
         />
       </div>
 
