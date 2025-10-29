@@ -66,8 +66,8 @@ export default function LoginPage() {
     );
   }
 
-  // Mobile startup content - show on mobile devices
-  if (isMobile) {
+  // Mobile startup content - temporarily always show for testing
+  if (true) {
     return (
       <div className="min-h-screen bg-white flex flex-col justify-center items-center p-6">
         {/* Logo */}
