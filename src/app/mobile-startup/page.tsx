@@ -3,14 +3,19 @@
 export default function MobileStartupPage() {
   return (
     <div style={{ 
-      minHeight: '100vh', 
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: '#A0A0A0', 
       display: 'flex', 
       flexDirection: 'column', 
       justifyContent: 'center', 
       alignItems: 'center', 
       padding: '24px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      zIndex: 9999
     }}>
       {/* Logo */}
       <div style={{ marginBottom: '32px' }}>
