@@ -35,8 +35,8 @@ export default function LoginPage() {
         const isMobileDevice = window.innerWidth < 768;
         setIsMobile(isMobileDevice);
         if (isMobileDevice) {
-          // Use window.location for more reliable redirect to static HTML
-          window.location.href = '/mobile-startup.html';
+          // Use window.location for more reliable redirect to API route
+          window.location.href = '/mobile-startup';
         }
       };
       
