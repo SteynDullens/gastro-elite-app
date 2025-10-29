@@ -15,31 +15,31 @@ export default function MobileStartupPage() {
       alignItems: 'center', 
       padding: '24px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      zIndex: 9999
+      zIndex: 99999,
+      overflow: 'hidden'
     }}>
-      {/* Logo */}
-      <div style={{ marginBottom: '32px' }}>
+      {/* Logo - Using absolute URL to ensure it loads */}
+      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
         <img 
-          src="/logo.svg" 
+          src="https://gastro-elite-app-steyn-dullens-projects.vercel.app/logo.svg" 
           alt="Gastro-Elite Logo" 
           style={{ 
             width: '128px', 
             height: '128px', 
-            margin: '0 auto',
             display: 'block',
+            margin: '0 auto',
             maxWidth: '100%'
           }}
-          loading="eager"
+          onLoad={() => console.log('Logo loaded successfully')}
           onError={(e) => {
-            console.log('Logo failed to load:', e);
-            // Fallback to a text logo if image fails
+            console.log('Logo failed to load, trying fallback');
             e.currentTarget.style.display = 'none';
-            e.currentTarget.nextSibling?.remove();
             const fallback = document.createElement('div');
             fallback.textContent = 'Gastro-Elite';
-            fallback.style.fontSize = '24px';
+            fallback.style.fontSize = '32px';
             fallback.style.fontWeight = 'bold';
             fallback.style.color = '#ff6b35';
+            fallback.style.textAlign = 'center';
             e.currentTarget.parentNode?.appendChild(fallback);
           }}
         />
