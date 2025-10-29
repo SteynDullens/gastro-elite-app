@@ -1,5 +1,7 @@
 "use client";
 
+import Image from 'next/image';
+
 export default function MobileStartupPage() {
   return (
     <div style={{ 
@@ -19,10 +21,13 @@ export default function MobileStartupPage() {
     }}>
       {/* Logo */}
       <div style={{ marginBottom: '32px' }}>
-        <img 
+        <Image 
           src="/logo.svg" 
           alt="Gastro-Elite Logo" 
-          style={{ width: '128px', height: '128px', margin: '0 auto' }}
+          width={128}
+          height={128}
+          style={{ margin: '0 auto' }}
+          priority
         />
       </div>
 
