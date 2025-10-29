@@ -35,15 +35,20 @@ export default function LoginPage() {
         const isMobileDevice = window.innerWidth < 768;
         setIsMobile(isMobileDevice);
         if (isMobileDevice) {
-          router.push('/mobile-startup');
+          // Use window.location for more reliable redirect
+          window.location.href = '/mobile-startup';
         }
       };
       
-      checkMobile();
+      // Small delay to prevent hydration issues
+      const timer = setTimeout(checkMobile, 100);
       window.addEventListener('resize', checkMobile);
-      return () => window.removeEventListener('resize', checkMobile);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('resize', checkMobile);
+      };
     }
-  }, [mounted, router]);
+  }, [mounted]);
 
   // Handle back navigation
   const handleBackClick = () => {
@@ -53,12 +58,12 @@ export default function LoginPage() {
       router.push('/');
     }
   };
-
+  
   // Show loading state while mounting
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
-        <div className="text-center">
+          <div className="text-center">
           <div className="text-gray-500">Loading...</div>
         </div>
       </div>
