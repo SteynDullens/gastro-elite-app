@@ -13,7 +13,7 @@ export default function MobileStartupLayout({
         <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16" />
         <link rel="icon" href="/favicon.svg" />
       </head>
-      <body className="font-sans antialiased">
+      <body style={{ margin: 0, padding: 0, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         {children}
       </body>
     </html>

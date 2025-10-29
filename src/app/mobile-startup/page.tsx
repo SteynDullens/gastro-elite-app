@@ -4,7 +4,7 @@ export default function MobileStartupPage() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      backgroundColor: 'white', 
+      backgroundColor: '#A0A0A0', 
       display: 'flex', 
       flexDirection: 'column', 
       justifyContent: 'center', 
