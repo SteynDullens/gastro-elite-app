@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from "@/context/LanguageContext";
+import Image from "next/image";
 
 interface Ingredient {
   id: string;
@@ -35,13 +36,18 @@ export default function RecipeDetail({ recipe }: RecipeDetailProps) {
         
         <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
           {recipe.image ? (
-            <img
+            <Image
               src={recipe.image}
               alt={recipe.name}
-              className="w-full h-full object-cover"
+              fill
+              unoptimized
+              className="object-cover"
               onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                const wrapper = e.currentTarget.parentElement;
+                if (wrapper) {
+                  (wrapper as HTMLElement).style.display = 'none';
+                  wrapper.nextElementSibling?.classList.remove('hidden');
+                }
               }}
             />
           ) : null}

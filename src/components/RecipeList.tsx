@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import Image from "next/image";
 
 interface Ingredient {
   id: string;
@@ -142,13 +143,18 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             <div key={recipe.id} className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
               <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
                 {recipe.image ? (
-                  <img
+                  <Image
                     src={recipe.image}
                     alt={recipe.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      const wrapper = e.currentTarget.parentElement;
+                      if (wrapper) {
+                        (wrapper as HTMLElement).style.display = 'none';
+                        wrapper.nextElementSibling?.classList.remove('hidden');
+                      }
                     }}
                   />
                 ) : null}

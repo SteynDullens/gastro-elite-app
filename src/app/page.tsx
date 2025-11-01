@@ -4,6 +4,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Bubble from "@/components/Bubble";
 
 interface BusinessApplication {
@@ -68,10 +69,14 @@ export default function Home() {
   return (
     <div className="bubble-grid">
       <Bubble variant="light" className="col-span-full">
-        <div className="bubble-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
+        <div className="flex justify-center mb-6">
+          <Image
+            src="/logo.svg"
+            alt="Gastro-Elite logo"
+            width={96}
+            height={96}
+            priority
+          />
         </div>
         <div className="bubble-title">{t.welcome} {user.firstName}!</div>
         <div className="bubble-description">{t.goodLuck}</div>

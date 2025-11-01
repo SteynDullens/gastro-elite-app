@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface NavItem {
   href: string;
@@ -48,7 +49,7 @@ export default function DesktopSidebar() {
       <div className="sidebar-content">
         {/* Logo */}
         <div className="sidebar-logo">
-          <img src="/logo.svg" alt="Gastro-Elite Logo" />
+          <Image src="/logo.svg" alt="Gastro-Elite Logo" width={96} height={96} priority />
         </div>
         
         {/* Navigation */}
@@ -67,17 +68,18 @@ export default function DesktopSidebar() {
                     style={isDisabled ? { pointerEvents: 'none', opacity: 0.5 } : {}}
                   >
                     <div className="nav-icon">
-                      <img
+                      <Image
                         src={item.iconPath}
                         alt={`${item.label} icon`}
+                        width={32}
+                        height={32}
                         className="nav-icon-img"
                         style={{ 
                           filter: isActive 
-                            ? 'brightness(0) invert(1)' // White icon for active state
+                            ? 'brightness(0) invert(1)'
                             : 'none'
                         }}
                         onError={(e) => {
-                          // Fallback if image fails to load
                           e.currentTarget.style.display = 'none';
                         }}
                       />

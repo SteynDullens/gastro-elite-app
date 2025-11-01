@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import NextImage from "next/image";
 
 export default function AccountPage() {
   const { t, language, setLanguage } = useLanguage();
@@ -95,6 +96,30 @@ export default function AccountPage() {
   const [businessError, setBusinessError] = useState("");
   const [businessSuccess, setBusinessSuccess] = useState("");
 
+  const fetchCompanyData = useCallback(async () => {
+    if (!user?.companyId) return;
+    const companyId = user.companyId;
+
+    try {
+      const [companyResponse, employeesResponse] = await Promise.all([
+        fetch(`/api/company/${companyId}`),
+        fetch(`/api/company/${companyId}/employees`)
+      ]);
+
+      if (companyResponse.ok) {
+        const companyData = await companyResponse.json();
+        setCompany(companyData);
+      }
+
+      if (employeesResponse.ok) {
+        const employeesData = await employeesResponse.json();
+        setEmployees(employeesData.employees || []);
+      }
+    } catch (error) {
+      console.error('Error fetching company data:', error);
+    }
+  }, [user?.companyId]);
+
   // Update user profile when user data changes
   useEffect(() => {
     if (user) {
@@ -127,31 +152,7 @@ export default function AccountPage() {
         fetchCompanyData();
       }
     }
-  }, [user, isBusiness]);
-
-  // Fetch company data
-  const fetchCompanyData = async () => {
-    if (!user?.companyId) return;
-    
-    try {
-      const [companyResponse, employeesResponse] = await Promise.all([
-        fetch(`/api/company/${user.companyId}`),
-        fetch(`/api/company/${user.companyId}/employees`)
-      ]);
-
-      if (companyResponse.ok) {
-        const companyData = await companyResponse.json();
-        setCompany(companyData);
-      }
-
-      if (employeesResponse.ok) {
-        const employeesData = await employeesResponse.json();
-        setEmployees(employeesData.employees || []);
-      }
-    } catch (error) {
-      console.error('Error fetching company data:', error);
-    }
-  };
+  }, [user, isBusiness, fetchCompanyData]);
 
   // Business functions
   const handleAddEmployee = async (e: React.FormEvent) => {
@@ -216,7 +217,7 @@ export default function AccountPage() {
       setShowPhotoEditor(true);
       
       // Calculate image dimensions and set minimum scale
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         const { width, height } = img;
         setImageDimensions({ width, height });
@@ -245,7 +246,7 @@ export default function AccountPage() {
       // Create a canvas to crop the image
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const img = new Image();
+      const img = new window.Image();
       
       img.onload = async () => {
         const size = 200; // Profile image size
@@ -623,10 +624,14 @@ export default function AccountPage() {
         <div className="relative inline-block mb-6">
           <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg mx-auto relative group">
             {userProfile.avatar ? (
-              <img 
-                src={userProfile.avatar} 
-                alt="Profile" 
-                className="w-full h-full object-cover"
+              <NextImage
+                src={userProfile.avatar}
+                alt="Profile"
+                fill
+                sizes="128px"
+                className="object-cover"
+                unoptimized
+                priority
               />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -1289,16 +1294,18 @@ export default function AccountPage() {
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
-                <img
+                <NextImage
                   src={selectedImage}
                   alt="Profile preview"
-                  className="w-full h-full object-cover select-none transition-transform duration-75 ease-out"
+                  fill
+                  unoptimized
+                  draggable={false}
+                  className="select-none transition-transform duration-75 ease-out object-cover"
                   style={{
                     transform: `scale(${cropData.scale}) translate(${cropData.x}px, ${cropData.y}px)`,
                     cursor: 'move',
                     touchAction: 'none',
                   }}
-                  draggable={false}
                 />
                 <div className="absolute inset-0 border-2 border-white rounded-full pointer-events-none"></div>
               </div>

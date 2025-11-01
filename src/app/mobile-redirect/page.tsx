@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import Image from "next/image";
 
 export default function MobileRedirectPage() {
   useEffect(() => {
@@ -25,12 +26,13 @@ export default function MobileRedirectPage() {
       zIndex: 99999
     }}>
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <img 
+        <Image 
           src="/logo.svg" 
           alt="Gastro-Elite Logo" 
-          style={{ 
-            width: '128px', 
-            height: '128px', 
+          width={128}
+          height={128}
+          priority
+          style={{
             display: 'block',
             margin: '0 auto',
             maxWidth: '100%'
@@ -93,3 +95,4 @@ export default function MobileRedirectPage() {
     </div>
   );
 }
+

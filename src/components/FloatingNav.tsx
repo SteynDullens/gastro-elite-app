@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 
 interface NavItem {
   href: string;
@@ -21,17 +22,18 @@ function FloatingNavItem({ href, iconPath, label }: NavItem) {
       className={`nav-item ${isActive ? 'active' : ''}`}
       title={label}
     >
-      <img
+      <Image
         src={iconPath}
         alt={`${label} icon`}
+        width={24}
+        height={24}
         className="w-6 h-6"
         style={{ 
           filter: isActive 
-            ? 'brightness(0) invert(1)' // White icon for active state
+            ? 'brightness(0) invert(1)'
             : 'none'
         }}
         onError={(e) => {
-          // Fallback if image fails to load
           e.currentTarget.style.display = 'none';
         }}
       />

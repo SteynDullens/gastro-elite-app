@@ -25,6 +25,18 @@ interface RecipeFormData {
 
 const UNITS = ["stuks", "gram", "kg", "l", "ml"];
 
+const DEFAULT_CATEGORIES = [
+  'Voorgerecht',
+  'Tussengerecht',
+  'Hoofdgerecht',
+  'Dessert',
+  'Groentegarnituur',
+  'Vlees',
+  'Vis',
+  'Vegetarisch',
+  'Zetmeelgarnituur',
+];
+
 // Auto-replacement function for temperature and other common terms
 const autoReplaceText = (text: string): string => {
   return text
@@ -63,17 +75,6 @@ export default function RecipeForm() {
   const [editingDraft, setEditingDraft] = useState<{ quantity: string; unit: string; name: string } | null>(null);
 
   // Categories state
-  const DEFAULT_CATEGORIES = [
-    'Voorgerecht',
-    'Tussengerecht',
-    'Hoofdgerecht',
-    'Dessert',
-    'Groentegarnituur',
-    'Vlees',
-    'Vis',
-    'Vegetarisch',
-    'Zetmeelgarnituur',
-  ];
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");

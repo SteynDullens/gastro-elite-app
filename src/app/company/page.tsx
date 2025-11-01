@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Bubble, { BackBubble } from "@/components/Bubble";
 
@@ -36,17 +36,14 @@ export default function CompanyDashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    if (isBusiness && user?.companyId) {
-      fetchCompanyData();
-    }
-  }, [isBusiness, user?.companyId]);
+  const fetchCompanyData = useCallback(async () => {
+    if (!user?.companyId) return;
+    const companyId = user.companyId;
 
-  const fetchCompanyData = async () => {
     try {
       const [companyResponse, employeesResponse] = await Promise.all([
-        fetch(`/api/company/${user?.companyId}`),
-        fetch(`/api/company/${user?.companyId}/employees`)
+        fetch(`/api/company/${companyId}`),
+        fetch(`/api/company/${companyId}/employees`)
       ]);
 
       if (companyResponse.ok) {
@@ -63,7 +60,13 @@ export default function CompanyDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.companyId]);
+
+  useEffect(() => {
+    if (isBusiness && user?.companyId) {
+      fetchCompanyData();
+    }
+  }, [isBusiness, user?.companyId, fetchCompanyData]);
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();

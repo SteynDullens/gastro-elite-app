@@ -14,3 +14,4 @@ VALUES ('admin@gastro-elite.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/Le
 
 
 
+
