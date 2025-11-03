@@ -3,9 +3,9 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Bubble from "@/components/Bubble";
+import LoginScreen from "@/components/LoginScreen";
 
 interface BusinessApplication {
   id: string;
@@ -23,17 +23,9 @@ interface BusinessApplication {
 export default function Home() {
   const { t } = useLanguage();
   const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
   const [businessApplications, setBusinessApplications] = useState<BusinessApplication[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   
-  // Redirect non-logged-in users to account page
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/account');
-    }
-  }, [user, loading, router]);
-
   // Fetch business applications for admin users
   useEffect(() => {
     if (isAdmin && user) {
@@ -61,9 +53,9 @@ export default function Home() {
     );
   }
   
-  // Don't render anything for non-logged-in users (they'll be redirected)
+  // Show login start screen for guests
   if (!user) {
-    return null;
+    return <LoginScreen enableBackButton={false} />;
   }
   
   return (

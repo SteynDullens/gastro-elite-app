@@ -52,6 +52,10 @@ export default function FloatingNav() {
     { href: "/account", iconPath: "/account-icon.png", label: t.account },
   ];
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <nav className="floating-nav">
       {navItems.map((item) => (

@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import Image from "next/image";
 
 interface NavItem {
@@ -17,9 +16,6 @@ export default function DesktopSidebar() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const pathname = usePathname();
-  
-  // Debug logging
-  console.log('DesktopSidebar rendering, t:', t, 'user:', user);
   
   const navItems: NavItem[] = [
     {
@@ -44,28 +40,35 @@ export default function DesktopSidebar() {
     }
   ];
 
+  if (!user) {
+    return (
+      <div className="desktop-sidebar">
+        <div className="sidebar-content">
+          <div className="sidebar-logo">
+            <Image src="/logo.svg" alt="Gastro-Elite Logo" width={96} height={96} priority />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="desktop-sidebar">
       <div className="sidebar-content">
-        {/* Logo */}
         <div className="sidebar-logo">
           <Image src="/logo.svg" alt="Gastro-Elite Logo" width={96} height={96} priority />
         </div>
         
-        {/* Navigation */}
         <nav className="sidebar-nav">
           <ul className="nav-list">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
-              const isDisabled = (item.href === "/recipes" || item.href === "/add") && !user;
-              
               return (
                 <li key={item.href} className="nav-item-wrapper">
                   <Link
                     href={item.href}
-                    className={`nav-link ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+                    className={`nav-link ${isActive ? 'active' : ''}`}
                     title={item.label}
-                    style={isDisabled ? { pointerEvents: 'none', opacity: 0.5 } : {}}
                   >
                     <div className="nav-icon">
                       <Image
@@ -92,7 +95,6 @@ export default function DesktopSidebar() {
           </ul>
         </nav>
         
-        {/* Footer */}
         <div className="sidebar-footer">
           <p>© 2024 Gastro-Elite</p>
           <p>Professioneel receptenbeheer</p>

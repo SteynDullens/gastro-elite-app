@@ -60,7 +60,7 @@ function SimpleNavItem({ href, iconPath, label }: NavItem) {
 
 export default function SimpleFloatingNav() {
   const { t } = useLanguage();
-  const { logout, user, isBusiness } = useAuth();
+  const { user } = useAuth();
   const { showModal, handleCloseModal, handleLogin } = useAuthGuard();
   const [isScrollingUp, setIsScrollingUp] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -74,6 +74,11 @@ export default function SimpleFloatingNav() {
 
   // Mobile scroll behavior - fade out sidebar on any downward movement
   useEffect(() => {
+    if (!user) {
+      setIsScrollingUp(false);
+      return;
+    }
+
     const handleScroll = () => {
       if (typeof window === 'undefined') return;
       
@@ -119,7 +124,11 @@ export default function SimpleFloatingNav() {
         window.removeEventListener('touchmove', handleScroll);
       };
     }
-  }, [lastScrollY]);
+  }, [lastScrollY, user]);
+
+  if (!user) {
+    return null;
+  }
 
 
   return (
