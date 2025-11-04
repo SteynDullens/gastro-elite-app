@@ -1,26 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gastro-Elite App
 
-<!-- Database configuration updated for PostgreSQL -->
+A professional recipe management system for the hospitality industry built with Next.js.
 
-## Getting Started
+## Quick Start
 
-First, run the development server:
+### For Layout Development (No Database Required)
 
+If you want to work on UI/layout changes without database setup:
+
+1. Create `.env.local`:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+DEV_MODE_NO_DB=true
+NODE_ENV=development
+JWT_SECRET=dev-secret-key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See [LAYOUT_DEVELOPMENT.md](./LAYOUT_DEVELOPMENT.md) for details.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Full Setup (With Database)
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Set up environment variables (see `.env.example`):
+```bash
+DATABASE_URL="your-database-url"
+JWT_SECRET="your-secret-key"
+```
+
+3. Run database migrations:
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+4. Start development server:
+```bash
+npm run dev
+```
+
+See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for complete database setup guide.
+
+## Features
+
+- ✅ User authentication & authorization
+- ✅ Recipe management (personal & business)
+- ✅ Company/team management
+- ✅ Category management
+- ✅ Responsive design (mobile & desktop)
+- ✅ Graceful database error handling
+- ✅ Development mode for layout work
+
+## Project Structure
+
+- `/src/app` - Next.js app router pages
+- `/src/components` - React components
+- `/src/lib` - Utilities & database connection
+- `/prisma` - Database schema & migrations
+- `/public` - Static assets
+
+## Documentation
+
+- [LAYOUT_DEVELOPMENT.md](./LAYOUT_DEVELOPMENT.md) - Working on layouts without database
+- [DATABASE_SETUP.md](./DATABASE_SETUP.md) - Database configuration guide
 
 ## Learn More
 

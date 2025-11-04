@@ -1,5 +1,5 @@
 // Use Prisma client instead of direct MySQL connection
-import { prisma } from './prisma';
+import { testConnection as testDbConnection, getPrisma } from './db-connection';
 
 // Create a simple pool-like interface for compatibility
 const pool = {
@@ -21,21 +21,18 @@ const pool = {
 
 // Test database connection
 export async function testConnection() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Database connected successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    return false;
-  }
+  return await testDbConnection();
 }
 
 // Initialize database tables
 export async function initializeDatabase() {
   try {
     // Use Prisma to initialize the database
-    await prisma.$connect();
+    const connected = await testDbConnection();
+    
+    if (!connected) {
+      throw new Error('Failed to connect to database');
+    }
     
     // Prisma handles schema management through migrations
     // Just ensure the database is connected

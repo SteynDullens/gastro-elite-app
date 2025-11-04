@@ -156,9 +156,10 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
               <Image
                 src="/logo.svg"
                 alt="Gastro-Elite Logo"
-                width={112}
-                height={112}
+                width={240}
+                height={240}
                 priority
+                className="w-[240px] h-[240px] max-w-[70vw] max-h-[70vw] object-contain"
               />
             </div>
 

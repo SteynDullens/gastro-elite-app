@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, generateToken } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { safeDbOperation } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,16 +13,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user using Prisma
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        ownedCompany: true,
-        company: true
-      }
+    // Find user using Prisma with graceful error handling
+    const user = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findUnique({
+        where: { email },
+        include: {
+          ownedCompany: true,
+          company: true
+        }
+      });
     });
 
     if (!user) {
+      // Check if we're in dev mode without DB
+      if (process.env.DEV_MODE_NO_DB === 'true') {
+        return NextResponse.json(
+          { error: 'Database is not available. Please set up database connection or disable DEV_MODE_NO_DB.' },
+          { status: 503 }
+        );
+      }
       throw new Error('Invalid credentials');
     }
 

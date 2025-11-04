@@ -14,15 +14,28 @@ export default function MobilePage() {
       padding: '24px',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
-          {/* Logo */}
-          <div style={{ marginBottom: '32px' }}>
+          {/* Logo - Big and Centered */}
+          <div style={{ 
+            marginBottom: '48px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%'
+          }}>
             <Image 
               src="/logo.svg" 
               alt="Gastro-Elite Logo" 
-              width={128}
-              height={128}
+              width={240}
+              height={240}
               priority
-              style={{ display: 'block', margin: '0 auto' }}
+              style={{ 
+                display: 'block',
+                width: '240px',
+                height: '240px',
+                maxWidth: '70vw',
+                maxHeight: '70vw',
+                objectFit: 'contain'
+              }}
             />
           </div>
 

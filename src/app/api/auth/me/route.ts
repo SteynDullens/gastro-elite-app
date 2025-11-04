@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { getCachedData, setCachedData, withRetry } from '@/lib/performance';
+import { safeDbOperation } from '@/lib/prisma';
+import { getCachedData, setCachedData } from '@/lib/performance';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     let user = getCachedData(cacheKey);
     
     if (!user) {
-      // Find user using Prisma with retry
-      user = await withRetry(async () => {
+      // Find user using Prisma with graceful error handling
+      user = await safeDbOperation(async (prisma) => {
         return await prisma.user.findUnique({
           where: { id: decoded.id },
           include: {
@@ -45,6 +45,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user || (user as any).isBlocked) {
+      // If in dev mode without DB, return null user gracefully
+      if (process.env.DEV_MODE_NO_DB === 'true') {
+        return NextResponse.json({
+          success: false,
+          user: null,
+          error: 'Database not available'
+        });
+      }
       return NextResponse.json(
         { error: 'User not found or inactive' },
         { status: 401 }
