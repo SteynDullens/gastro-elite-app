@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
         // Create company with owner ID
         const addressString = businessAddress ? 
-          `${businessAddress.street || ''}, ${businessAddress.postalCode || ''} ${businessAddress.city || ''}, ${businessAddress.country || ''}`.replace(/^,\s*|,\s*$/g, '') : '';
+          `${businessAddress.street || ''} ${businessAddress.houseNumber || ''}, ${businessAddress.postalCode || ''} ${businessAddress.city || ''}, ${businessAddress.country || 'Nederland'}`.trim().replace(/\s+/g, ' ').replace(/,\s*,/g, ',') : '';
         
         const newCompany = await tx.company.create({
           data: {

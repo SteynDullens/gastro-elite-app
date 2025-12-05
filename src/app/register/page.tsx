@@ -10,6 +10,7 @@ import Bubble from "@/components/Bubble";
 interface BusinessAddress {
   country: string;
   postalCode: string;
+  houseNumber: string;
   street: string;
   city: string;
 }
@@ -40,6 +41,7 @@ export default function RegisterPage() {
     businessAddress: {
       country: "Nederland",
       postalCode: "",
+      houseNumber: "",
       street: "",
       city: ""
     } as BusinessAddress,
@@ -113,11 +115,43 @@ export default function RegisterPage() {
           [field]: value
         }
       }));
+
+      // Auto-fill address when postal code and house number are both filled
+      if (field === 'postalCode' || field === 'houseNumber') {
+        const newPostalCode = field === 'postalCode' ? value : formData.businessAddress.postalCode;
+        const newHouseNumber = field === 'houseNumber' ? value : formData.businessAddress.houseNumber;
+        
+        if (newPostalCode && newHouseNumber && newPostalCode.length >= 6 && newHouseNumber.length > 0) {
+          lookupAddress(newPostalCode, newHouseNumber);
+        }
+      }
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: value
       }));
+    }
+  };
+
+  const lookupAddress = async (postalCode: string, houseNumber: string) => {
+    try {
+      const response = await fetch(`/api/address/lookup?postalCode=${encodeURIComponent(postalCode)}&houseNumber=${encodeURIComponent(houseNumber)}`);
+      const data = await response.json();
+      
+      if (data.success && data.street && data.city) {
+        setFormData(prev => ({
+          ...prev,
+          businessAddress: {
+            ...prev.businessAddress,
+            street: data.street,
+            city: data.city,
+            postalCode: data.postalCode || postalCode
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Address lookup error:', error);
+      // Silently fail - user can fill manually
     }
   };
 
@@ -250,6 +284,7 @@ export default function RegisterPage() {
           businessAddress: {
             country: "Nederland",
             postalCode: "",
+            houseNumber: "",
             street: "",
             city: ""
           }
@@ -536,7 +571,56 @@ export default function RegisterPage() {
                   <div className="mt-6">
                     <h4 className="text-md font-medium text-gray-700 mb-4">Bedrijfsadres</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      {/* Land - First row, full width */}
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Land *
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.country"
+                          value={formData.businessAddress.country}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
+                          readOnly
+                        />
+                      </div>
+                      
+                      {/* Postcode and Huisnummer - Second row */}
                       <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Postcode *
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.postalCode"
+                          value={formData.businessAddress.postalCode}
+                          onChange={handleInputChange}
+                          placeholder="1234AB"
+                          maxLength={6}
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          style={{ textTransform: 'uppercase' }}
+                        />
+                        <p className="text-xs text-gray-500">Vul postcode in (bijv. 1234AB)</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Huisnummer *
+                        </label>
+                        <input
+                          type="text"
+                          name="businessAddress.houseNumber"
+                          value={formData.businessAddress.houseNumber}
+                          onChange={handleInputChange}
+                          placeholder="12"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        />
+                        <p className="text-xs text-gray-500">Straat en plaats worden automatisch ingevuld</p>
+                      </div>
+                      
+                      {/* Straat - Third row, full width */}
+                      <div className="space-y-2 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">
                           Straat
                         </label>
@@ -545,22 +629,14 @@ export default function RegisterPage() {
                           name="businessAddress.street"
                           value={formData.businessAddress.street}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
+                          readOnly={!!formData.businessAddress.street}
+                          placeholder="Wordt automatisch ingevuld"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Postcode
-                        </label>
-                        <input
-                          type="text"
-                          name="businessAddress.postalCode"
-                          value={formData.businessAddress.postalCode}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        />
-                      </div>
-                      <div className="space-y-2">
+                      
+                      {/* Plaats - Fourth row, full width */}
+                      <div className="space-y-2 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">
                           Plaats
                         </label>
@@ -569,19 +645,9 @@ export default function RegisterPage() {
                           name="businessAddress.city"
                           value={formData.businessAddress.city}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Land
-                        </label>
-                        <input
-                          type="text"
-                          name="businessAddress.country"
-                          value={formData.businessAddress.country}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
+                          readOnly={!!formData.businessAddress.city}
+                          placeholder="Wordt automatisch ingevuld"
                         />
                       </div>
                     </div>
