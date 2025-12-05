@@ -668,6 +668,87 @@ async function fileExists(filePath: string): Promise<boolean> {
 }
 
 // Test email configuration
+// Send password reset email
+export async function sendPasswordResetEmail(
+  userEmail: string,
+  userName: string,
+  resetToken: string
+): Promise<boolean> {
+  try {
+    const emailConfig = getEmailConfig();
+    const resetUrl = `${getAppUrl()}/reset-password?token=${resetToken}`;
+    
+    const mailOptions = {
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: userEmail,
+      subject: '🔐 Wachtwoord Resetten - Gastro-Elite',
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">
+              Wachtwoord Resetten
+            </h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Beste ${userName},
+            </p>
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              We hebben een verzoek ontvangen om het wachtwoord van uw Gastro-Elite account te resetten.
+            </p>
+
+            <!-- Warning Card -->
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;">
+                ⚠️ <strong>Belangrijk:</strong> Deze link is 1 uur geldig. Als u geen wachtwoord reset heeft aangevraagd, kunt u deze e-mail negeren.
+              </p>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${resetUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(255,140,0,0.4);">
+                Wachtwoord Resetten
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+              Of kopieer deze link naar uw browser:
+            </p>
+            <p style="color: #FF8C00; font-size: 12px; word-break: break-all; text-align: center; margin: 8px 0 0;">
+              ${resetUrl}
+            </p>
+
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+              Als u deze aanvraag niet heeft gedaan, kunt u deze e-mail veilig negeren.
+            </p>
+            <p style="color: #6b7280; margin: 12px 0 0; font-size: 12px;">
+              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    await getTransporter().sendMail(mailOptions);
+    console.log('✅ Password reset email sent to:', userEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    return false;
+  }
+}
+
 export async function testEmailConfiguration(): Promise<boolean> {
   try {
     const emailConfig = getEmailConfig();

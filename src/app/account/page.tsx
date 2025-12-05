@@ -26,6 +26,7 @@ export default function AccountPage() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const [userProfile, setUserProfile] = useState({
     firstName: "",
     lastName: "",
@@ -490,14 +491,17 @@ export default function AccountPage() {
 
       if (response.ok) {
         const data = await response.json();
+        setFailedAttempts(0); // Reset on success
         // The AuthContext will handle the user state update
         router.refresh();
       } else {
         const errorData = await response.json();
-        setLoginError(errorData.message || "Uw account is nog niet geverifieerd");
+        setLoginError(errorData.error || errorData.message || "Inloggen mislukt");
+        setFailedAttempts(prev => prev + 1);
       }
     } catch (error) {
       setLoginError("Er is een fout opgetreden bij het inloggen");
+      setFailedAttempts(prev => prev + 1);
     } finally {
       setLoginLoading(false);
     }
@@ -588,6 +592,17 @@ export default function AccountPage() {
               {loginError && (
                 <div className="text-red-600 text-sm text-center">
                   {loginError}
+                </div>
+              )}
+
+              {failedAttempts >= 1 && (
+                <div className="text-center">
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-orange-600 hover:text-orange-700 text-sm font-medium hover:underline"
+                  >
+                    Wachtwoord vergeten?
+                  </Link>
                 </div>
               )}
 

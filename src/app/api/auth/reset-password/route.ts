@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPasswordResetToken, markPasswordResetTokenUsed, updateUserPassword, logError } from '@/lib/auth';
+import { safeDbOperation } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,62 +8,58 @@ export async function POST(request: NextRequest) {
 
     if (!token || !password) {
       return NextResponse.json(
-        { error: 'Token and password are required' },
+        { error: 'Token en wachtwoord zijn verplicht' },
         { status: 400 }
       );
     }
 
     if (password.length < 6) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
+        { error: 'Wachtwoord moet minimaal 6 karakters zijn' },
         { status: 400 }
       );
     }
 
-    // Verify reset token
-    const userId = await verifyPasswordResetToken(token);
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
-        { status: 400 }
-      );
-    }
-
-    // Update password
-    await updateUserPassword(userId, password);
-
-    // Mark token as used
-    await markPasswordResetTokenUsed(token);
-
-    // Log password reset
-    await logError({
-      level: 'info',
-      message: `Password reset completed for user ID: ${userId}`,
-      userId,
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-      userAgent: request.headers.get('user-agent') || 'unknown',
-      url: request.url,
-      method: 'POST'
+    // Find user by reset token
+    const user = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findFirst({
+        where: { emailVerificationToken: token }
+      });
     });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Ongeldige of verlopen reset link. Vraag een nieuwe link aan.' },
+        { status: 400 }
+      );
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update password and clear the token
+    await safeDbOperation(async (prisma) => {
+      return await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          emailVerificationToken: null, // Clear the reset token
+          emailVerified: true, // Also verify email if not already verified
+        }
+      });
+    });
+
+    console.log('✅ Password reset successful for:', user.email);
 
     return NextResponse.json({
       success: true,
-      message: 'Password reset successfully'
+      message: 'Wachtwoord succesvol gewijzigd'
     });
 
   } catch (error: any) {
-    await logError({
-      level: 'error',
-      message: `Password reset failed: ${error.message}`,
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-      userAgent: request.headers.get('user-agent') || 'unknown',
-      url: request.url,
-      method: 'POST'
-    });
-
+    console.error('Reset password error:', error);
     return NextResponse.json(
-      { error: 'Password reset failed' },
+      { error: 'Er is een fout opgetreden. Probeer het later opnieuw.' },
       { status: 500 }
     );
   }

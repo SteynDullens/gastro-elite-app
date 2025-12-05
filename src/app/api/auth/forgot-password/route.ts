@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/database';
-import { createPasswordResetToken, logError } from '@/lib/auth';
-import nodemailer from 'nodemailer';
+import { safeDbOperation } from '@/lib/prisma';
+import { sendPasswordResetEmail } from '@/lib/email';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,71 +9,63 @@ export async function POST(request: NextRequest) {
 
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: 'E-mailadres is verplicht' },
         { status: 400 }
       );
     }
 
-    const connection = await pool.getConnection();
-
-    try {
-      // Check if user exists
-      const [users] = await connection.execute(
-        'SELECT id, email, firstName FROM users WHERE email = ? AND isActive = true',
-        [email]
-      );
-
-      if (!(users as any[]).length) {
-        // Don't reveal if email exists or not for security
-        return NextResponse.json({
-          success: true,
-          message: 'If an account with that email exists, we have sent a password reset link.'
-        });
-      }
-
-      const user = (users as any[])[0];
-
-      // Create password reset token
-      const resetToken = await createPasswordResetToken(user.id);
-
-      // Send email (in production, you'd use a real email service)
-      const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-
-      // Log password reset request
-      await logError({
-        level: 'info',
-        message: `Password reset requested for user: ${email}`,
-        userId: user.id,
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        url: request.url,
-        method: 'POST'
+    // Find user by email
+    const user = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() }
       });
-
-      // In production, send actual email here
-      console.log(`Password reset email for ${user.email}: ${resetUrl}`);
-
-      return NextResponse.json({
-        success: true,
-        message: 'If an account with that email exists, we have sent a password reset link.'
-      });
-
-    } finally {
-      connection.release();
-    }
-
-  } catch (error: any) {
-    await logError({
-      level: 'error',
-      message: `Password reset request failed: ${error.message}`,
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-      userAgent: request.headers.get('user-agent') || 'unknown',
-      url: request.url,
-      method: 'POST'
     });
 
+    // Always return success to prevent email enumeration
+    if (!user) {
+      console.log('Password reset requested for non-existent email:', email);
+      return NextResponse.json({
+        success: true,
+        message: 'Als er een account bestaat met dit e-mailadres, ontvangt u een reset link.'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Store reset token in database
+    await safeDbOperation(async (prisma) => {
+      return await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationToken: resetToken, // Reusing this field for password reset
+        }
+      });
+    });
+
+    // Send password reset email
+    try {
+      await sendPasswordResetEmail(
+        user.email,
+        `${user.firstName} ${user.lastName}`,
+        resetToken
+      );
+      console.log('✅ Password reset email sent to:', email);
+    } catch (emailError) {
+      console.error('❌ Error sending password reset email:', emailError);
+      // Don't expose email errors to user
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Als er een account bestaat met dit e-mailadres, ontvangt u een reset link.'
+    });
+
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
     return NextResponse.json(
-      { error: 'Password reset request failed' },
+      { error: 'Er is een fout opgetreden. Probeer het later opnieuw.' },
       { status: 500 }
     );
   }
