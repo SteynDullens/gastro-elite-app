@@ -198,15 +198,30 @@ export async function sendPersonalRegistrationConfirmation(
       `
     };
 
-    const result = await getTransporter().sendMail(mailOptions);
+    const transporter = getTransporter();
+    
+    // First verify the connection
+    console.log('📧 Verifying SMTP connection...');
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP connection verified!');
+    } catch (verifyError: any) {
+      console.error('❌ SMTP verification failed:', verifyError.message);
+      console.error('Full verify error:', JSON.stringify(verifyError, Object.getOwnPropertyNames(verifyError)));
+    }
+    
+    const result = await transporter.sendMail(mailOptions);
     console.log('✅ Personal registration email sent successfully!');
     console.log('Message ID:', result.messageId);
     return true;
-  } catch (error) {
-    console.error('❌ Error sending personal registration confirmation:', error);
-    console.error('Error code:', (error as any).code);
-    console.error('Error message:', (error as any).message);
-    console.error('Error response:', (error as any).response);
+  } catch (error: any) {
+    console.error('❌ Error sending personal registration confirmation');
+    console.error('Error name:', error.name);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Error command:', error.command);
+    console.error('Error responseCode:', error.responseCode);
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return false;
   }
 }
