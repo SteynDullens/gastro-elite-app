@@ -432,46 +432,110 @@ export async function sendBusinessApprovalNotification(
     const emailConfig = getEmailConfig();
     const loginUrl = `${getAppUrl()}/login`;
     
+    const currentDate = new Date().toLocaleDateString('nl-NL', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
       to: userEmail,
-      subject: 'Your Business Account Has Been Approved!',
+      subject: `🎉 Uw bedrijfsaccount is goedgekeurd - ${companyName}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #FF8C00;">🎉 Business Account Approved!</h2>
-          
-          <p>Dear ${userName},</p>
-          
-          <p>Great news! Your business account for <strong>${companyName}</strong> has been approved and is now active.</p>
-          
-          <h3>What's Next?</h3>
-          <ul>
-            <li>✅ Your business account is fully activated</li>
-            <li>✅ You can now access all business features</li>
-            <li>✅ Start managing your team and recipes</li>
-            <li>✅ Invite employees to join your organization</li>
-          </ul>
-          
-          <p><strong>Get Started:</strong> Log in to your account to begin using all the business features:</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" 
-               style="background-color: #FF8C00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Log In to Your Account
-            </a>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <div style="font-size: 64px; margin-bottom: 16px;">🎉</div>
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">
+              Account Goedgekeurd!
+            </h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0; font-size: 16px;">
+              Welkom bij Gastro-Elite
+            </p>
           </div>
           
-          <h3>Available Business Features:</h3>
-          <ul>
-            <li><strong>Team Management:</strong> Invite and manage employees</li>
-            <li><strong>Recipe Management:</strong> Create and organize professional recipes</li>
-            <li><strong>Category Management:</strong> Organize recipes with custom categories</li>
-            <li><strong>Business Analytics:</strong> Track your recipe usage and team activity</li>
-          </ul>
+          <!-- Content -->
+          <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Beste ${userName},
+            </p>
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Geweldig nieuws! Uw bedrijfsaccount aanvraag voor <strong style="color: #FF8C00;">${companyName}</strong> is goedgekeurd en volledig geactiveerd.
+            </p>
+
+            <!-- Success Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #22c55e;">
+              <h2 style="color: #1f2937; margin: 0 0 16px; font-size: 18px;">
+                ✅ Wat betekent dit?
+              </h2>
+              <ul style="color: #4b5563; margin: 0; padding-left: 20px; line-height: 2;">
+                <li>Uw bedrijfsaccount is volledig geactiveerd</li>
+                <li>U heeft toegang tot alle bedrijfsfuncties</li>
+                <li>U kunt medewerkers uitnodigen voor uw organisatie</li>
+                <li>U kunt professionele recepturen beheren</li>
+              </ul>
+            </div>
+
+            <!-- Features Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #FF8C00; padding-bottom: 10px;">
+                🚀 Beschikbare Functies
+              </h2>
+              <table style="width: 100%;">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <strong style="color: #1f2937;">👥 Teambeheer</strong>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 14px;">Nodig medewerkers uit en beheer uw team</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <strong style="color: #1f2937;">📖 Receptenbeheer</strong>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 14px;">Maak en organiseer professionele recepturen</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <strong style="color: #1f2937;">🏷️ Categorieën</strong>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 14px;">Organiseer recepten met aangepaste categorieën</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0;">
+                    <strong style="color: #1f2937;">📊 Bedrijfsoverzicht</strong>
+                    <p style="color: #6b7280; margin: 4px 0 0; font-size: 14px;">Volg uw receptgebruik en teamactiviteit</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${loginUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(255,140,0,0.4);">
+                Inloggen op uw Account
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+              Heeft u vragen? Neem gerust contact op met ons supportteam.
+            </p>
+
+          </div>
           
-          <p>If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
-          
-          <p>Welcome to Gastro-Elite!<br>The Gastro-Elite Team</p>
+          <!-- Footer -->
+          <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: white; margin: 0 0 8px; font-size: 14px; font-weight: 500;">
+              Welkom bij Gastro-Elite!
+            </p>
+            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+            </p>
+          </div>
         </div>
       `
     };
@@ -493,47 +557,94 @@ export async function sendBusinessRejectionNotification(
 ): Promise<boolean> {
   try {
     const emailConfig = getEmailConfig();
-    const supportUrl = `${getAppUrl()}/contact`;
+    const registerUrl = `${getAppUrl()}/register`;
     
+    const currentDate = new Date().toLocaleDateString('nl-NL', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
       to: userEmail,
-      subject: 'Business Account Application Update',
+      subject: `Bedrijfsaccount aanvraag - ${companyName}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #FF8C00;">Business Account Application Update</h2>
-          
-          <p>Dear ${userName},</p>
-          
-          <p>Thank you for your interest in Gastro-Elite. After careful review of your business account application for <strong>${companyName}</strong>, we are unable to approve your request at this time.</p>
-          
-          ${reason ? `
-          <div style="background-color: #f8f9fa; border-left: 4px solid #FF8C00; padding: 15px; margin: 20px 0;">
-            <h4 style="margin-top: 0; color: #333;">Reason for Rejection:</h4>
-            <p style="margin-bottom: 0;">${reason}</p>
-          </div>
-          ` : ''}
-          
-          <h3>Next Steps:</h3>
-          <ul>
-            <li>Review the provided feedback (if any)</li>
-            <li>Correct any issues with your application</li>
-            <li>Resubmit your business account application</li>
-            <li>Contact our support team if you have questions</li>
-          </ul>
-          
-          <p>We encourage you to reapply once you have addressed any concerns. Our team is here to help you through the application process.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${supportUrl}" 
-               style="background-color: #FF8C00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Contact Support
-            </a>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
+              Bedrijfsaccount Aanvraag Update
+            </h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0; font-size: 14px;">
+              ${currentDate}
+            </p>
           </div>
           
-          <p>Thank you for your understanding, and we look forward to working with you in the future.</p>
+          <!-- Content -->
+          <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Beste ${userName},
+            </p>
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Bedankt voor uw interesse in Gastro-Elite. Na zorgvuldige beoordeling van uw bedrijfsaccount aanvraag voor <strong style="color: #FF8C00;">${companyName}</strong>, kunnen wij uw aanvraag helaas op dit moment niet goedkeuren.
+            </p>
+
+            ${reason ? `
+            <!-- Reason Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #ef4444;">
+              <h2 style="color: #1f2937; margin: 0 0 12px; font-size: 16px;">
+                📋 Reden voor afwijzing
+              </h2>
+              <p style="color: #4b5563; margin: 0; line-height: 1.6;">
+                ${reason}
+              </p>
+            </div>
+            ` : ''}
+
+            <!-- Next Steps Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color: #1f2937; margin: 0 0 16px; font-size: 18px; border-bottom: 2px solid #FF8C00; padding-bottom: 10px;">
+                🔄 Volgende Stappen
+              </h2>
+              <ul style="color: #4b5563; margin: 0; padding-left: 20px; line-height: 2;">
+                <li>Bekijk de feedback hierboven (indien gegeven)</li>
+                <li>Corrigeer eventuele problemen met uw aanvraag</li>
+                <li>Dien een nieuwe bedrijfsaccount aanvraag in</li>
+                <li>Neem contact op met ons team bij vragen</li>
+              </ul>
+            </div>
+
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Wij moedigen u aan om opnieuw een aanvraag in te dienen zodra u eventuele punten heeft aangepakt. Ons team staat klaar om u te helpen door het aanvraagproces.
+            </p>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${registerUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(255,140,0,0.4);">
+                Opnieuw Aanvragen
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+              Heeft u vragen? Neem gerust contact op met ons supportteam.
+            </p>
+
+          </div>
           
-          <p>Best regards,<br>The Gastro-Elite Team</p>
+          <!-- Footer -->
+          <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+              Bedankt voor uw begrip. Wij kijken ernaar uit om in de toekomst met u samen te werken.
+            </p>
+            <p style="color: #6b7280; margin: 12px 0 0; font-size: 12px;">
+              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+            </p>
+          </div>
         </div>
       `
     };

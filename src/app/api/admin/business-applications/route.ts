@@ -97,7 +97,8 @@ export async function POST(request: NextRequest) {
             select: {
               email: true,
               firstName: true,
-              lastName: true
+              lastName: true,
+              emailVerified: true
             }
           }
         }
@@ -106,6 +107,13 @@ export async function POST(request: NextRequest) {
 
     if (!company) {
       return NextResponse.json({ message: 'Company not found' }, { status: 404 });
+    }
+
+    // Check email verification for approval
+    if (status === 'approved' && !company.owner.emailVerified) {
+      return NextResponse.json({ 
+        message: 'Kan niet goedkeuren: de eigenaar heeft het e-mailadres nog niet geverifieerd.' 
+      }, { status: 400 });
     }
 
     // Update company status using Prisma
