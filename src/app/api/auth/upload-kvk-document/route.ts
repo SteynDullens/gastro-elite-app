@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { put } from '@vercel/blob';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,29 +30,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'kvk-documents');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = document.name.split('.').pop();
-    const filename = `kvk_${kvkNumber}_${timestamp}.${fileExtension}`;
-    const filepath = join(uploadsDir, filename);
+    const filename = `kvk-documents/kvk_${kvkNumber}_${timestamp}.${fileExtension}`;
 
-    // Convert file to buffer and save
-    const bytes = await document.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    // Upload to Vercel Blob Storage
+    const blob = await put(filename, document, {
+      access: 'public',
+      addRandomSuffix: false,
+    });
 
-    // Return the public URL
-    const documentUrl = `/uploads/kvk-documents/${filename}`;
+    console.log('✅ Document uploaded to Vercel Blob:', blob.url);
 
     return NextResponse.json({ 
       success: true, 
-      documentPath: documentUrl,
+      documentPath: blob.url,
       message: 'Document uploaded successfully' 
     });
 
@@ -66,9 +57,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
