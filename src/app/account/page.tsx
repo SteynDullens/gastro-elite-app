@@ -595,16 +595,14 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {failedAttempts >= 1 && (
-                <div className="text-center">
-                  <Link 
-                    href="/forgot-password" 
-                    className="text-orange-600 hover:text-orange-700 text-sm font-medium hover:underline"
-                  >
-                    Wachtwoord vergeten?
-                  </Link>
-                </div>
-              )}
+              <div className="text-right">
+                <Link 
+                  href="/forgot-password" 
+                  className="text-orange-600 hover:text-orange-700 text-sm font-medium hover:underline"
+                >
+                  Wachtwoord vergeten?
+                </Link>
+              </div>
 
               <button
                 type="submit"
