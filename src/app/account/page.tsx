@@ -587,22 +587,22 @@ export default function AccountPage() {
                     )}
                   </button>
                 </div>
-              </div>
-
-              <div className="flex justify-end items-center py-2 mb-2" style={{ minHeight: '32px' }}>
-                <a 
-                  href="/forgot-password" 
-                  className="text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline transition-colors"
-                  style={{ 
-                    color: '#ea580c',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                    display: 'block'
-                  }}
-                >
-                  🔑 Wachtwoord vergeten?
-                </a>
+                <div className="mt-3 text-right">
+                  <a 
+                    href="/forgot-password" 
+                    style={{ 
+                      color: '#ea580c',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                      display: 'inline-block'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                  >
+                    🔑 Wachtwoord vergeten?
+                  </a>
+                </div>
               </div>
 
               {loginError && (
