@@ -177,10 +177,10 @@ export async function POST(request: NextRequest) {
             vatNumber: vatNumber || '',
             companyPhone: companyPhone || '',
             address: {
-              country: 'Netherlands',
-              postalCode: '',
-              street: businessAddress || '',
-              city: '',
+              country: businessAddress?.country || 'Nederland',
+              postalCode: businessAddress?.postalCode || '',
+              street: businessAddress?.street || '',
+              city: businessAddress?.city || '',
             },
             kvkDocumentPath
           };
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
           try {
             console.log('📧 Sending business registration emails...');
             await Promise.all([
-              sendBusinessRegistrationNotification(businessData, kvkDocumentPath),
+              sendBusinessRegistrationNotification(businessData, kvkDocumentPath, kvkDocumentData, company.id),
               sendBusinessRegistrationConfirmation(businessData, verificationToken)
             ]);
             console.log('✅ Business registration emails sent successfully');

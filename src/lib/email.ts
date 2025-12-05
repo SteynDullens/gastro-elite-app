@@ -61,83 +61,215 @@ export interface PersonalRegistrationData {
   phone?: string;
 }
 
+// Generate action token for email buttons
+function generateActionToken(companyId: string, action: string): string {
+  const crypto = require('crypto');
+  const secret = process.env.JWT_SECRET || process.env.DWT_SECRET || 'gastro-elite-secret';
+  return crypto
+    .createHmac('sha256', secret)
+    .update(`${companyId}:${action}`)
+    .digest('hex')
+    .substring(0, 32);
+}
+
 // Send business registration notification to admin
 export async function sendBusinessRegistrationNotification(
   data: BusinessRegistrationData,
-  kvkDocumentPath?: string
+  kvkDocumentPath?: string,
+  kvkDocumentData?: string,
+  companyId?: string
 ): Promise<boolean> {
   try {
-    const attachments = [];
+    const attachments: any[] = [];
     
-    // Add KvK document as attachment if provided
-    if (kvkDocumentPath && await fileExists(kvkDocumentPath)) {
-      attachments.push({
-        filename: `kvk-document-${data.kvkNumber}.pdf`,
-        path: kvkDocumentPath
-      });
+    // Add KvK document as attachment
+    if (kvkDocumentData && kvkDocumentData.startsWith('data:')) {
+      // Base64 encoded document
+      const matches = kvkDocumentData.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const extension = mimeType.includes('pdf') ? 'pdf' : mimeType.includes('png') ? 'png' : 'jpg';
+        attachments.push({
+          filename: `KvK-uittreksel-${data.kvkNumber}.${extension}`,
+          content: base64Data,
+          encoding: 'base64'
+        });
+      }
+    } else if (kvkDocumentPath && !kvkDocumentPath.startsWith('base64:')) {
+      // URL-based document (Vercel Blob)
+      if (kvkDocumentPath.startsWith('http')) {
+        attachments.push({
+          filename: `KvK-uittreksel-${data.kvkNumber}.pdf`,
+          path: kvkDocumentPath
+        });
+      } else if (await fileExists(kvkDocumentPath)) {
+        attachments.push({
+          filename: `KvK-uittreksel-${data.kvkNumber}.pdf`,
+          path: kvkDocumentPath
+        });
+      }
     }
 
     const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    const adminPanelUrl = `${appUrl}/admin/business-applications`;
+    
+    // Generate action tokens if companyId is provided
+    let actionButtons = '';
+    if (companyId) {
+      const approveToken = generateActionToken(companyId, 'approve');
+      const rejectToken = generateActionToken(companyId, 'reject');
+      const approveUrl = `${appUrl}/api/admin/email-action?companyId=${companyId}&action=approve&token=${approveToken}`;
+      const rejectUrl = `${appUrl}/api/admin/email-action?companyId=${companyId}&action=reject&token=${rejectToken}`;
+      
+      actionButtons = `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${approveUrl}" 
+               style="display: inline-block; background-color: #22c55e; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-right: 12px; font-size: 16px;">
+              ✓ Goedkeuren
+            </a>
+            <a href="${rejectUrl}" 
+               style="display: inline-block; background-color: #ef4444; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              ✗ Afwijzen
+            </a>
+          </div>
+          <p style="text-align: center; color: #6b7280; font-size: 13px; margin-top: 8px;">
+            Of beheer deze aanvraag in het <a href="${adminPanelUrl}" style="color: #FF8C00;">Admin Panel</a>
+          </p>`;
+    } else {
+      actionButtons = `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${adminPanelUrl}" 
+               style="display: inline-block; background-color: #FF8C00; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              Bekijk in Admin Panel
+            </a>
+          </div>`;
+    }
+
+    const currentDate = new Date().toLocaleDateString('nl-NL', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     const mailOptions = {
-      from: `"Gastro-Elite Registration" <${emailConfig.auth.user}>`,
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
       to: getAdminEmail(),
-      subject: `New Business Account Request - ${data.companyName}`,
+      subject: `🏢 Nieuwe Bedrijfsaccount Aanvraag - ${data.companyName}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #FF8C00;">New Business Account Registration</h2>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
+              🏢 Nieuwe Bedrijfsaccount Aanvraag
+            </h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">
+              Ontvangen op ${currentDate}
+            </p>
+          </div>
           
-          <h3>Company Information</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Company Name:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.companyName}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>KvK Number:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.kvkNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>VAT Number:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.vatNumber || 'Not provided'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Company Phone:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.companyPhone || 'Not provided'}</td>
-            </tr>
-          </table>
+          <!-- Content -->
+          <div style="padding: 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            
+            <!-- Company Info Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #FF8C00; padding-bottom: 10px;">
+                📋 Bedrijfsgegevens
+              </h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; width: 40%;">Bedrijfsnaam</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 600;">${data.companyName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280;">KvK Nummer</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 500;">${data.kvkNumber}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280;">BTW Nummer</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #1f2937;">${data.vatNumber || '<span style="color: #9ca3af;">Niet opgegeven</span>'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; color: #6b7280;">Bedrijfstelefoon</td>
+                  <td style="padding: 12px 0; color: #1f2937;">${data.companyPhone || '<span style="color: #9ca3af;">Niet opgegeven</span>'}</td>
+                </tr>
+              </table>
+            </div>
 
-          <h3>Company Address</h3>
-          <p>
-            ${data.address.street}<br>
-            ${data.address.postalCode} ${data.address.city}<br>
-            ${data.address.country}
-          </p>
+            <!-- Address Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color: #1f2937; margin: 0 0 16px; font-size: 18px; border-bottom: 2px solid #FF8C00; padding-bottom: 10px;">
+                📍 Vestigingsadres
+              </h2>
+              <p style="color: #1f2937; margin: 0; line-height: 1.8;">
+                ${data.address.street || '<span style="color: #9ca3af;">-</span>'}<br>
+                ${data.address.postalCode || ''} ${data.address.city || ''}<br>
+                ${data.address.country || 'Nederland'}
+              </p>
+            </div>
 
-          <h3>Contact Person</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Name:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.firstName} ${data.lastName}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Email:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.email}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Phone:</strong></td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${data.phone || 'Not provided'}</td>
-            </tr>
-          </table>
+            <!-- Contact Person Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #FF8C00; padding-bottom: 10px;">
+                👤 Contactpersoon
+              </h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; width: 40%;">Naam</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 600;">${data.firstName} ${data.lastName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280;">E-mailadres</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
+                    <a href="mailto:${data.email}" style="color: #FF8C00; text-decoration: none;">${data.email}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; color: #6b7280;">Telefoonnummer</td>
+                  <td style="padding: 12px 0; color: #1f2937;">${data.phone || '<span style="color: #9ca3af;">Niet opgegeven</span>'}</td>
+                </tr>
+              </table>
+            </div>
 
-          <p style="margin-top: 20px;">
-            <strong>Action Required:</strong> Please review this business account request and approve or reject it in the admin panel.
-          </p>
+            <!-- Document Notice -->
+            ${attachments.length > 0 ? `
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                📎 <strong>Bijlage:</strong> KvK uittreksel is bijgevoegd aan deze e-mail
+              </p>
+            </div>
+            ` : ''}
+
+            <!-- Action Buttons -->
+            <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <h2 style="color: #1f2937; margin: 0 0 16px; font-size: 18px; text-align: center;">
+                ⚡ Actie Vereist
+              </h2>
+              <p style="color: #6b7280; text-align: center; margin: 0 0 20px;">
+                Controleer de gegevens en keur de aanvraag goed of af.
+              </p>
+              ${actionButtons}
+            </div>
+
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+            </p>
+          </div>
         </div>
       `,
       attachments
     };
 
     await getTransporter().sendMail(mailOptions);
+    console.log('✅ Admin notification email sent with', attachments.length, 'attachment(s)');
     return true;
   } catch (error) {
     console.error('Error sending business registration notification:', error);
