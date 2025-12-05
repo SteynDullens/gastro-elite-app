@@ -14,8 +14,8 @@ function verifyActionToken(companyId: string, action: string, token: string): bo
   return token === expectedToken;
 }
 
-// Generate action token
-export function generateActionToken(companyId: string, action: string): string {
+// Generate action token (internal use only)
+function generateActionTokenInternal(companyId: string, action: string): string {
   const secret = process.env.JWT_SECRET || process.env.DWT_SECRET || 'gastro-elite-secret';
   return crypto
     .createHmac('sha256', secret)
