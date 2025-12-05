@@ -39,6 +39,7 @@ model Company {
   vatNumber       String?
   companyPhone    String?
   kvkDocumentPath String?
+  kvkDocumentData String?   @db.Text // Base64 encoded document data (fallback storage)
   status          String    @default("pending") // pending, approved, rejected
   rejectionReason String?
   approvedAt      DateTime?

@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       vatNumber,
       companyPhone,
       businessAddress,
-      kvkDocumentPath
+      kvkDocumentPath,
+      kvkDocumentData
     } = registrationData;
 
     if (!email || !password || !firstName || !lastName) {
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
             vatNumber: vatNumber || null,
             companyPhone: companyPhone || null,
             kvkDocumentPath: kvkDocumentPath || null,
+            kvkDocumentData: kvkDocumentData || null,
             status: 'pending',
             ownerId: newUser.id,
           }

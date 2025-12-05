@@ -178,6 +178,7 @@ export default function RegisterPage() {
     try {
       // Upload KvK document if business account and document provided
       let kvkDocumentPath = '';
+      let kvkDocumentData = '';
       console.log('Account type:', accountType, 'KvK document:', kvkDocument);
       if (accountType === 'business' && kvkDocument) {
         setUploadingDocument(true);
@@ -197,6 +198,10 @@ export default function RegisterPage() {
         
         const uploadResult = await uploadResponse.json();
         kvkDocumentPath = uploadResult.documentPath;
+        // If base64 data is returned (fallback mode), store it
+        if (uploadResult.documentData) {
+          kvkDocumentData = uploadResult.documentData;
+        }
         setUploadingDocument(false);
       }
 
@@ -214,7 +219,8 @@ export default function RegisterPage() {
           vatNumber: formData.vatNumber,
           companyPhone: formData.companyPhone,
           businessAddress: formData.businessAddress,
-          kvkDocumentPath
+          kvkDocumentPath,
+          kvkDocumentData
         })
       };
 
