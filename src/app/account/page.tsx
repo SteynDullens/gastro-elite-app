@@ -589,20 +589,20 @@ export default function AccountPage() {
                 </div>
               </div>
 
+              <div className="flex justify-end mb-4">
+                <Link 
+                  href="/forgot-password" 
+                  className="text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline transition-colors"
+                >
+                  Wachtwoord vergeten?
+                </Link>
+              </div>
+
               {loginError && (
                 <div className="text-red-600 text-sm text-center">
                   {loginError}
                 </div>
               )}
-
-              <div className="text-right">
-                <Link 
-                  href="/forgot-password" 
-                  className="text-orange-600 hover:text-orange-700 text-sm font-medium hover:underline"
-                >
-                  Wachtwoord vergeten?
-                </Link>
-              </div>
 
               <button
                 type="submit"
