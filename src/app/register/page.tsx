@@ -53,7 +53,6 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [kvkDocument, setKvkDocument] = useState<File | null>(null);
-  const [debugInfo, setDebugInfo] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,7 +103,6 @@ export default function RegisterPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setDebugInfo('Input changed: ' + name + ' = ' + value);
     
     if (name.startsWith('businessAddress.')) {
       const field = name.split('.')[1];
@@ -147,7 +145,6 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDebugInfo('Form submission started!');
     setLoading(true);
     setError("");
     setSuccess("");
@@ -166,13 +163,11 @@ export default function RegisterPage() {
     }
 
     if (accountType === 'business') {
-      setDebugInfo('Business validation - companyName: ' + formData.companyName + ', kvkNumber: ' + formData.kvkNumber);
       if (!formData.companyName || !formData.kvkNumber) {
         setError("Bedrijfsnaam en KvK nummer zijn verplicht");
         setLoading(false);
         return;
       }
-      setDebugInfo('Business validation passed');
     }
 
     try {
@@ -257,7 +252,6 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       console.error('Registration error:', error);
-      setDebugInfo('Registration error: ' + error.message);
       setError(error.message || "Er is een fout opgetreden bij de registratie");
     } finally {
       setLoading(false);
@@ -345,12 +339,6 @@ export default function RegisterPage() {
             </div>
           </div>
 
-        {/* Debug Info */}
-        {debugInfo && (
-          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg text-sm text-yellow-800">
-            Debug: {debugInfo}
-          </div>
-        )}
 
         {/* Success Message */}
         {success && (
