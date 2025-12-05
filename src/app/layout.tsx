@@ -21,14 +21,12 @@ export const metadata: Metadata = {
     icon: '/favicon.svg',
   },
   manifest: '/manifest.json',
+  themeColor: '#A0A0A0',
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: '#A0A0A0',
 };
 
 export default function RootLayout({
