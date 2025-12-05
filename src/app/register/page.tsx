@@ -55,8 +55,10 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [kvkDocument, setKvkDocument] = useState<File | null>(null);
+  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const addressLookupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle mount and scroll
   useEffect(() => {
@@ -118,12 +120,22 @@ export default function RegisterPage() {
 
       // Auto-fill address when postal code and house number are both filled
       if (field === 'postalCode' || field === 'houseNumber') {
-        const newPostalCode = field === 'postalCode' ? value : formData.businessAddress.postalCode;
-        const newHouseNumber = field === 'houseNumber' ? value : formData.businessAddress.houseNumber;
-        
-        if (newPostalCode && newHouseNumber && newPostalCode.length >= 6 && newHouseNumber.length > 0) {
-          lookupAddress(newPostalCode, newHouseNumber);
+        // Clear existing timeout
+        if (addressLookupTimeoutRef.current) {
+          clearTimeout(addressLookupTimeoutRef.current);
         }
+
+        // Get current values and clean postal code
+        const rawPostalCode = field === 'postalCode' ? value : formData.businessAddress.postalCode;
+        const currentPostalCode = rawPostalCode.trim().toUpperCase().replace(/\s+/g, '');
+        const currentHouseNumber = field === 'houseNumber' ? value : formData.businessAddress.houseNumber;
+        
+        // Debounce: wait 1 second after user stops typing, then lookup
+        addressLookupTimeoutRef.current = setTimeout(() => {
+          if (currentPostalCode && currentHouseNumber && currentPostalCode.length >= 6 && currentHouseNumber.trim().length > 0) {
+            lookupAddress(currentPostalCode, currentHouseNumber);
+          }
+        }, 1000); // 1 second delay
       }
     } else {
       setFormData(prev => ({
@@ -134,8 +146,17 @@ export default function RegisterPage() {
   };
 
   const lookupAddress = async (postalCode: string, houseNumber: string) => {
+    // Clean postal code: remove spaces, make uppercase
+    const cleanPostalCode = postalCode.trim().toUpperCase().replace(/\s+/g, '');
+    const cleanHouseNumber = houseNumber.trim();
+    
+    if (!cleanPostalCode || !cleanHouseNumber || cleanPostalCode.length < 6) {
+      return;
+    }
+
+    setAddressLookupLoading(true);
     try {
-      const response = await fetch(`/api/address/lookup?postalCode=${encodeURIComponent(postalCode)}&houseNumber=${encodeURIComponent(houseNumber)}`);
+      const response = await fetch(`/api/address/lookup?postalCode=${encodeURIComponent(cleanPostalCode)}&houseNumber=${encodeURIComponent(cleanHouseNumber)}`);
       const data = await response.json();
       
       if (data.success && data.street && data.city) {
@@ -145,15 +166,26 @@ export default function RegisterPage() {
             ...prev.businessAddress,
             street: data.street,
             city: data.city,
-            postalCode: data.postalCode || postalCode
+            postalCode: data.postalCode || cleanPostalCode
           }
         }));
       }
     } catch (error) {
       console.error('Address lookup error:', error);
       // Silently fail - user can fill manually
+    } finally {
+      setAddressLookupLoading(false);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (addressLookupTimeoutRef.current) {
+        clearTimeout(addressLookupTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -596,8 +628,20 @@ export default function RegisterPage() {
                           name="businessAddress.postalCode"
                           value={formData.businessAddress.postalCode}
                           onChange={handleInputChange}
+                          onBlur={(e) => {
+                            // Trigger lookup immediately when user leaves the field
+                            const postalCode = e.target.value.trim().toUpperCase().replace(/\s+/g, '');
+                            const houseNumber = formData.businessAddress.houseNumber.trim();
+                            if (postalCode.length >= 6 && houseNumber.length > 0) {
+                              // Clear any pending timeout
+                              if (addressLookupTimeoutRef.current) {
+                                clearTimeout(addressLookupTimeoutRef.current);
+                              }
+                              lookupAddress(postalCode, houseNumber);
+                            }
+                          }}
                           placeholder="1234AB"
-                          maxLength={6}
+                          maxLength={7}
                           className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                           style={{ textTransform: 'uppercase' }}
                         />
@@ -613,10 +657,34 @@ export default function RegisterPage() {
                           name="businessAddress.houseNumber"
                           value={formData.businessAddress.houseNumber}
                           onChange={handleInputChange}
+                          onBlur={(e) => {
+                            // Trigger lookup immediately when user leaves the field
+                            const postalCode = formData.businessAddress.postalCode.trim().toUpperCase().replace(/\s+/g, '');
+                            const houseNumber = e.target.value.trim();
+                            if (postalCode.length >= 6 && houseNumber.length > 0) {
+                              // Clear any pending timeout
+                              if (addressLookupTimeoutRef.current) {
+                                clearTimeout(addressLookupTimeoutRef.current);
+                              }
+                              lookupAddress(postalCode, houseNumber);
+                            }
+                          }}
                           placeholder="12"
                           className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                         />
-                        <p className="text-xs text-gray-500">Straat en plaats worden automatisch ingevuld</p>
+                        <p className="text-xs text-gray-500">
+                          {addressLookupLoading ? (
+                            <span className="flex items-center gap-1">
+                              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                              </svg>
+                              Adres wordt opgezocht...
+                            </span>
+                          ) : (
+                            "Straat en plaats worden automatisch ingevuld"
+                          )}
+                        </p>
                       </div>
                       
                       {/* Straat - Third row, full width */}
@@ -624,15 +692,25 @@ export default function RegisterPage() {
                         <label className="block text-sm font-medium text-gray-700">
                           Straat
                         </label>
-                        <input
-                          type="text"
-                          name="businessAddress.street"
-                          value={formData.businessAddress.street}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
-                          readOnly={!!formData.businessAddress.street}
-                          placeholder="Wordt automatisch ingevuld"
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="businessAddress.street"
+                            value={formData.businessAddress.street}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
+                            readOnly={!!formData.businessAddress.street}
+                            placeholder={addressLookupLoading ? "Zoeken..." : "Wordt automatisch ingevuld"}
+                          />
+                          {addressLookupLoading && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <svg className="animate-spin h-5 w-5 text-orange-500" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       {/* Plaats - Fourth row, full width */}
@@ -640,15 +718,25 @@ export default function RegisterPage() {
                         <label className="block text-sm font-medium text-gray-700">
                           Plaats
                         </label>
-                        <input
-                          type="text"
-                          name="businessAddress.city"
-                          value={formData.businessAddress.city}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
-                          readOnly={!!formData.businessAddress.city}
-                          placeholder="Wordt automatisch ingevuld"
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="businessAddress.city"
+                            value={formData.businessAddress.city}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
+                            readOnly={!!formData.businessAddress.city}
+                            placeholder={addressLookupLoading ? "Zoeken..." : "Wordt automatisch ingevuld"}
+                          />
+                          {addressLookupLoading && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <svg className="animate-spin h-5 w-5 text-orange-500" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
