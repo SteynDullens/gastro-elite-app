@@ -8,21 +8,21 @@ export async function GET(request: NextRequest) {
     const token = request.cookies.get('auth-token')?.value;
 
     if (!token) {
-      console.log('👤 /api/auth/me - No token found');
-      return NextResponse.json(
-        { error: 'No authentication token' },
-        { status: 401 }
-      );
+      // Return 200 with success:false to avoid console errors for unauthenticated users
+      return NextResponse.json({
+        success: false,
+        user: null
+      });
     }
 
     console.log('👤 /api/auth/me - Token found, verifying...');
     const decoded = verifyToken(token);
     if (!decoded) {
-      console.log('👤 /api/auth/me - Token verification failed');
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
+      // Return 200 with success:false to avoid console errors for invalid tokens
+      return NextResponse.json({
+        success: false,
+        user: null
+      });
     }
 
     console.log('👤 /api/auth/me - Token valid, user ID:', decoded.id);
@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
         });
       }
       console.log('👤 /api/auth/me - User not found or blocked');
-      return NextResponse.json(
-        { error: 'User not found or inactive' },
-        { status: 401 }
-      );
+      return NextResponse.json({
+        success: false,
+        user: null
+      });
     }
 
     // Remove password from user object
@@ -82,9 +82,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Auth me error:', error.message);
-    return NextResponse.json(
-      { error: 'Authentication failed' },
-      { status: 401 }
-    );
+    return NextResponse.json({
+      success: false,
+      user: null
+    });
   }
 }
