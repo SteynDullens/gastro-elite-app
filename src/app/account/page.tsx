@@ -587,15 +587,15 @@ export default function AccountPage() {
                     )}
                   </button>
                 </div>
-              </div>
-
-              <div className="flex justify-end mb-4">
-                <Link 
-                  href="/forgot-password" 
-                  className="text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline transition-colors"
-                >
-                  Wachtwoord vergeten?
-                </Link>
+                <div className="mt-2 text-right">
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline"
+                    style={{ display: 'inline-block', color: '#ea580c' }}
+                  >
+                    Wachtwoord vergeten?
+                  </Link>
+                </div>
               </div>
 
               {loginError && (
