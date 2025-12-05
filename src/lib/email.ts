@@ -2,23 +2,38 @@ import nodemailer from 'nodemailer';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Email configuration for ZXCS DirectAdmin
-const emailConfig = {
-  host: process.env.SMTP_HOST || 'mail.zxcs.nl',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: true, // true for 465 (SSL), false for 587 (STARTTLS)
-  auth: {
-    user: process.env.SMTP_USER || 'noreply@gastro-elite.com',
-    pass: process.env.SMTP_PASS || '!Janssenstraat1211'
-  }
-};
+// Get email configuration (called at runtime to ensure env vars are loaded)
+function getEmailConfig() {
+  return {
+    host: process.env.SMTP_HOST || 'mail.zxcs.nl',
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: true, // true for 465 (SSL), false for 587 (STARTTLS)
+    auth: {
+      user: process.env.SMTP_USER || 'noreply@gastro-elite.com',
+      pass: process.env.SMTP_PASS || '!Janssenstraat1211'
+    }
+  };
+}
 
-// Create transporter
-const transporter = nodemailer.createTransport(emailConfig);
+// Create transporter lazily (for each email to ensure fresh config)
+function getTransporter() {
+  const config = getEmailConfig();
+  console.log('📧 Creating transporter with config:', {
+    host: config.host,
+    port: config.port,
+    user: config.auth.user,
+    passSet: !!config.auth.pass
+  });
+  return nodemailer.createTransport(config);
+}
 
-// Admin email configuration
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@gastro-elite.com';
-const APP_URL = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+// Admin email configuration (runtime)
+function getAdminEmail() {
+  return process.env.ADMIN_EMAIL || 'admin@gastro-elite.com';
+}
+function getAppUrl() {
+  return (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+}
 
 export interface BusinessRegistrationData {
   firstName: string;
@@ -61,9 +76,10 @@ export async function sendBusinessRegistrationNotification(
       });
     }
 
+    const emailConfig = getEmailConfig();
     const mailOptions = {
       from: `"Gastro-Elite Registration" <${emailConfig.auth.user}>`,
-      to: ADMIN_EMAIL,
+      to: getAdminEmail(),
       subject: `New Business Account Request - ${data.companyName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -120,7 +136,7 @@ export async function sendBusinessRegistrationNotification(
       attachments
     };
 
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error('Error sending business registration notification:', error);
@@ -134,11 +150,14 @@ export async function sendPersonalRegistrationConfirmation(
   verificationToken: string
 ): Promise<boolean> {
   try {
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    
     console.log('📧 Sending personal registration confirmation to:', data.email);
     console.log('📧 From:', emailConfig.auth.user);
     console.log('📧 Verification token:', verificationToken);
     
-    const verificationUrl = `${APP_URL}/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
     console.log('📧 Verification URL:', verificationUrl);
     
     const mailOptions = {
@@ -179,7 +198,7 @@ export async function sendPersonalRegistrationConfirmation(
       `
     };
 
-    const result = await transporter.sendMail(mailOptions);
+    const result = await getTransporter().sendMail(mailOptions);
     console.log('✅ Personal registration email sent successfully!');
     console.log('Message ID:', result.messageId);
     return true;
@@ -198,7 +217,9 @@ export async function sendBusinessRegistrationConfirmation(
   verificationToken: string
 ): Promise<boolean> {
   try {
-    const verificationUrl = `${APP_URL}/verify-email?token=${verificationToken}`;
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
     
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
@@ -241,10 +262,10 @@ export async function sendBusinessRegistrationConfirmation(
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     return true;
   } catch (error) {
-                  console.error('Error sending business registration confirmation:', error);
+    console.error('Error sending business registration confirmation:', error);
     return false;
   }
 }
@@ -256,7 +277,8 @@ export async function sendBusinessApprovalNotification(
   userName: string
 ): Promise<boolean> {
   try {
-    const loginUrl = `${APP_URL}/login`;
+    const emailConfig = getEmailConfig();
+    const loginUrl = `${getAppUrl()}/login`;
     
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
@@ -302,7 +324,7 @@ export async function sendBusinessApprovalNotification(
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error('Error sending business approval notification:', error);
@@ -318,7 +340,8 @@ export async function sendBusinessRejectionNotification(
   reason?: string
 ): Promise<boolean> {
   try {
-    const supportUrl = `${APP_URL}/contact`;
+    const emailConfig = getEmailConfig();
+    const supportUrl = `${getAppUrl()}/contact`;
     
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
@@ -363,7 +386,7 @@ export async function sendBusinessRejectionNotification(
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error('Error sending business rejection notification:', error);
@@ -384,13 +407,14 @@ async function fileExists(filePath: string): Promise<boolean> {
 // Test email configuration
 export async function testEmailConfiguration(): Promise<boolean> {
   try {
+    const emailConfig = getEmailConfig();
     console.log('Testing email configuration...');
     console.log('SMTP_HOST:', emailConfig.host);
     console.log('SMTP_PORT:', emailConfig.port);
     console.log('SMTP_USER:', emailConfig.auth.user);
     console.log('SMTP_PASS:', emailConfig.auth.pass ? 'SET' : 'NOT SET');
     
-    await transporter.verify();
+    await getTransporter().verify();
     console.log('✅ Email configuration is valid');
     return true;
   } catch (error) {
