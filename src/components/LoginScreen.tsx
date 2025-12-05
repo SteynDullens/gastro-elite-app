@@ -229,6 +229,19 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
                         required
                         autoComplete="current-password"
                     />
+                    <div className="mt-2 text-right">
+                      <Link 
+                        href="/forgot-password" 
+                        className="text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline transition-colors"
+                        style={{ 
+                          color: '#ea580c',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}
+                      >
+                        🔑 Wachtwoord vergeten?
+                      </Link>
+                    </div>
                   </div>
 
                   {error && (
