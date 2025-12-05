@@ -11,22 +11,26 @@ export async function POST(request: Request) {
 
     console.log('🧪 Testing email delivery to:', email);
     
-    // Create transporter with environment variables
+    // Create transporter with environment variables (trimmed to remove any newlines)
+    const host = (process.env.SMTP_HOST || 'mail.zxcs.nl').trim();
+    const port = parseInt((process.env.SMTP_PORT || '465').trim());
+    const user = (process.env.SMTP_USER || 'noreply@gastro-elite.com').trim();
+    const pass = (process.env.SMTP_PASS || '!Janssenstraat1211').trim();
+    
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'mail.zxcs.nl',
-      port: parseInt(process.env.SMTP_PORT || '465'),
+      host,
+      port,
       secure: true,
-      auth: {
-        user: process.env.SMTP_USER || 'noreply@gastro-elite.com',
-        pass: process.env.SMTP_PASS || '!Janssenstraat1211'
-      }
+      auth: { user, pass },
+      logger: true,
+      debug: true
     });
 
-    console.log('📧 SMTP Configuration:');
-    console.log('Host:', process.env.SMTP_HOST || 'mail.zxcs.nl');
-    console.log('Port:', process.env.SMTP_PORT || '465');
-    console.log('User:', process.env.SMTP_USER || 'noreply@gastro-elite.com');
-    console.log('Pass:', process.env.SMTP_PASS ? 'SET' : 'NOT SET');
+    console.log('📧 SMTP Configuration (after trim):');
+    console.log('Host:', JSON.stringify(host));
+    console.log('Port:', port);
+    console.log('User:', JSON.stringify(user));
+    console.log('Pass:', pass ? 'SET (' + pass.length + ' chars)' : 'NOT SET');
 
     // Test connection
     await transporter.verify();
@@ -48,11 +52,19 @@ export async function POST(request: Request) {
 
     console.log('✅ Test email sent successfully!');
     console.log('Message ID:', info.messageId);
+    console.log('Response:', info.response);
+    console.log('Accepted:', JSON.stringify(info.accepted));
+    console.log('Rejected:', JSON.stringify(info.rejected));
+    console.log('Envelope:', JSON.stringify(info.envelope));
+    console.log('Full info:', JSON.stringify(info));
 
     return NextResponse.json({
       success: true,
       message: `Test email sent to ${email}`,
-      messageId: info.messageId
+      messageId: info.messageId,
+      response: info.response,
+      accepted: info.accepted,
+      rejected: info.rejected
     });
 
   } catch (error) {
