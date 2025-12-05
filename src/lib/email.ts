@@ -3,14 +3,15 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 // Get email configuration (called at runtime to ensure env vars are loaded)
+// Note: .trim() removes any newline characters that may have been added by environment variable tools
 function getEmailConfig() {
   return {
-    host: process.env.SMTP_HOST || 'mail.zxcs.nl',
-    port: parseInt(process.env.SMTP_PORT || '465'),
+    host: (process.env.SMTP_HOST || 'mail.zxcs.nl').trim(),
+    port: parseInt((process.env.SMTP_PORT || '465').trim()),
     secure: true, // true for 465 (SSL), false for 587 (STARTTLS)
     auth: {
-      user: process.env.SMTP_USER || 'noreply@gastro-elite.com',
-      pass: process.env.SMTP_PASS || '!Janssenstraat1211'
+      user: (process.env.SMTP_USER || 'noreply@gastro-elite.com').trim(),
+      pass: (process.env.SMTP_PASS || '!Janssenstraat1211').trim()
     }
   };
 }
