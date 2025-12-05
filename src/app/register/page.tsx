@@ -168,6 +168,11 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
+      if (!kvkDocument) {
+        setError("KvK uittreksel is verplicht voor een bedrijfsaccount");
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -578,17 +583,23 @@ export default function RegisterPage() {
 
                   <div className="mt-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      KvK Uittreksel (optioneel)
+                      KvK Uittreksel *
                     </label>
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
                       onChange={handleFileChange}
+                      required
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                     />
+                    {kvkDocument && (
+                      <p className="text-xs text-green-600 mt-2">
+                        ✓ Bestand geselecteerd: {kvkDocument.name}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-500 mt-2">
-                      Alleen PDF, JPG en PNG bestanden. Maximaal 5MB.
+                      Verplicht. Alleen PDF, JPG en PNG bestanden. Maximaal 5MB.
                     </p>
                   </div>
                 </div>

@@ -50,6 +50,12 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      if (!kvkDocumentPath) {
+        return NextResponse.json(
+          { error: 'KvK document is required for business accounts' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user already exists
@@ -105,6 +111,10 @@ export async function POST(request: NextRequest) {
             name: companyName!,
             address: addressString,
             kvkNumber: kvkNumber!,
+            vatNumber: vatNumber || null,
+            companyPhone: companyPhone || null,
+            kvkDocumentPath: kvkDocumentPath || null,
+            status: 'pending',
             ownerId: newUser.id,
           }
         });

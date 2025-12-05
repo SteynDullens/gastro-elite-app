@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { sendBusinessApprovalNotification, sendBusinessRejectionNotification } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,20 +17,22 @@ export async function GET(request: NextRequest) {
 
     const applications = await safeDbOperation(async (prisma) => {
       return await prisma.company.findMany({
-      include: {
-        owner: {
-          select: {
-            firstName: true,
-            lastName: true,
+        include: {
+          owner: {
+            select: {
+              firstName: true,
+              lastName: true,
               email: true,
-              phone: true
+              phone: true,
+              emailVerified: true,
+              emailVerifiedAt: true
+            }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      });
     });
 
     if (!applications) {
@@ -40,17 +43,24 @@ export async function GET(request: NextRequest) {
     const transformedApplications = applications.map(app => ({
       id: app.id,
       company_name: app.name,
-      vat_number: (app as any).vatNumber || '',
+      vat_number: app.vatNumber || '',
       kvk_number: app.kvkNumber,
+      company_phone: app.companyPhone || '',
       address: app.address,
       contact_name: `${app.owner.firstName} ${app.owner.lastName}`,
       contact_phone: app.owner.phone || '',
       contact_email: app.owner.email,
-      kvk_document_path: (app as any).kvkDocumentPath || '',
+      kvk_document_path: app.kvkDocumentPath || '',
       status: app.status,
+      rejection_reason: app.rejectionReason || '',
+      approved_at: app.approvedAt?.toISOString() || null,
+      approved_by: app.approvedBy || null,
+      email_verified: app.owner.emailVerified,
+      email_verified_at: app.owner.emailVerifiedAt?.toISOString() || null,
       createdAt: app.createdAt.toISOString(),
       ownerEmail: app.owner.email,
-      ownerFirstName: app.owner.firstName
+      ownerFirstName: app.owner.firstName,
+      ownerLastName: app.owner.lastName
     }));
 
     return NextResponse.json(transformedApplications);
@@ -78,17 +88,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
     }
 
-    // Update company status using Prisma
-    await safeDbOperation(async (prisma) => {
-      return await prisma.company.update({
-      where: { id: companyId },
-      data: {
-        status: status === 'approved' ? 'approved' : 'rejected'
-      }
+    // Get company and owner info for email notification
+    const company = await safeDbOperation(async (prisma) => {
+      return await prisma.company.findUnique({
+        where: { id: companyId },
+        include: {
+          owner: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
       });
     });
 
-    return NextResponse.json({ message: `Company application ${status} successfully` });
+    if (!company) {
+      return NextResponse.json({ message: 'Company not found' }, { status: 404 });
+    }
+
+    // Update company status using Prisma
+    const isApproved = status === 'approved';
+    await safeDbOperation(async (prisma) => {
+      return await prisma.company.update({
+        where: { id: companyId },
+        data: {
+          status: isApproved ? 'approved' : 'rejected',
+          rejectionReason: isApproved ? null : (rejectionReason || null),
+          approvedAt: isApproved ? new Date() : null,
+          approvedBy: decodedToken.email || decodedToken.id
+        }
+      });
+    });
+
+    // Send email notification to the business owner
+    const userName = `${company.owner.firstName} ${company.owner.lastName}`;
+    try {
+      if (isApproved) {
+        await sendBusinessApprovalNotification(
+          company.owner.email,
+          company.name,
+          userName
+        );
+        console.log(`✅ Approval email sent to ${company.owner.email}`);
+      } else {
+        await sendBusinessRejectionNotification(
+          company.owner.email,
+          company.name,
+          userName,
+          rejectionReason
+        );
+        console.log(`✅ Rejection email sent to ${company.owner.email}`);
+      }
+    } catch (emailError) {
+      console.error('Error sending status notification email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    return NextResponse.json({ 
+      message: `Company application ${status} successfully`,
+      emailSent: true
+    });
   } catch (error) {
     console.error('Error updating business application status:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

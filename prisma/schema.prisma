@@ -11,37 +11,44 @@ datasource db {
 }
 
 model User {
-  id                      String   @id @default(cuid())
+  id                      String    @id @default(cuid())
   firstName               String
   lastName                String
-  email                   String   @unique
+  email                   String    @unique
   password                String
   phone                   String
-  company                 Company? @relation("CompanyEmployees", fields: [companyId], references: [id])
+  company                 Company?  @relation("CompanyEmployees", fields: [companyId], references: [id])
   companyId               String?
-  ownedCompany            Company? @relation("CompanyOwner")
+  ownedCompany            Company?  @relation("CompanyOwner")
   recipes                 Recipe[]
-  originalRecipes         Recipe[] @relation("OriginalRecipeOwner")
-  isBlocked               Boolean  @default(false)
-  isAdmin                 Boolean  @default(false)
+  originalRecipes         Recipe[]  @relation("OriginalRecipeOwner")
+  isBlocked               Boolean   @default(false)
+  isAdmin                 Boolean   @default(false)
   emailVerificationToken  String?
-  emailVerified           Boolean  @default(false)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  emailVerified           Boolean   @default(false)
+  emailVerifiedAt         DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 }
 
 model Company {
-  id          String  @id @default(cuid())
-  name        String
-  address     String
-  kvkNumber   String
-  status      String  @default("pending") // pending, approved, rejected
-  owner       User    @relation("CompanyOwner", fields: [ownerId], references: [id])
-  ownerId     String  @unique
-  employees   User[]  @relation("CompanyEmployees")
-  recipes     Recipe[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  address         String
+  kvkNumber       String
+  vatNumber       String?
+  companyPhone    String?
+  kvkDocumentPath String?
+  status          String    @default("pending") // pending, approved, rejected
+  rejectionReason String?
+  approvedAt      DateTime?
+  approvedBy      String?
+  owner           User      @relation("CompanyOwner", fields: [ownerId], references: [id])
+  ownerId         String    @unique
+  employees       User[]    @relation("CompanyEmployees")
+  recipes         Recipe[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Category {

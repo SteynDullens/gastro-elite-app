@@ -14,6 +14,8 @@ function VerifyEmailContent() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<any>(null);
+  const [isBusinessAccount, setIsBusinessAccount] = useState(false);
+  const [businessStatus, setBusinessStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -40,6 +42,8 @@ function VerifyEmailContent() {
         if (response.ok) {
           setSuccess(true);
           setUser(data.user);
+          setIsBusinessAccount(data.isBusinessAccount || false);
+          setBusinessStatus(data.businessStatus || null);
         } else {
           setError(data.error || 'Verificatie mislukt');
         }
@@ -95,14 +99,35 @@ function VerifyEmailContent() {
                 </p>
               </div>
             )}
+
+            {/* Business account pending approval message */}
+            {isBusinessAccount && businessStatus === 'pending' && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-center mb-2">
+                  <svg className="w-6 h-6 text-amber-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-semibold text-amber-800">Wachten op Goedkeuring</span>
+                </div>
+                <p className="text-amber-700 text-sm">
+                  Uw e-mailadres is geverifieerd. Wacht alstublieft tot uw bedrijfsaccount is goedgekeurd voordat u kunt inloggen.
+                </p>
+                <p className="text-amber-600 text-xs mt-2">
+                  U ontvangt een e-mail zodra uw account is beoordeeld door onze beheerder.
+                </p>
+              </div>
+            )}
             
             <div className="space-y-4">
-              <button
-                onClick={handleLogin}
-                className="w-full bg-orange-500 text-white px-6 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors"
-              >
-                Inloggen
-              </button>
+              {/* Only show login button for non-business or approved business accounts */}
+              {(!isBusinessAccount || businessStatus === 'approved') && (
+                <button
+                  onClick={handleLogin}
+                  className="w-full bg-orange-500 text-white px-6 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors"
+                >
+                  Inloggen
+                </button>
+              )}
               
               <button
                 onClick={handleHome}

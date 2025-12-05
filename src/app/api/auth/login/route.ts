@@ -22,7 +22,14 @@ export async function POST(request: NextRequest) {
       return await prisma.user.findUnique({
         where: { email },
         include: {
-          ownedCompany: true,
+          ownedCompany: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+              rejectionReason: true
+            }
+          },
           company: true
         }
       });
@@ -49,6 +56,19 @@ export async function POST(request: NextRequest) {
     // Check if email is verified
     if (!user.emailVerified) {
       throw new Error('Je account is nog niet geverifieerd. Controleer je e-mail voor de verificatielink.');
+    }
+
+    // Check if business account is pending approval
+    if (user.ownedCompany) {
+      if (user.ownedCompany.status === 'pending') {
+        throw new Error('Uw bedrijfsaccount wacht nog op goedkeuring. U ontvangt een e-mail zodra uw account is beoordeeld.');
+      }
+      if (user.ownedCompany.status === 'rejected') {
+        const reason = user.ownedCompany.rejectionReason 
+          ? `: ${user.ownedCompany.rejectionReason}` 
+          : '.';
+        throw new Error(`Uw bedrijfsaccount aanvraag is helaas afgewezen${reason}`);
+      }
     }
 
     const isValidPassword = await verifyPassword(password, user.password);

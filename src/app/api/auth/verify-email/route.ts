@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find user with this verification token
+    // Find user with this verification token, including company info
     const user = await safeDbOperation(async (prisma) => {
       return await prisma.user.findFirst({
-        where: { emailVerificationToken: token }
+        where: { emailVerificationToken: token },
+        include: {
+          ownedCompany: true
+        }
       });
     });
 
@@ -27,18 +30,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Update user to verified
+    // Update user to verified with timestamp
     await safeDbOperation(async (prisma) => {
       return await prisma.user.update({
         where: { id: user.id },
         data: {
           emailVerified: true,
+          emailVerifiedAt: new Date(),
           emailVerificationToken: null
         }
       });
     });
 
-    // Redirect to login page with success message
+    // Check if this is a business account
+    const isBusinessAccount = !!user.ownedCompany;
+    const businessStatus = user.ownedCompany?.status || null;
+
+    // Redirect based on account type
+    if (isBusinessAccount && businessStatus === 'pending') {
+      return NextResponse.redirect(new URL('/login?verified=true&businessPending=true', request.url));
+    }
+    
     return NextResponse.redirect(new URL('/login?verified=true', request.url));
 
   } catch (error: any) {
@@ -61,10 +73,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user with this verification token
+    // Find user with this verification token, including company info
     const user = await safeDbOperation(async (prisma) => {
       return await prisma.user.findFirst({
-        where: { emailVerificationToken: token }
+        where: { emailVerificationToken: token },
+        include: {
+          ownedCompany: true
+        }
       });
     });
 
@@ -75,20 +90,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user to verified
+    // Update user to verified with timestamp
     await safeDbOperation(async (prisma) => {
       return await prisma.user.update({
         where: { id: user.id },
         data: {
           emailVerified: true,
+          emailVerifiedAt: new Date(),
           emailVerificationToken: null
         }
       });
     });
 
+    // Check if this is a business account
+    const isBusinessAccount = !!user.ownedCompany;
+    const businessStatus = user.ownedCompany?.status || null;
+
     return NextResponse.json({
       success: true,
-      message: 'Email verified successfully'
+      message: 'Email verified successfully',
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email
+      },
+      isBusinessAccount,
+      businessStatus
     });
 
   } catch (error: any) {
