@@ -589,19 +589,20 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              <div className="text-right py-2">
-                <Link 
+              <div className="flex justify-end items-center py-2 mb-2" style={{ minHeight: '32px' }}>
+                <a 
                   href="/forgot-password" 
-                  className="inline-block text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline transition-colors underline-offset-2"
+                  className="text-orange-600 hover:text-orange-700 text-sm font-semibold hover:underline transition-colors"
                   style={{ 
                     color: '#ea580c',
                     fontSize: '14px',
                     fontWeight: '600',
-                    cursor: 'pointer'
+                    textDecoration: 'none',
+                    display: 'block'
                   }}
                 >
                   🔑 Wachtwoord vergeten?
-                </Link>
+                </a>
               </div>
 
               {loginError && (
