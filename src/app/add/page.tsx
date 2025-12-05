@@ -21,16 +21,16 @@ export default function AddPage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Toevoegen receptuur</h1>
-            <p className="text-gray-600">Maak nieuwe recepten aan</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.addRecipe}</h1>
+            <p className="text-gray-600">{t.createNewRecipes}</p>
           </div>
           
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">➕</div>
-              <h2 className="text-xl font-semibold mb-2">Toevoegen receptuur</h2>
+              <h2 className="text-xl font-semibold mb-2">{t.addRecipe}</h2>
               <p className="text-gray-600 text-sm">
-                Log in of maak een account aan om recepten toe te voegen.
+                {t.loginToAddRecipes}
               </p>
             </div>
             
@@ -48,7 +48,7 @@ export default function AddPage() {
                 href="/register"
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 text-center rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
               >
-                Account aanmaken
+                {t.createAccount}
               </a>
             </div>
           </div>
@@ -61,8 +61,8 @@ export default function AddPage() {
     <div className="space-y-6">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold">Toevoegen receptuur</h1>
-          <p className="text-gray-600 mt-1">Vul de gegevens in om een nieuwe receptuur toe te voegen.</p>
+          <h1 className="text-2xl font-semibold">{t.addRecipe}</h1>
+          <p className="text-gray-600 mt-1">{t.fillDetailsToAdd}</p>
         </div>
 
         <div className="bg-white rounded-xl shadow p-4 sm:p-6">

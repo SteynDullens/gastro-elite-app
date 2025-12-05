@@ -32,6 +32,28 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
 
+  // Category translation map
+  const translateCategory = (category: string): string => {
+    const categoryMap: Record<string, string> = {
+      'Voorgerecht': t.catVoorgerecht,
+      'Tussengerecht': t.catTussengerecht,
+      'Hoofdgerecht': t.catHoofdgerecht,
+      'Dessert': t.catDessert,
+      'Groentegarnituur': t.catGroentegarnituur,
+      'Vlees': t.catVlees,
+      'Vis': t.catVis,
+      'Vegetarisch': t.catVegetarisch,
+      'Zetmeelgarnituur': t.catZetmeelgarnituur,
+      'Gebonden sauzen': t.catGebondenSauzen,
+      'Koude sauzen': t.catKoudeSauzen,
+      'Soepen': t.catSoepen,
+      'Salades': t.catSalades,
+      'Brood': t.catBrood,
+      'Dranken': t.catDranken,
+    };
+    return categoryMap[category] || category;
+  };
+
   // Categories loaded from backend
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -100,7 +122,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   : "bg-white text-gray-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-300"
               }`}
             >
-              {category}
+              {translateCategory(category)}
             </button>
           ))}
         </div>
@@ -120,10 +142,10 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-12 shadow-lg border border-orange-200">
               <div className="text-6xl mb-6">🍽️</div>
               <div className="text-gray-800 text-2xl font-bold mb-4">
-                Er zijn nog geen recepturen toegevoegd
+                {t.noRecipesYet}
               </div>
               <p className="text-gray-600 mb-8 text-lg">
-                Begin snel met het toevoegen van je eerste recept!
+                {t.startAddingFirstRecipe}
               </p>
               <a 
                 href="/add"
@@ -132,7 +154,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
               >
-                Eerste recept toevoegen
+                {t.addFirstRecipe}
               </a>
             </div>
           )}
@@ -163,7 +185,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-sm">No photo</span>
+                  <span className="text-sm">{t.noPhoto}</span>
                 </div>
               </div>
               
@@ -181,7 +203,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                         key={typeof category === 'string' ? category : (category as any).id}
                         className="px-3 py-1 bg-orange-200 text-orange-800 text-xs rounded-full font-medium shadow-sm"
                       >
-                        {typeof category === 'string' ? category : (category as any).name}
+                        {translateCategory(typeof category === 'string' ? category : (category as any).name)}
                       </span>
                     ))}
                   </div>

@@ -40,29 +40,46 @@ export default function DesktopSidebar() {
     }
   ];
 
-  if (!user) {
-    return (
-      <div className="desktop-sidebar">
-        <div className="sidebar-content">
-          <div className="sidebar-logo">
-            <Image src="/logo.svg" alt="Gastro-Elite Logo" width={96} height={96} priority />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="desktop-sidebar">
       <div className="sidebar-content">
+        {/* Logo */}
         <div className="sidebar-logo">
-          <Image src="/logo.svg" alt="Gastro-Elite Logo" width={96} height={96} priority />
+          <Image src="/logo.svg" alt="Gastro-Elite Logo" width={100} height={100} priority />
         </div>
         
+        {/* Navigation */}
         <nav className="sidebar-nav">
           <ul className="nav-list">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
+              const isDisabled = !user;
+              
+              if (isDisabled) {
+                return (
+                  <li key={item.href} className="nav-item-wrapper">
+                    <div
+                      className="nav-link disabled"
+                      title={t.loginToAccess}
+                    >
+                      <div className="nav-icon">
+                        <Image
+                          src={item.iconPath}
+                          alt={`${item.label} icon`}
+                          width={24}
+                          height={24}
+                          style={{ filter: 'grayscale(100%)' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                      <span className="nav-label">{item.label}</span>
+                    </div>
+                  </li>
+                );
+              }
+              
               return (
                 <li key={item.href} className="nav-item-wrapper">
                   <Link
@@ -74,13 +91,10 @@ export default function DesktopSidebar() {
                       <Image
                         src={item.iconPath}
                         alt={`${item.label} icon`}
-                        width={32}
-                        height={32}
-                        className="nav-icon-img"
+                        width={24}
+                        height={24}
                         style={{ 
-                          filter: isActive 
-                            ? 'brightness(0) invert(1)'
-                            : 'none'
+                          filter: isActive ? 'brightness(0) invert(1)' : 'none'
                         }}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
@@ -95,6 +109,7 @@ export default function DesktopSidebar() {
           </ul>
         </nav>
         
+        {/* Footer */}
         <div className="sidebar-footer">
           <p>© 2024 Gastro-Elite</p>
           <p>Professioneel receptenbeheer</p>

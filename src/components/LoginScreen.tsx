@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface LoginScreenProps {
   enableBackButton?: boolean;
@@ -13,9 +14,11 @@ interface LoginScreenProps {
 export default function LoginScreen({ enableBackButton = true }: LoginScreenProps) {
   const router = useRouter();
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [showBackArrow, setShowBackArrow] = useState(enableBackButton);
   const [mounted, setMounted] = useState(false);
-  const [showFormFields, setShowFormFields] = useState(false);
+  const [logoAnimated, setLogoAnimated] = useState(false);
+  const [showFormFields, setShowFormFields] = useState(false); // Hidden initially
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,10 +26,12 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
 
   useEffect(() => {
     setMounted(true);
+    // Trigger logo animation after mount
+    const logoTimer = setTimeout(() => setLogoAnimated(true), 100);
 
     if (!enableBackButton) {
       setShowBackArrow(false);
-      return;
+      return () => clearTimeout(logoTimer);
     }
 
     const handleScroll = () => {
@@ -38,38 +43,18 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
     handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => {
+      clearTimeout(logoTimer);
       window.removeEventListener('scroll', handleScroll);
     };
   }, [enableBackButton]);
 
-  // Check if mobile and redirect
-  useEffect(() => {
-    if (mounted) {
-      const checkMobile = () => {
-        const isMobileDevice = window.innerWidth < 768;
-        if (isMobileDevice) {
-          // Use window.location for more reliable redirect to mobile page
-          window.location.href = '/mobile-redirect';
-        }
-      };
-      
-      // Small delay to prevent hydration issues
-      const timer = setTimeout(checkMobile, 100);
-      window.addEventListener('resize', checkMobile);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('resize', checkMobile);
-      };
-    }
-  }, [mounted]);
-
   useEffect(() => {
     if (showFormFields && emailInputRef.current) {
-      emailInputRef.current.focus();
+      // Small delay to let animation start
+      setTimeout(() => emailInputRef.current?.focus(), 300);
     }
   }, [showFormFields]);
 
-  // Handle back navigation
   const handleBackClick = () => {
     if (!enableBackButton) return;
 
@@ -80,15 +65,12 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
     }
   };
 
+  const handleLoginClick = () => {
+    setShowFormFields(true);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!showFormFields) {
-      setShowFormFields(true);
-      setError("");
-      return;
-    }
-
     setLoading(true);
     setError("");
 
@@ -101,42 +83,40 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
       }
 
       if (result.error === 'BUSINESS_PENDING_APPROVAL') {
-        setError("Please wait a little longer — your business registration must be approved by Gastro-Elite. This may take up to 24 hours.");
+        setError(t.businessPendingApproval);
       } else if (result.error === 'BUSINESS_REJECTED') {
-        setError("Your business registration has been rejected. Please contact support for more information.");
+        setError(t.businessRejected);
       } else {
-        setError(result.error || "Login failed. Please check your credentials.");
+        setError(result.error || t.loginFailed);
       }
     } catch (err) {
-      setError("Login failed. Please check your credentials.");
+      setError(t.loginFailed);
     } finally {
       setLoading(false);
     }
   };
   
-  // Show loading state while mounting
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
+      <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">{t.loading}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
-      <div className="w-full max-w-md">
-        <div className="bg-white border border-orange-300 rounded-xl shadow-lg max-w-md mx-auto relative overflow-hidden">
-          {enableBackButton && (
+    <div className="min-h-screen flex flex-col overflow-hidden">
+      {/* Back Button - Fixed position */}
+      {enableBackButton && showBackArrow && (
             <button
               onClick={handleBackClick}
-              className={`absolute -top-4 -left-4 z-50 bg-white hover:bg-gray-50 border border-orange-300 rounded-full p-3 shadow-lg transition-all duration-300 ${showBackArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className="fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-2 shadow-md transition-all duration-300"
               title="Terug"
             >
               <svg
-                className="w-5 h-5 text-orange-600"
+            className="w-5 h-5 text-gray-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -151,30 +131,76 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
             </button>
           )}
 
-          <div className="p-6 sm:p-8 flex flex-col items-center justify-center gap-6">
-            <div className="w-full flex justify-center mt-2 mb-8">
+      {/* Logo Section - With slow entrance animation (1.5s) - 1.5x bigger */}
+      <div className="flex-shrink-0 pt-8 pb-4 md:pt-10 md:pb-6">
+        <div className="flex justify-center">
               <Image
                 src="/logo.svg"
                 alt="Gastro-Elite Logo"
-                width={240}
-                height={240}
+            width={420}
+            height={420}
                 priority
-                className="w-[240px] h-[240px] max-w-[70vw] max-h-[70vw] object-contain"
+            className={`w-72 h-72 md:w-96 md:h-96 object-contain transition-all ease-out ${
+              logoAnimated ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-90 blur-md'
+            }`}
+            style={{ 
+              minWidth: '270px', 
+              minHeight: '270px',
+              transitionDuration: '1500ms'
+            }}
               />
             </div>
+        {/* Tagline */}
+        <p className="text-center text-gray-600 text-sm md:text-base mt-2 px-6 max-w-sm mx-auto">
+          {t.tagline}
+        </p>
+      </div>
 
-            <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-6">
-              <div
-                className={`w-full overflow-hidden transition-all duration-300 ease-out ${
-                  showFormFields
-                    ? "max-h-[420px] opacity-100 translate-y-0"
-                    : "max-h-0 opacity-0 -translate-y-4 pointer-events-none"
-                }`}
-              >
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      E-mail
+      {/* Login Card - Centered (no animation) */}
+      <div className="flex-1 flex items-start md:items-center justify-center px-4 pb-8">
+        <div className="w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+            {/* Show only button initially */}
+            {!showFormFields ? (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-center text-gray-800">
+                  {t.welcomeTitle}
+                </h2>
+                
+                {/* Large Login Button */}
+                <button
+                  onClick={handleLoginClick}
+                  className="w-full py-4 px-6 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl active:scale-[0.98] transition-all duration-200"
+                  style={{ backgroundColor: '#ff6b35' }}
+                >
+                  {t.login}
+                </button>
+
+                {/* Register Link */}
+                <div className="pt-4 border-t border-gray-100 text-center">
+                  <p className="text-gray-600 text-sm">
+                    {t.noAccount}{" "}
+                    <Link
+                      href="/register"
+                      className="font-semibold text-orange-500 hover:text-orange-600 transition-colors"
+                    >
+                      {t.register}
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Form Fields - Animated appearance */
+              <div className="animate-fadeSlideIn">
+                <h2 className="text-xl font-semibold text-center text-gray-800 mb-6">
+                  {t.welcomeTitle}
+                </h2>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="animate-fadeSlideIn" style={{ animationDelay: '100ms' }}>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                        {t.emailAddress}
                     </label>
                     <input
                       type="email"
@@ -182,66 +208,96 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       ref={emailInputRef}
-                      className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="Voer uw e-mailadres in"
-                      required={showFormFields}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-base"
+                        placeholder="uw@email.nl"
+                        required
+                        autoComplete="email"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                      Wachtwoord
+                    <div className="animate-fadeSlideIn" style={{ animationDelay: '200ms' }}>
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                        {t.password}
                     </label>
                     <input
                       type="password"
                       id="password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="Voer uw wachtwoord in"
-                      required={showFormFields}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-base"
+                        placeholder={t.yourPassword}
+                        required
+                        autoComplete="current-password"
                     />
                   </div>
 
                   {error && (
-                    <div className="text-red-600 text-sm text-center py-2">
+                      <div className="bg-red-50 border border-red-200 text-red-600 text-sm text-center py-3 px-4 rounded-xl animate-fadeSlideIn">
                       {error}
                     </div>
                   )}
-                </div>
               </div>
 
-              <div className="w-full flex justify-center">
+                  {/* Login Button */}
+                  <div className="animate-fadeSlideIn" style={{ animationDelay: '300ms' }}>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full max-w-sm py-3 px-6 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full py-3.5 px-6 text-white rounded-xl font-semibold text-base transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-[0.98]"
                   style={{ backgroundColor: '#ff6b35' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e55a2b')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff6b35')}
-                >
-                  {loading ? "Bezig..." : "Inloggen"}
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                          </svg>
+                          {t.processing}
+                        </span>
+                      ) : t.login}
                 </button>
               </div>
             </form>
 
-            <div className="mt-6 text-center pt-4 border-t border-gray-100 w-full">
+                {/* Register Link */}
+                <div className="mt-6 pt-6 border-t border-gray-100 text-center animate-fadeSlideIn" style={{ animationDelay: '400ms' }}>
               <p className="text-gray-600 text-sm">
-                Nog geen account?{" "}
+                    {t.noAccount}{" "}
                 <Link
                   href="/register"
-                  className="font-medium transition-colors"
-                  style={{ color: '#FF6A00' }}
+                      className="font-semibold text-orange-500 hover:text-orange-600 transition-colors"
                 >
-                  Registreren
+                      {t.register}
                 </Link>
               </p>
             </div>
           </div>
-        </div>
+            )}
+          </div>
 
+          {/* Footer */}
+          <p className="text-center text-gray-400 text-xs mt-6">
+            © 2024 Gastro-Elite. {t.allRightsReserved}
+          </p>
+        </div>
       </div>
+
+      {/* Custom animation styles */}
+      <style jsx>{`
+        @keyframes fadeSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeSlideIn {
+          animation: fadeSlideIn 0.4s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
-

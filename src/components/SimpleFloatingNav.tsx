@@ -44,13 +44,18 @@ function SimpleNavItem({ href, iconPath, label }: NavItem) {
       onClick={handleClick}
       style={isDisabled ? { pointerEvents: 'none', opacity: 0.5 } : {}}
     >
-      <div className="nav-icon">
+      <div className="w-full h-full flex items-center justify-center">
         <Image
           src={iconPath}
           alt={`${label} icon`}
           width={24}
           height={24}
           className="nav-icon-img"
+          style={{ 
+            width: '24px', 
+            height: '24px',
+            objectFit: 'contain'
+          }}
         />
       </div>
     </Link>

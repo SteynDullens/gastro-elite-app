@@ -8,25 +8,31 @@ export async function GET(request: NextRequest) {
     const token = request.cookies.get('auth-token')?.value;
 
     if (!token) {
+      console.log('👤 /api/auth/me - No token found');
       return NextResponse.json(
         { error: 'No authentication token' },
         { status: 401 }
       );
     }
 
+    console.log('👤 /api/auth/me - Token found, verifying...');
     const decoded = verifyToken(token);
     if (!decoded) {
+      console.log('👤 /api/auth/me - Token verification failed');
       return NextResponse.json(
         { error: 'Invalid token' },
         { status: 401 }
       );
     }
 
+    console.log('👤 /api/auth/me - Token valid, user ID:', decoded.id);
+
     // Check cache first
     const cacheKey = `user-${decoded.id}`;
     let user = getCachedData(cacheKey);
     
     if (!user) {
+      console.log('👤 /api/auth/me - Fetching user from database...');
       // Find user using Prisma with graceful error handling
       user = await safeDbOperation(async (prisma) => {
         return await prisma.user.findUnique({
@@ -41,7 +47,12 @@ export async function GET(request: NextRequest) {
       // Cache the user data
       if (user) {
         setCachedData(cacheKey, user);
+        console.log('👤 /api/auth/me - User found and cached');
+      } else {
+        console.log('👤 /api/auth/me - User not found in database');
       }
+    } else {
+      console.log('👤 /api/auth/me - User loaded from cache');
     }
 
     if (!user || (user as any).isBlocked) {
@@ -53,6 +64,7 @@ export async function GET(request: NextRequest) {
           error: 'Database not available'
         });
       }
+      console.log('👤 /api/auth/me - User not found or blocked');
       return NextResponse.json(
         { error: 'User not found or inactive' },
         { status: 401 }
@@ -62,13 +74,14 @@ export async function GET(request: NextRequest) {
     // Remove password from user object
     const { password: _, ...userWithoutPassword } = user as any;
 
+    console.log('👤 /api/auth/me - Success for:', userWithoutPassword.email);
     return NextResponse.json({
       success: true,
       user: userWithoutPassword
     });
 
   } catch (error: any) {
-    console.error('Auth me error:', error);
+    console.error('❌ Auth me error:', error.message);
     return NextResponse.json(
       { error: 'Authentication failed' },
       { status: 401 }

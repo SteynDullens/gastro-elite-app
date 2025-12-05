@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect } from 'react';
 import Image from "next/image";
 
 export default function MobileRedirectPage() {
-  useEffect(() => {
-    // Redirect to a working mobile page
-    window.location.href = '/login';
-  }, []);
+  // No redirect - just show the mobile landing page
 
   return (
     <div style={{

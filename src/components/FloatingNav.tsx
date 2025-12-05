@@ -12,9 +12,40 @@ interface NavItem {
   label: string;
 }
 
-function FloatingNavItem({ href, iconPath, label }: NavItem) {
+interface FloatingNavItemProps extends NavItem {
+  disabled?: boolean;
+  disabledTitle?: string;
+}
+
+function FloatingNavItem({ href, iconPath, label, disabled, disabledTitle }: FloatingNavItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href;
+  
+  if (disabled) {
+    return (
+      <div
+        className="nav-item disabled"
+        title={disabledTitle}
+        style={{ 
+          opacity: 0.4, 
+          cursor: 'not-allowed',
+          pointerEvents: 'none'
+        }}
+      >
+        <Image
+          src={iconPath}
+          alt={`${label} icon`}
+          width={24}
+          height={24}
+          className="w-6 h-6"
+          style={{ filter: 'grayscale(100%)' }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      </div>
+    );
+  }
   
   return (
     <Link
@@ -52,10 +83,6 @@ export default function FloatingNav() {
     { href: "/account", iconPath: "/account-icon.png", label: t.account },
   ];
 
-  if (!user) {
-    return null;
-  }
-
   return (
     <nav className="floating-nav">
       {navItems.map((item) => (
@@ -64,6 +91,8 @@ export default function FloatingNav() {
           href={item.href}
           iconPath={item.iconPath}
           label={item.label}
+          disabled={!user}
+          disabledTitle={t.loginToAccess}
         />
       ))}
     </nav>

@@ -50,6 +50,28 @@ export default function RecipeForm() {
   const { addRecipe } = useRecipes();
   const { t } = useLanguage();
   const router = useRouter();
+
+  // Category translation map
+  const translateCategory = (category: string): string => {
+    const categoryMap: Record<string, string> = {
+      'Voorgerecht': t.catVoorgerecht,
+      'Tussengerecht': t.catTussengerecht,
+      'Hoofdgerecht': t.catHoofdgerecht,
+      'Dessert': t.catDessert,
+      'Groentegarnituur': t.catGroentegarnituur,
+      'Vlees': t.catVlees,
+      'Vis': t.catVis,
+      'Vegetarisch': t.catVegetarisch,
+      'Zetmeelgarnituur': t.catZetmeelgarnituur,
+      'Gebonden sauzen': t.catGebondenSauzen,
+      'Koude sauzen': t.catKoudeSauzen,
+      'Soepen': t.catSoepen,
+      'Salades': t.catSalades,
+      'Brood': t.catBrood,
+      'Dranken': t.catDranken,
+    };
+    return categoryMap[category] || category;
+  };
   
   const [formData, setFormData] = useState<RecipeFormData>({
     name: "",
@@ -148,11 +170,11 @@ export default function RecipeForm() {
 
   const addIngredient = () => {
     if (!newIngredient.name.trim()) {
-      alert("Voer een ingrediënt naam in");
+      alert(t.enterIngredientName);
       return;
     }
     if (!newIngredient.quantity || newIngredient.quantity.trim() === "" || parseFloat(newIngredient.quantity) <= 0) {
-      alert("Voer een geldige hoeveelheid in");
+      alert(t.enterValidQuantity);
       return;
     }
     
@@ -193,7 +215,7 @@ export default function RecipeForm() {
     
     // Validate quantity
     if (!editingDraft.quantity || editingDraft.quantity.trim() === "" || parseFloat(editingDraft.quantity) <= 0) {
-      alert("Voer een geldige hoeveelheid in");
+      alert(t.enterValidQuantity);
       return;
     }
     
@@ -231,10 +253,10 @@ export default function RecipeForm() {
       if (res.ok && data.url) {
         setFormData({ ...formData, image: data.url });
       } else {
-        alert(data.error || "Upload mislukt");
+        alert(data.error || t.uploadFailed);
       }
     } catch (err) {
-      alert("Upload mislukt");
+      alert(t.uploadFailed);
     } finally {
       setIsUploading(false);
     }
@@ -329,7 +351,7 @@ export default function RecipeForm() {
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         console.error('Recipe creation failed:', err);
-        alert(err.error || 'Opslaan mislukt');
+        alert(err.error || t.saveFailed);
         return;
       }
       
@@ -361,7 +383,7 @@ export default function RecipeForm() {
       setImagePreview("");
     router.push("/recipes");
     } catch (err) {
-      alert('Opslaan mislukt');
+      alert(t.saveFailed);
     }
   };
 
@@ -383,14 +405,24 @@ export default function RecipeForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Receptfoto</label>
+          <label className="block text-sm font-medium mb-2">{t.recipePhoto}</label>
           <div className="flex items-center gap-3">
-          <input
+            <input
               type="file"
               accept="image/*"
               onChange={handleImageChange}
-              className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+              className="hidden"
+              id="recipe-image-input"
             />
+            <label
+              htmlFor="recipe-image-input"
+              className="cursor-pointer px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+            >
+              {t.chooseFile}
+            </label>
+            <span className="text-sm text-gray-500">
+              {imagePreview || formData.image ? (imagePreview || formData.image).split('/').pop() : t.noFileSelected}
+            </span>
           </div>
           {(imagePreview || formData.image) && (
             <div className="mt-3">
@@ -398,14 +430,14 @@ export default function RecipeForm() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={imagePreview || formData.image} alt="Preview" className="h-full object-cover" />
               </div>
-              {isUploading && <p className="text-sm text-gray-500 mt-1">Bezig met uploaden...</p>}
+              {isUploading && <p className="text-sm text-gray-500 mt-1">{t.uploading}</p>}
             </div>
           )}
         </div>
       </div>
 
         <div>
-        <label className="block text-sm font-medium mb-2">Batch grootte</label>
+        <label className="block text-sm font-medium mb-2">{t.batchSize}</label>
         <div className="grid grid-cols-2 gap-3">
           <input
             type="number"
@@ -419,16 +451,16 @@ export default function RecipeForm() {
             onChange={(e) => setFormData({ ...formData, batchUnit: e.target.value as RecipeFormData["batchUnit"] })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="stuks">stuks</option>
-            <option value="personen">personen</option>
-            <option value="portie">portie</option>
+            <option value="stuks">{t.pieces}</option>
+            <option value="personen">{t.persons}</option>
+            <option value="portie">{t.portion}</option>
           </select>
         </div>
         </div>
 
       {/* Categories multi-select */}
         <div>
-        <label className="block text-sm font-medium mb-2">Categorieën</label>
+        <label className="block text-sm font-medium mb-2">{t.categories}</label>
         <div className="relative">
           <div className="flex items-center gap-2">
             <button
@@ -439,11 +471,11 @@ export default function RecipeForm() {
               {formData.categories.length > 0 ? (
                 <span className="flex flex-wrap gap-1">
                   {formData.categories.map((c) => (
-                    <span key={c} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">{c}</span>
+                    <span key={c} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">{translateCategory(c)}</span>
                   ))}
                 </span>
               ) : (
-                <span className="text-gray-500">Selecteer categorieën</span>
+                <span className="text-gray-500">{t.selectCategories}</span>
               )}
             </button>
             {categoryOpen && (
@@ -455,7 +487,7 @@ export default function RecipeForm() {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
               >
-                Gereed
+                {t.done}
               </button>
             )}
           </div>
@@ -472,11 +504,11 @@ export default function RecipeForm() {
                         onChange={() => toggleCategory(c)}
                         className="accent-orange-500"
                       />
-                      <span className="text-sm flex-1 select-none">{c}</span>
+                      <span className="text-sm flex-1 select-none">{translateCategory(c)}</span>
                       <button
                         type="button"
                         onClick={async () => {
-                          const newName = prompt('Nieuwe categorienaam', c);
+                          const newName = prompt(t.newCategory, c);
                           if (!newName || newName.trim() === c) return;
                           try {
                             const res = await fetch('/api/recipes/categories', {
@@ -485,14 +517,14 @@ export default function RecipeForm() {
                               body: JSON.stringify({ oldName: c, newName: newName.trim() })
                             });
                             const data = await res.json();
-                            if (!res.ok) { alert(data.error || 'Wijzigen mislukt'); return; }
+                            if (!res.ok) { alert(data.error || t.changeFailed); return; }
                             // Update lists
                             setAllCategories(prev => prev.map(n => n === c ? data.category.name : n).sort((a, b) => a.localeCompare(b)));
                             setFormData(prev => ({ ...prev, categories: prev.categories.map(n => n === c ? data.category.name : n) }));
                           } catch {}
                         }}
                         className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 p-1"
-                        title="Bewerken"
+                        title={t.edit}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                           <path d="M21.731 2.269a2.625 2.625 0 00-3.714 0l-1.157 1.157 3.714 3.714 1.157-1.157a2.625 2.625 0 000-3.714zM19.513 8.199l-3.714-3.714L3.879 16.405a4.5 4.5 0 00-1.112 1.846l-.799 2.796a.75.75 0 00.927.927l2.796-.799a4.5 4.5 0 001.846-1.112L19.513 8.199z" />
@@ -501,20 +533,20 @@ export default function RecipeForm() {
                       <button
                         type="button"
                         onClick={async () => {
-                          if (!confirm(`Categorie '${c}' verwijderen?`)) return;
+                          if (!confirm(t.deleteCategory)) return;
                           try {
                             const res = await fetch('/api/recipes/categories', {
                               method: 'DELETE',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ name: c })
                             });
-                            if (!res.ok) { const d = await res.json().catch(()=>({})); alert(d.error || 'Verwijderen mislukt'); return; }
+                            if (!res.ok) { const d = await res.json().catch(()=>({})); alert(d.error || t.deleteFailed); return; }
                             setAllCategories(prev => prev.filter(n => n !== c));
                             setFormData(prev => ({ ...prev, categories: prev.categories.filter(n => n !== c) }));
                           } catch {}
                         }}
                         className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 p-1"
-                        title="Verwijderen"
+                        title={t.delete}
                       >
                         ✕
                       </button>
@@ -530,7 +562,7 @@ export default function RecipeForm() {
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewCategory(); } if (e.key === 'Escape') setCategoryOpen(false); }}
                   className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nieuwe categorie..."
+                  placeholder={t.newCategory}
                 />
                 <button
                   type="button"
@@ -540,7 +572,7 @@ export default function RecipeForm() {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
                 >
-                  Toevoegen
+                  {t.add}
                 </button>
               </div>
               <div className="flex justify-end mt-2">
@@ -552,7 +584,7 @@ export default function RecipeForm() {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
                 >
-                  Gereed
+                  {t.done}
                 </button>
               </div>
             </div>
@@ -562,7 +594,7 @@ export default function RecipeForm() {
 
       {/* Save Destination Selector */}
       <div>
-        <label className="block text-sm font-medium mb-2">Opslaan in</label>
+        <label className="block text-sm font-medium mb-2">{t.saveIn}</label>
         <div className="space-y-2">
           <label className="flex items-center">
             <input
@@ -573,7 +605,7 @@ export default function RecipeForm() {
               onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
               className="mr-2"
             />
-            <span className="text-sm">Persoonlijke database</span>
+            <span className="text-sm">{t.personalDatabase}</span>
           </label>
           <label className="flex items-center">
             <input
@@ -584,7 +616,7 @@ export default function RecipeForm() {
               onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
               className="mr-2"
             />
-            <span className="text-sm">Bedrijfsdatabase</span>
+            <span className="text-sm">{t.businessDatabase}</span>
           </label>
           <label className="flex items-center">
             <input
@@ -595,11 +627,11 @@ export default function RecipeForm() {
               onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
               className="mr-2"
             />
-            <span className="text-sm">Beide databases</span>
+            <span className="text-sm">{t.bothDatabases}</span>
           </label>
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Kies waar je recept opgeslagen moet worden
+          {t.chooseWhereToSave}
         </p>
       </div>
 
@@ -653,7 +685,7 @@ export default function RecipeForm() {
                     onClick={() => beginEditIngredient(ingredient.id)}
                     className="text-red-600 hover:text-red-800 inline-flex items-center justify-center align-middle"
                     aria-label="Edit ingredient"
-                    title="Bewerken"
+                    title={t.edit}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                       <path d="M21.731 2.269a2.625 2.625 0 00-3.714 0l-1.157 1.157 3.714 3.714 1.157-1.157a2.625 2.625 0 000-3.714zM19.513 8.199l-3.714-3.714L3.879 16.405a4.5 4.5 0 00-1.112 1.846l-.799 2.796a.75.75 0 00.927.927l2.796-.799a4.5 4.5 0 001.846-1.112L19.513 8.199z" />
@@ -664,7 +696,7 @@ export default function RecipeForm() {
                 onClick={() => removeIngredient(ingredient.id)}
                 className="text-red-600 hover:text-red-800"
                     aria-label="Remove ingredient"
-                    title="Verwijderen"
+                    title={t.delete}
               >
                 ✕
               </button>
@@ -716,11 +748,11 @@ export default function RecipeForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Bereidingswijze</label>
+        <label className="block text-sm font-medium mb-2">{t.preparationMethod}</label>
         <div className="space-y-3">
           {formData.steps.map((step, idx) => (
             <div key={idx} className="flex items-start gap-2 p-3 bg-gray-50 rounded-md w-full transition-all">
-              <div className="text-gray-600 whitespace-nowrap w-20 shrink-0">Stap {idx + 1}.</div>
+              <div className="text-gray-600 whitespace-nowrap w-20 shrink-0">{t.step} {idx + 1}.</div>
               {editingStepIndex === idx || !step || !step.trim() ? (
                 <>
         <textarea
@@ -732,7 +764,7 @@ export default function RecipeForm() {
                     onKeyDown={(e) => onStepKeyDown(e, idx)}
                     rows={1}
                     className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-40 overflow-auto leading-normal"
-                    placeholder={`Omschrijving stap ${idx + 1}`}
+                    placeholder={`${t.stepDescription} ${idx + 1}`}
                     autoFocus
                   />
                 </>
@@ -744,7 +776,7 @@ export default function RecipeForm() {
                     onClick={() => beginEditStep(idx)}
                     className="text-red-600 hover:text-red-800 inline-flex items-center justify-center align-middle"
                     aria-label="Edit step"
-                    title="Bewerken"
+                    title={t.edit}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                       <path d="M21.731 2.269a2.625 2.625 0 00-3.714 0l-1.157 1.157 3.714 3.714 1.157-1.157a2.625 2.625 0 000-3.714zM19.513 8.199l-3.714-3.714L3.879 16.405a4.5 4.5 0 00-1.112 1.846l-.799 2.796a.75.75 0 00.927.927l2.796-.799a4.5 4.5 0 001.846-1.112L19.513 8.199z" />
@@ -755,7 +787,7 @@ export default function RecipeForm() {
                     onClick={() => removeStep(idx)}
                     className="text-red-600 hover:text-red-800"
                     aria-label="Remove step"
-                    title="Verwijderen"
+                    title={t.delete}
                   >
                     ✕
                   </button>
@@ -771,7 +803,7 @@ export default function RecipeForm() {
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
           >
-            Stap toevoegen
+            {t.addStep}
           </button>
         </div>
       </div>

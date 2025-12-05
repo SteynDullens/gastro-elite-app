@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { safeDbOperation } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -14,13 +14,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
-    const applications = await prisma.company.findMany({
+    const applications = await safeDbOperation(async (prisma) => {
+      return await prisma.company.findMany({
       include: {
         owner: {
           select: {
             firstName: true,
             lastName: true,
-            email: true
+              email: true,
+              phone: true
           }
         }
       },
@@ -28,6 +30,11 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       }
     });
+    });
+
+    if (!applications) {
+      return NextResponse.json([]);
+    }
 
     // Transform to match the expected format
     const transformedApplications = applications.map(app => ({
@@ -37,7 +44,7 @@ export async function GET(request: NextRequest) {
       kvk_number: app.kvkNumber,
       address: app.address,
       contact_name: `${app.owner.firstName} ${app.owner.lastName}`,
-      contact_phone: (app.owner as any).phone || '',
+      contact_phone: app.owner.phone || '',
       contact_email: app.owner.email,
       kvk_document_path: (app as any).kvkDocumentPath || '',
       status: app.status,
@@ -72,11 +79,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Update company status using Prisma
-    await prisma.company.update({
+    await safeDbOperation(async (prisma) => {
+      return await prisma.company.update({
       where: { id: companyId },
       data: {
         status: status === 'approved' ? 'approved' : 'rejected'
       }
+      });
     });
 
     return NextResponse.json({ message: `Company application ${status} successfully` });

@@ -4,12 +4,17 @@ import { PrismaClient } from '@prisma/client';
 let prismaInstance: PrismaClient | null = null;
 let isConnected = false;
 let connectionError: Error | null = null;
+let lastConnectionTime = 0;
 
 // Development mode flag - allows app to run without DB
 const DEV_MODE_NO_DB = process.env.DEV_MODE_NO_DB === 'true';
 
+// Connection refresh interval (4 minutes - before typical 5min timeout)
+const CONNECTION_REFRESH_INTERVAL = 4 * 60 * 1000;
+
 /**
  * Get Prisma client instance with graceful error handling
+ * Creates a new instance if the connection might be stale
  */
 export function getPrisma(): PrismaClient | null {
   if (DEV_MODE_NO_DB) {
@@ -17,11 +22,23 @@ export function getPrisma(): PrismaClient | null {
     return null;
   }
 
+  const now = Date.now();
+  const connectionAge = now - lastConnectionTime;
+  
+  // If connection is potentially stale, create a new client
+  if (prismaInstance && connectionAge > CONNECTION_REFRESH_INTERVAL) {
+    console.log('🔄 Refreshing Prisma connection (age: ' + Math.round(connectionAge / 1000) + 's)');
+    prismaInstance.$disconnect().catch(() => {});
+    prismaInstance = null;
+    isConnected = false;
+  }
+
   if (!prismaInstance) {
     try {
       prismaInstance = new PrismaClient({
         log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
       });
+      lastConnectionTime = now;
     } catch (error) {
       console.error('Failed to create Prisma client:', error);
       connectionError = error as Error;
@@ -72,26 +89,51 @@ export async function safeDbOperation<T>(
     return fallback ? fallback() : null;
   }
 
-  const prisma = getPrisma();
+  let prisma = getPrisma();
   if (!prisma) {
     console.warn('⚠️  Prisma client not available - using fallback');
     return fallback ? fallback() : null;
   }
 
   try {
-    return await operation(prisma);
-  } catch (error) {
-    console.error('Database operation failed:', error);
+    const result = await operation(prisma);
+    isConnected = true;
+    lastConnectionTime = Date.now();
+    return result;
+  } catch (error: any) {
+    console.error('Database operation failed:', error.message);
     connectionError = error as Error;
+    isConnected = false;
     
-    // Try to reconnect once
-    if (!isConnected) {
-      const reconnected = await testConnection();
-      if (reconnected) {
+    // Check if it's a connection error that we should retry
+    const isConnectionError = 
+      error.message?.includes('connect') ||
+      error.message?.includes('timed out') ||
+      error.message?.includes('ECONNREFUSED') ||
+      error.message?.includes('closed') ||
+      error.code === 'P1001' ||
+      error.code === 'P1002' ||
+      error.code === 'P2024';
+    
+    if (isConnectionError) {
+      console.log('🔄 Connection error detected, attempting reconnect...');
+      
+      // Force create a new client
+      if (prismaInstance) {
+        prismaInstance.$disconnect().catch(() => {});
+        prismaInstance = null;
+      }
+      
+      prisma = getPrisma();
+      if (prisma) {
         try {
-          return await operation(prisma);
-        } catch (retryError) {
-          console.error('Database operation failed after retry:', retryError);
+          const result = await operation(prisma);
+          console.log('✅ Reconnection successful');
+          isConnected = true;
+          lastConnectionTime = Date.now();
+          return result;
+        } catch (retryError: any) {
+          console.error('Database operation failed after retry:', retryError.message);
         }
       }
     }

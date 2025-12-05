@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { safeDbOperation } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -18,9 +18,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findUnique({
       where: { id: decoded.id },
       include: { ownedCompany: true, company: true }
+      });
     });
 
     if (!user || user.isBlocked) {
@@ -46,7 +48,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure categories exist (create if missing) and collect IDs
-    const categoryRecords = await Promise.all(
+    const categoryRecords = await safeDbOperation(async (prisma) => {
+      return await Promise.all(
       (categories || []).map(async (catName) => {
         const trimmed = (catName || '').trim();
         if (!trimmed) return null;
@@ -55,6 +58,7 @@ export async function POST(request: NextRequest) {
         return prisma.category.create({ data: { name: trimmed } });
       })
     );
+    }) || [];
 
     // Create recipe(s) based on saveTo option
     const recipeData = {
@@ -88,7 +92,8 @@ export async function POST(request: NextRequest) {
     if (saveTo === 'personal' || saveTo === 'both') {
       // Create personal recipe
       console.log('Creating personal recipe for user:', user.id);
-      recipe = await prisma.recipe.create({
+      recipe = await safeDbOperation(async (prisma) => {
+        return await prisma.recipe.create({
         data: {
           ...recipeData,
           userId: user.id,
@@ -97,26 +102,29 @@ export async function POST(request: NextRequest) {
         },
         include: { categories: true, ingredients: true },
       });
-      console.log('Personal recipe created:', recipe.id);
+      });
+      console.log('Personal recipe created:', recipe?.id);
     } else if (saveTo === 'business') {
       // Create business recipe
       if (!user.ownedCompany && !user.company) {
         return NextResponse.json({ error: 'User must be associated with a company to create business recipes' }, { status: 400 });
       }
       
-      recipe = await prisma.recipe.create({
+      recipe = await safeDbOperation(async (prisma) => {
+        return await prisma.recipe.create({
         data: {
           ...recipeData,
           companyId: user.ownedCompany?.id || user.company?.id,
           originalOwnerId: user.id,
         },
         include: { categories: true, ingredients: true },
+        });
       });
     } else {
       return NextResponse.json({ error: 'Invalid saveTo option' }, { status: 400 });
     }
 
-    console.log('Recipe creation successful, returning recipe:', recipe.id);
+    console.log('Recipe creation successful, returning recipe:', recipe?.id);
     return NextResponse.json({ recipe });
   } catch (error) {
     console.error('Create recipe error:', error);
@@ -124,5 +132,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create recipe' }, { status: 500 });
   }
 }
-
-

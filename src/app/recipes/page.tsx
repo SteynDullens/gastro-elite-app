@@ -28,16 +28,16 @@ export default function RecipesPage() {
           <BackBubble href="/" className="absolute top-4 left-4 z-10" />
           
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Recepturen</h1>
-            <p className="text-gray-600">Beheer uw receptencollectie</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.recipes}</h1>
+            <p className="text-gray-600">{t.manageRecipeCollection}</p>
           </div>
           
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">📋</div>
-              <h2 className="text-xl font-semibold mb-2">Recepturen</h2>
+              <h2 className="text-xl font-semibold mb-2">{t.recipes}</h2>
               <p className="text-gray-600 text-sm">
-                Log in of maak een account aan om uw recepturen te bekijken.
+                {t.loginToViewRecipes}
               </p>
             </div>
 
@@ -55,7 +55,7 @@ export default function RecipesPage() {
                 href="/register" 
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 text-center rounded-xl font-medium hover:bg-gray-300 transition-all duration-200"
               >
-                Account aanmaken
+                {t.createAccount}
               </a>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function RecipesPage() {
       <BackBubble href="/" className="absolute top-4 left-4 z-10" />
       
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Recepturen</h1>
+        <h1 className="text-3xl font-bold">{t.recipes}</h1>
       </div>
       
       {/* Recipe List */}
@@ -79,7 +79,7 @@ export default function RecipesPage() {
             <div className="text-gray-500">{t.loading}</div>
           </div>
         ) : (
-          <RecipeList recipes={recipes.map(recipe => ({
+          <RecipeList recipes={(recipes || []).map(recipe => ({
             ...recipe,
             categories: recipe.categories.map((cat: any) => typeof cat === 'string' ? cat : cat.name)
           }))} />
@@ -88,5 +88,3 @@ export default function RecipesPage() {
     </div>
   );
 }
-
-

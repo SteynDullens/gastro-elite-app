@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
+import { safeDbOperation } from '@/lib/prisma';
 import { 
   sendBusinessRegistrationNotification, 
   sendPersonalRegistrationConfirmation,
@@ -54,17 +54,14 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     console.log('🔍 Checking if user exists:', email);
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findUnique({
       where: { email }
+      });
     });
 
     if (existingUser) {
-      console.log('❌ User already exists:', {
-        id: existingUser.id,
-        email: existingUser.email,
-        firstName: existingUser.firstName,
-        lastName: existingUser.lastName
-      });
+      console.log('❌ User already exists');
       return NextResponse.json(
         { error: 'User with this email already exists' },
         { status: 400 }
@@ -79,11 +76,12 @@ export async function POST(request: NextRequest) {
     // Generate email verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    let user, company = null;
+    let user: any, company: any = null;
 
     if (role === 'business') {
       // Create business user with company
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await safeDbOperation(async (prisma) => {
+        return await prisma.$transaction(async (tx) => {
         // Create user first
         const newUser = await tx.user.create({
           data: {
@@ -118,13 +116,15 @@ export async function POST(request: NextRequest) {
         });
 
         return { user: newUser, company: newCompany };
+        });
       });
 
-      user = result.user;
-      company = result.company;
+      user = result?.user;
+      company = result?.company;
     } else {
       // Create regular user
-      user = await prisma.user.create({
+      user = await safeDbOperation(async (prisma) => {
+        return await prisma.user.create({
         data: {
           firstName,
           lastName,
@@ -136,22 +136,25 @@ export async function POST(request: NextRequest) {
           emailVerificationToken: verificationToken,
         }
       });
+      });
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Failed to create user' },
+        { status: 500 }
+      );
     }
 
     // Send appropriate email notifications (only if email is configured)
     try {
-      // Check if email is configured
       console.log('Email configuration check:');
       console.log('SMTP_USER:', process.env.SMTP_USER ? 'SET' : 'NOT SET');
       console.log('SMTP_PASS:', process.env.SMTP_PASS ? 'SET' : 'NOT SET');
-      console.log('SMTP_HOST:', process.env.SMTP_HOST || 'NOT SET');
-      console.log('SMTP_PORT:', process.env.SMTP_PORT || 'NOT SET');
-      console.log('Parsed SMTP_PORT:', parseInt(process.env.SMTP_PORT || '465'));
       
       if (process.env.SMTP_USER && process.env.SMTP_PASS) {
         console.log('Email is configured, sending verification email...');
         if (role === 'business' && company) {
-          // Send business registration data to admin
           const businessData: BusinessRegistrationData = {
             firstName,
             lastName,
@@ -170,7 +173,6 @@ export async function POST(request: NextRequest) {
             kvkDocumentPath
           };
           
-          // Send emails synchronously
           try {
             console.log('📧 Sending business registration emails...');
             await Promise.all([
@@ -182,7 +184,6 @@ export async function POST(request: NextRequest) {
             console.error('❌ Error sending business registration emails:', error);
           }
         } else {
-          // Send personal registration confirmation
           const personalData: PersonalRegistrationData = {
             firstName,
             lastName,
@@ -192,12 +193,10 @@ export async function POST(request: NextRequest) {
           
           try {
             console.log('📧 Sending personal registration email...');
-            const emailResult = await sendPersonalRegistrationConfirmation(personalData, verificationToken);
-            console.log('✅ Personal registration email sent successfully:', emailResult);
+            await sendPersonalRegistrationConfirmation(personalData, verificationToken);
+            console.log('✅ Personal registration email sent successfully');
           } catch (error) {
             console.error('❌ Error sending personal registration email:', error);
-            console.error('Error details:', (error as any).message, (error as any).code);
-            console.error('Full error:', error);
           }
         }
       } else {
@@ -205,7 +204,6 @@ export async function POST(request: NextRequest) {
       }
     } catch (emailError) {
       console.error('Error sending email notifications:', emailError);
-      // Continue with registration even if email sending fails
     }
 
     // Check if email is configured to determine verification status
@@ -213,9 +211,11 @@ export async function POST(request: NextRequest) {
     
     // For testing: auto-verify if email is not configured
     if (!emailConfigured) {
-      await prisma.user.update({
+      await safeDbOperation(async (prisma) => {
+        return await prisma.user.update({
         where: { id: user.id },
         data: { emailVerified: true }
+        });
       });
     }
     
@@ -226,21 +226,15 @@ export async function POST(request: NextRequest) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        emailVerified: emailConfigured ? false : true // Auto-verify if no email config
+        emailVerified: emailConfigured ? false : true
       },
       message: role === 'business' 
-        ? 'Bedrijfsaccount registratie succesvol. Controleer je e-mail voor verificatie en noteer dat je account binnen 24 uur wordt beoordeeld.'
+        ? 'Bedrijfsaccount registratie succesvol. Controleer je e-mail voor verificatie.'
         : 'Account registratie succesvol. Controleer je e-mail voor verificatie.'
     });
 
   } catch (error: any) {
     console.error('Registration error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-      stack: error.stack
-    });
     return NextResponse.json(
       { error: error.message || 'Registration failed' },
       { status: 500 }
