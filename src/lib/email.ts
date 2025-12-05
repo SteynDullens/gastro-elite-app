@@ -213,7 +213,11 @@ export async function sendPersonalRegistrationConfirmation(
     
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ Personal registration email sent successfully!');
-    console.log('Message ID:', result.messageId);
+    console.log('📧 Message ID:', result.messageId);
+    console.log('📧 Response:', result.response);
+    console.log('📧 Accepted:', result.accepted);
+    console.log('📧 Rejected:', result.rejected);
+    console.log('📧 Envelope:', JSON.stringify(result.envelope));
     return true;
   } catch (error: any) {
     console.error('❌ Error sending personal registration confirmation');
