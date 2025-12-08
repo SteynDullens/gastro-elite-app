@@ -164,15 +164,26 @@ export default function AccountPage() {
   }, [user, isBusiness, fetchCompanyData]);
 
   // Business functions
+  // Helper to get the company ID (from ownedCompany for business owners, or companyId for employees)
+  const getCompanyId = () => {
+    if (user?.ownedCompany?.id) {
+      return user.ownedCompany.id; // Business owner
+    }
+    return user?.companyId; // Employee or null
+  };
+
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusinessError("");
     setBusinessSuccess("");
 
+    // Get the company ID (prefer ownedCompany.id for business owners)
+    const companyId = getCompanyId();
+    
     // Validate that user has a company ID
-    if (!user?.companyId) {
+    if (!companyId) {
       setBusinessError("U heeft geen bedrijfsaccount. Alleen bedrijfseigenaren kunnen medewerkers uitnodigen.");
-      console.error('❌ User does not have a companyId:', user);
+      console.error('❌ User does not have a companyId or ownedCompany:', user);
       return;
     }
 
@@ -189,7 +200,7 @@ export default function AccountPage() {
     }
 
     try {
-      const response = await fetch(`/api/company/${user.companyId}/employees`, {
+      const response = await fetch(`/api/company/${companyId}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +275,7 @@ export default function AccountPage() {
         }
       } else {
         // Remove employee
-        const response = await fetch(`/api/company/${user.companyId}/employees/${employeeId}`, {
+        const response = await fetch(`/api/company/${companyId}/employees/${employeeId}`, {
           method: 'DELETE',
         });
 
