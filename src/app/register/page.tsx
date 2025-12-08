@@ -799,17 +799,29 @@ export default function RegisterPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       KvK Uittreksel *
                     </label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    />
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleFileChange}
+                        required
+                        className="hidden"
+                        id="kvk-document-input"
+                      />
+                      <label
+                        htmlFor="kvk-document-input"
+                        className="cursor-pointer px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors text-sm font-medium"
+                      >
+                        {t.chooseFile}
+                      </label>
+                      <span className="text-sm text-gray-600">
+                        {kvkDocument ? kvkDocument.name : t.noFileSelected}
+                      </span>
+                    </div>
                     {kvkDocument && (
                       <p className="text-xs text-green-600 mt-2">
-                        ✓ Bestand geselecteerd: {kvkDocument.name}
+                        ✓ {kvkDocument.name}
                       </p>
                     )}
                     <p className="text-xs text-gray-500 mt-2">
