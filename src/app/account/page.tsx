@@ -1156,41 +1156,57 @@ export default function AccountPage() {
                         {/* Three dots menu */}
                         <div className="relative">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               const menuId = employee.invitationId || employee.id;
+                              if (!menuId) return;
                               setOpenMenuId(openMenuId === menuId ? null : menuId);
                             }}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                             aria-label="Menu"
+                            type="button"
                           >
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                               <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                             </svg>
                           </button>
                           
-                          {(openMenuId === employee.id || openMenuId === employee.invitationId) && (
+                          {openMenuId && (openMenuId === employee.id || openMenuId === employee.invitationId) && (
                             <>
                               <div 
                                 className="fixed inset-0 z-10" 
-                                onClick={() => setOpenMenuId(null)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                }}
                               />
-                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
+                              <div 
+                                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
-                                  onClick={() => {
-                                    handleRemoveEmployee(employee.invitationId || employee.id);
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const idToRemove = employee.invitationId || employee.id;
+                                    if (idToRemove) {
+                                      handleRemoveEmployee(idToRemove);
+                                    }
                                     setOpenMenuId(null);
                                   }}
                                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                  type="button"
                                 >
                                   Verwijderen
                                 </button>
                                 {employee.status === 'accepted' && (
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       // TODO: Implement permissions modal
                                       setOpenMenuId(null);
                                     }}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                    type="button"
                                   >
                                     Machtigingen
                                   </button>
