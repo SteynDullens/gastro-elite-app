@@ -59,12 +59,12 @@ export async function GET(
       }));
 
       // Try to get invitations (if model exists)
+      // Show ALL invitations (pending, accepted, rejected) so users can see the full history
       let pendingInvitations: any[] = [];
       try {
         const invitations = await prisma.employeeInvitation.findMany({
           where: {
-            companyId: companyId,
-            status: 'pending'
+            companyId: companyId
           },
           include: {
             invitedUser: {
@@ -81,15 +81,32 @@ export async function GET(
           }
         });
 
+        // Show ALL invitations, including those for existing users
+        // If a user is already an employee AND has an accepted invitation, we'll filter it out to avoid duplicates
+        // But if they have a pending invitation, show it so users can see "Uitnodiging verzonden" status
+        const employeeIds = new Set(employeeList.map(emp => emp.id));
+        
         pendingInvitations = invitations
-          .filter(inv => !inv.invitedUser)
+          .filter(inv => {
+            // Show invitations without an invitedUser (new user invitations)
+            if (!inv.invitedUser) return true;
+            
+            // For existing users: only filter out if invitation is 'accepted' AND user is already an employee
+            // This way, pending invitations for employees still show up
+            if (inv.status === 'accepted' && employeeIds.has(inv.invitedUser.id)) {
+              return false; // Don't show accepted invitations for users who are already employees (duplicate)
+            }
+            
+            // Show all other invitations (pending, rejected, or accepted for non-employees)
+            return true;
+          })
           .map(inv => ({
             id: inv.id,
-            firstName: null,
-            lastName: null,
+            firstName: inv.invitedUser?.firstName || null,
+            lastName: inv.invitedUser?.lastName || null,
             email: inv.email,
             phone: null,
-            status: 'pending' as const,
+            status: inv.status as 'pending' | 'accepted' | 'rejected',
             createdAt: inv.createdAt,
             invitationId: inv.id
           }));
@@ -329,18 +346,8 @@ export async function POST(
           data: { companyId: company.id }
         });
 
-        // Update invitation to accepted (if invitation was created)
-        if (invitation) {
-          try {
-            await prisma.employeeInvitation.update({
-              where: { id: invitation.id },
-              data: { status: 'accepted' }
-            });
-          } catch (updateError: any) {
-            console.warn('Could not update invitation status:', updateError);
-            // Continue anyway - user is already linked
-          }
-        }
+        // Keep invitation as 'pending' so it shows in the list with status "Uitnodiging verzonden"
+        // Don't update to 'accepted' immediately - let it show as pending so users can see the invitation was sent
 
         // Send invitation email to existing user
         try {
@@ -368,12 +375,16 @@ export async function POST(
           
           if (!emailSent) {
             emailError = 'E-mail kon niet worden verzonden, maar gebruiker is toegevoegd';
+            console.error('❌ Email sending failed - check SMTP configuration and logs');
           }
         } catch (emailErr: any) {
           console.error('❌ Email sending error:', emailErr);
           console.error('Error details:', {
             name: emailErr.name,
             message: emailErr.message,
+            code: emailErr.code,
+            command: emailErr.command,
+            responseCode: emailErr.responseCode,
             stack: emailErr.stack
           });
           emailError = `E-mail fout: ${emailErr.message}`;
