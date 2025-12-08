@@ -59,6 +59,12 @@ export default function RegisterPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addressLookupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const formDataRef = useRef(formData);
+  
+  // Keep ref in sync with formData
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
 
   // Handle mount and scroll
   useEffect(() => {
@@ -125,15 +131,21 @@ export default function RegisterPage() {
           clearTimeout(addressLookupTimeoutRef.current);
         }
 
-        // Get current values and clean postal code
-        const rawPostalCode = field === 'postalCode' ? value : formData.businessAddress.postalCode;
-        const currentPostalCode = rawPostalCode.trim().toUpperCase().replace(/\s+/g, '');
-        const currentHouseNumber = field === 'houseNumber' ? value : formData.businessAddress.houseNumber;
+        // Get current values - use the updated state, not the old formData
+        const updatedPostalCode = field === 'postalCode' ? value : formData.businessAddress.postalCode;
+        const updatedHouseNumber = field === 'houseNumber' ? value : formData.businessAddress.houseNumber;
+        
+        const currentPostalCode = updatedPostalCode.trim().toUpperCase().replace(/\s+/g, '');
+        const currentHouseNumber = updatedHouseNumber.trim();
         
         // Debounce: wait 1 second after user stops typing, then lookup
         addressLookupTimeoutRef.current = setTimeout(() => {
-          if (currentPostalCode && currentHouseNumber && currentPostalCode.length >= 6 && currentHouseNumber.trim().length > 0) {
-            lookupAddress(currentPostalCode, currentHouseNumber);
+          // Use ref to get latest values after timeout
+          const finalPostalCode = formDataRef.current.businessAddress.postalCode.trim().toUpperCase().replace(/\s+/g, '');
+          const finalHouseNumber = formDataRef.current.businessAddress.houseNumber.trim();
+          
+          if (finalPostalCode && finalHouseNumber && finalPostalCode.length >= 6 && finalHouseNumber.length > 0) {
+            lookupAddress(finalPostalCode, finalHouseNumber);
           }
         }, 1000); // 1 second delay
       }
@@ -191,18 +203,18 @@ export default function RegisterPage() {
       } else {
         console.warn('Address lookup returned no results:', data.message || data.error);
         // Don't clear existing values, just leave them as-is so user can edit manually
+        // Make fields editable if lookup failed
+        setFormData(prev => ({
+          ...prev,
+          businessAddress: {
+            ...prev.businessAddress,
+            // Keep existing values, don't clear them
+          }
+        }));
       }
     } catch (error) {
       console.error('Address lookup error:', error);
-      // Clear fields on error
-      setFormData(prev => ({
-        ...prev,
-        businessAddress: {
-          ...prev.businessAddress,
-          street: '',
-          city: ''
-        }
-      }));
+      // Don't clear fields on error - let user fill manually
     } finally {
       setAddressLookupLoading(false);
     }
@@ -673,14 +685,17 @@ export default function RegisterPage() {
                           onBlur={(e) => {
                             // Trigger lookup immediately when user leaves the field
                             const postalCode = e.target.value.trim().toUpperCase().replace(/\s+/g, '');
-                            const houseNumber = formData.businessAddress.houseNumber.trim();
-                            if (postalCode.length >= 6 && houseNumber.length > 0) {
-                              // Clear any pending timeout
-                              if (addressLookupTimeoutRef.current) {
-                                clearTimeout(addressLookupTimeoutRef.current);
+                            // Use ref to get latest state
+                            setTimeout(() => {
+                              const currentHouseNumber = formDataRef.current.businessAddress.houseNumber.trim();
+                              if (postalCode.length >= 6 && currentHouseNumber.length > 0) {
+                                // Clear any pending timeout
+                                if (addressLookupTimeoutRef.current) {
+                                  clearTimeout(addressLookupTimeoutRef.current);
+                                }
+                                lookupAddress(postalCode, currentHouseNumber);
                               }
-                              lookupAddress(postalCode, houseNumber);
-                            }
+                            }, 100);
                           }}
                           placeholder="1234AB"
                           maxLength={7}
@@ -701,15 +716,18 @@ export default function RegisterPage() {
                           onChange={handleInputChange}
                           onBlur={(e) => {
                             // Trigger lookup immediately when user leaves the field
-                            const postalCode = formData.businessAddress.postalCode.trim().toUpperCase().replace(/\s+/g, '');
                             const houseNumber = e.target.value.trim();
-                            if (postalCode.length >= 6 && houseNumber.length > 0) {
-                              // Clear any pending timeout
-                              if (addressLookupTimeoutRef.current) {
-                                clearTimeout(addressLookupTimeoutRef.current);
+                            // Use ref to get latest state
+                            setTimeout(() => {
+                              const currentPostalCode = formDataRef.current.businessAddress.postalCode.trim().toUpperCase().replace(/\s+/g, '');
+                              if (currentPostalCode.length >= 6 && houseNumber.length > 0) {
+                                // Clear any pending timeout
+                                if (addressLookupTimeoutRef.current) {
+                                  clearTimeout(addressLookupTimeoutRef.current);
+                                }
+                                lookupAddress(currentPostalCode, houseNumber);
                               }
-                              lookupAddress(postalCode, houseNumber);
-                            }
+                            }, 100);
                           }}
                           placeholder="12"
                           className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
@@ -743,7 +761,7 @@ export default function RegisterPage() {
                             onChange={handleInputChange}
                             required
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.street ? 'bg-gray-50' : 'bg-white'}`}
-                            readOnly={!!formData.businessAddress.street}
+                            readOnly={!!formData.businessAddress.street && !addressLookupLoading}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.street ? "" : "Wordt automatisch ingevuld")}
                             data-testid="street-input"
                           />
@@ -778,7 +796,7 @@ export default function RegisterPage() {
                             onChange={handleInputChange}
                             required
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.city ? 'bg-gray-50' : 'bg-white'}`}
-                            readOnly={!!formData.businessAddress.city}
+                            readOnly={!!formData.businessAddress.city && !addressLookupLoading}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.city ? "" : "Wordt automatisch ingevuld")}
                             data-testid="city-input"
                           />
