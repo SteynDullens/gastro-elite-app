@@ -239,7 +239,7 @@ export default function RegisterPage() {
       postalCode: formData.businessAddress.postalCode,
       houseNumber: formData.businessAddress.houseNumber
     });
-  }, [formData.businessAddress.street, formData.businessAddress.city]);
+  }, [formData.businessAddress.street, formData.businessAddress.city, formData.businessAddress.postalCode, formData.businessAddress.houseNumber]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
