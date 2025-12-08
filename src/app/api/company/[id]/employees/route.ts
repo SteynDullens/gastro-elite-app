@@ -233,6 +233,12 @@ export async function POST(
               id: true,
               name: true
             }
+          },
+          company: {
+            select: {
+              id: true,
+              name: true
+            }
           }
         }
       });
@@ -241,16 +247,26 @@ export async function POST(
       let emailError: string | null = null;
 
       if (existingUser) {
-        // User exists - check if they're already an employee
+        // IMPORTANT: Only personal users (without business accounts) can be invited as employees
+        // Check if user owns a business account - business users cannot be employees
+        if (existingUser.ownedCompany) {
+          console.error('❌ Cannot invite business user as employee:', {
+            email: existingUser.email,
+            companyName: existingUser.ownedCompany.name
+          });
+          throw new Error('Alleen persoonlijke gebruikers kunnen worden uitgenodigd als medewerker. Deze gebruiker heeft al een bedrijfsaccount.');
+        }
+
+        // Check if user is already an employee of this company
         const isAlreadyEmployee = company.employees.some(emp => emp.id === existingUser.id);
         
         if (isAlreadyEmployee) {
           throw new Error('Deze gebruiker is al lid van uw team');
         }
 
-        // Check if user owns a business account
-        if (existingUser.ownedCompany) {
-          throw new Error('Deze gebruiker heeft al een bedrijfsaccount en kan niet als medewerker worden toegevoegd');
+        // Check if user is already an employee of another company
+        if (existingUser.company && existingUser.company.id !== companyId) {
+          throw new Error(`Deze gebruiker is al medewerker van ${existingUser.company.name} en kan niet bij meerdere bedrijven werken.`);
         }
 
         // Create invitation record (with error handling for migration issues)
