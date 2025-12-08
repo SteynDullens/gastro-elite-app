@@ -102,8 +102,6 @@ export async function safeDbOperation<T>(
     return result;
   } catch (error: any) {
     console.error('Database operation failed:', error.message);
-    connectionError = error as Error;
-    isConnected = false;
     
     // Check if it's a connection error that we should retry
     const isConnectionError = 
@@ -115,7 +113,20 @@ export async function safeDbOperation<T>(
       error.code === 'P1002' ||
       error.code === 'P2024';
     
-    if (isConnectionError) {
+    // Only treat as connection error if it's actually a connection issue
+    // Business logic errors (like "Company not found") should not be treated as connection errors
+    const isBusinessLogicError = 
+      error.message?.includes('Company not found') ||
+      error.message?.includes('uitnodiging') ||
+      error.message?.includes('gebruiker') ||
+      error.message?.includes('team') ||
+      error.message?.includes('bedrijfsaccount') ||
+      error.message?.includes('permission') ||
+      error.message?.includes('Permission');
+    
+    if (isConnectionError && !isBusinessLogicError) {
+      connectionError = error as Error;
+      isConnected = false;
       console.log('🔄 Connection error detected, attempting reconnect...');
       
       // Force create a new client
@@ -134,8 +145,18 @@ export async function safeDbOperation<T>(
           return result;
         } catch (retryError: any) {
           console.error('Database operation failed after retry:', retryError.message);
+          connectionError = retryError as Error;
+          isConnected = false;
         }
       }
+    } else if (!isBusinessLogicError) {
+      // For other errors, still mark as connection error but don't retry
+      connectionError = error as Error;
+      isConnected = false;
+    } else {
+      // Business logic errors - store them but don't mark as connection failure
+      connectionError = error as Error;
+      // Don't set isConnected = false for business logic errors
     }
 
     return fallback ? fallback() : null;
