@@ -260,13 +260,20 @@ export default function AccountPage() {
   };
 
   const handleRemoveEmployee = async (employeeId: string) => {
+    const companyId = getCompanyId();
+    
+    if (!companyId) {
+      setBusinessError("U heeft geen bedrijfsaccount.");
+      return;
+    }
+
     try {
       // Check if it's an invitation (pending) or actual employee
       const employee = employees.find(emp => (emp.id === employeeId) || (emp.invitationId === employeeId));
       
       if (employee?.invitationId) {
         // Delete invitation
-        const response = await fetch(`/api/company/${user?.companyId}/invitations/${employeeId}`, {
+        const response = await fetch(`/api/company/${companyId}/invitations/${employeeId}`, {
           method: 'DELETE',
         });
 
