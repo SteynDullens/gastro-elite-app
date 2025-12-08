@@ -188,12 +188,13 @@ export async function POST(
           throw new Error('Er is al een uitnodiging verzonden naar dit e-mailadres');
         }
       } catch (invCheckError: any) {
-        // If model doesn't exist, skip this check
-        if (!invCheckError.message.includes('uitnodiging')) {
-          console.warn('Could not check for existing invitations:', invCheckError.message);
-        } else {
+        // If model doesn't exist or other database error, skip this check
+        if (invCheckError.message && invCheckError.message.includes('uitnodiging')) {
+          // This is our intentional error, re-throw it
           throw invCheckError;
         }
+        // Otherwise, it's a database/model error - log and continue
+        console.warn('Could not check for existing invitations (model may not exist):', invCheckError.message || invCheckError.code);
       }
 
       // Check if user exists
@@ -237,14 +238,12 @@ export async function POST(
               status: 'pending'
             }
           });
+          console.log('✅ Invitation record created:', invitation.id);
         } catch (invitationError: any) {
-          console.error('Error creating invitation record:', invitationError);
-          // If model doesn't exist, continue without invitation tracking
-          if (invitationError.code === 'P2001' || invitationError.message?.includes('model') || invitationError.message?.includes('does not exist')) {
-            console.warn('EmployeeInvitation model not found - migration may not have run. Continuing without invitation tracking.');
-          } else {
-            throw invitationError;
-          }
+          console.warn('⚠️ Could not create invitation record:', invitationError.code || invitationError.message);
+          // If model doesn't exist or other database error, continue without invitation tracking
+          // Don't throw - we can still add the employee and send email
+          invitation = null;
         }
 
         // Link user to company (personal account joining as employee)
@@ -324,14 +323,12 @@ export async function POST(
               status: 'pending'
             }
           });
+          console.log('✅ Invitation record created:', invitation.id);
         } catch (invitationError: any) {
-          console.error('Error creating invitation record:', invitationError);
-          // If model doesn't exist, continue without invitation tracking
-          if (invitationError.code === 'P2001' || invitationError.message?.includes('model') || invitationError.message?.includes('does not exist')) {
-            console.warn('EmployeeInvitation model not found - migration may not have run. Continuing without invitation tracking.');
-          } else {
-            throw invitationError;
-          }
+          console.warn('⚠️ Could not create invitation record:', invitationError.code || invitationError.message);
+          // If model doesn't exist or other database error, continue without invitation tracking
+          // Don't throw - we can still send the email
+          invitation = null;
         }
 
         // Send registration invitation

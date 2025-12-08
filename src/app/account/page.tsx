@@ -203,10 +203,13 @@ export default function AccountPage() {
         fetchCompanyData(); // Refresh employee list
       } else {
         const errorData = await response.json();
-        setBusinessError(errorData.error || errorData.message || "Uitnodiging verzenden mislukt");
+        console.error('API Error Response:', errorData);
+        const errorMessage = errorData.error || errorData.message || "Uitnodiging verzenden mislukt";
+        setBusinessError(errorMessage);
       }
-    } catch (error) {
-      setBusinessError("Uitnodiging verzenden mislukt");
+    } catch (error: any) {
+      console.error('Network/Request Error:', error);
+      setBusinessError(error?.message || "Uitnodiging verzenden mislukt. Controleer de console voor details.");
     }
   };
 
