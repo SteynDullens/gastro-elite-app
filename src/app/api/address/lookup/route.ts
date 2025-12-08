@@ -42,11 +42,24 @@ export async function GET(request: NextRequest) {
           const postcodeData = await postcodeResponse.json();
           console.log('PostcodeAPI.nu response:', postcodeData);
           
-          if (postcodeData.street && postcodeData.city) {
+          // PostcodeAPI.nu might return city as 'city' or 'plaats' or 'woonplaats'
+          const city = postcodeData.city || postcodeData.plaats || postcodeData.woonplaats || '';
+          const street = postcodeData.street || postcodeData.straat || '';
+          
+          if (street && city) {
             return NextResponse.json({
               success: true,
-              street: postcodeData.street,
-              city: postcodeData.city,
+              street: street,
+              city: city,
+              postalCode: cleanPostalCode,
+              houseNumber: houseNumber
+            });
+          } else if (street || city) {
+            // Return partial data if available
+            return NextResponse.json({
+              success: true,
+              street: street || '',
+              city: city || '',
               postalCode: cleanPostalCode,
               houseNumber: houseNumber
             });
@@ -80,16 +93,33 @@ export async function GET(request: NextRequest) {
         
         // Extract street name - try multiple fields
         let street = '';
+        let city = '';
+        
         if (address.straatnaam) {
           street = address.straatnaam;
         } else if (address.weergavenaam) {
           // Parse weergavenaam: "Straatnaam 123, 1234AB Plaatsnaam"
           const weergave = address.weergavenaam;
-          // Remove house number and postal code
-          street = weergave.split(',')[0].trim().replace(/\s+\d+.*$/, '').trim();
+          const parts = weergave.split(',');
+          // Street is before the first comma
+          street = parts[0].trim().replace(/\s+\d+.*$/, '').trim();
+          // City is after the comma (remove postal code)
+          if (parts.length > 1) {
+            city = parts[1].trim().replace(/^\d{4}[A-Z]{2}\s*/, '').trim();
+          }
         }
         
-        const city = address.woonplaatsnaam || '';
+        // Use woonplaatsnaam if available, otherwise use parsed city from weergavenaam
+        if (address.woonplaatsnaam) {
+          city = address.woonplaatsnaam;
+        } else if (!city && address.weergavenaam) {
+          // Fallback: try to extract city from weergavenaam differently
+          const weergaveParts = address.weergavenaam.split(',');
+          if (weergaveParts.length > 1) {
+            // Remove postal code pattern and get city
+            city = weergaveParts[1].trim().replace(/^\d{4}[A-Z]{2}\s*/, '').trim();
+          }
+        }
         
         console.log('Extracted values:', { 
           street, 
