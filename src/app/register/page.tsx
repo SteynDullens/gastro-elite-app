@@ -217,6 +217,16 @@ export default function RegisterPage() {
     };
   }, []);
 
+  // Debug: Log when address fields change
+  useEffect(() => {
+    console.log('Address fields changed:', {
+      street: formData.businessAddress.street,
+      city: formData.businessAddress.city,
+      postalCode: formData.businessAddress.postalCode,
+      houseNumber: formData.businessAddress.houseNumber
+    });
+  }, [formData.businessAddress.street, formData.businessAddress.city]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     console.log('File selected:', file);
@@ -726,12 +736,19 @@ export default function RegisterPage() {
                           <input
                             type="text"
                             name="businessAddress.street"
-                            value={formData.businessAddress.street || ''}
+                            value={formData.businessAddress.street ?? ''}
                             onChange={handleInputChange}
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.street ? 'bg-gray-50' : 'bg-white'}`}
                             readOnly={!!formData.businessAddress.street}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.street ? "" : "Wordt automatisch ingevuld")}
+                            data-testid="street-input"
                           />
+                          {/* Debug display */}
+                          {process.env.NODE_ENV === 'development' && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              Debug: {formData.businessAddress.street || '(empty)'}
+                            </div>
+                          )}
                           {addressLookupLoading && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                               <svg className="animate-spin h-5 w-5 text-orange-500" viewBox="0 0 24 24">
@@ -752,11 +769,12 @@ export default function RegisterPage() {
                           <input
                             type="text"
                             name="businessAddress.city"
-                            value={formData.businessAddress.city || ''}
+                            value={formData.businessAddress.city ?? ''}
                             onChange={handleInputChange}
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.city ? 'bg-gray-50' : 'bg-white'}`}
-                            readOnly={!!formData.businessAddress.city && !addressLookupLoading}
+                            readOnly={!!formData.businessAddress.city}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.city ? "" : "Wordt automatisch ingevuld")}
+                            data-testid="city-input"
                           />
                           {addressLookupLoading && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -764,6 +782,12 @@ export default function RegisterPage() {
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                               </svg>
+                            </div>
+                          )}
+                          {/* Debug display */}
+                          {process.env.NODE_ENV === 'development' && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              Debug: {formData.businessAddress.city || '(empty)'}
                             </div>
                           )}
                         </div>
