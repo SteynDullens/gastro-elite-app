@@ -103,6 +103,7 @@ export default function AccountPage() {
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [businessError, setBusinessError] = useState("");
   const [businessSuccess, setBusinessSuccess] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const fetchCompanyData = useCallback(async () => {
     if (!user?.companyId) return;
@@ -209,20 +210,38 @@ export default function AccountPage() {
     }
   };
 
-  const handleRemoveEmployee = async (employeeId: number) => {
+  const handleRemoveEmployee = async (employeeId: string) => {
     try {
-      const response = await fetch(`/api/company/${user?.companyId}/employees/${employeeId}`, {
-        method: 'DELETE',
-      });
+      // Check if it's an invitation (pending) or actual employee
+      const employee = employees.find(emp => (emp.id === employeeId) || (emp.invitationId === employeeId));
+      
+      if (employee?.invitationId) {
+        // Delete invitation
+        const response = await fetch(`/api/company/${user?.companyId}/invitations/${employeeId}`, {
+          method: 'DELETE',
+        });
 
-      if (response.ok) {
-        setBusinessSuccess("Employee removed successfully!");
-        fetchCompanyData(); // Refresh employee list
+        if (response.ok) {
+          setBusinessSuccess("Uitnodiging verwijderd!");
+          fetchCompanyData();
+        } else {
+          setBusinessError("Uitnodiging verwijderen mislukt");
+        }
       } else {
-        setBusinessError("Medewerker verwijderen mislukt");
+        // Remove employee
+        const response = await fetch(`/api/company/${user?.companyId}/employees/${employeeId}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          setBusinessSuccess("Medewerker verwijderd!");
+          fetchCompanyData();
+        } else {
+          setBusinessError("Medewerker verwijderen mislukt");
+        }
       }
     } catch (error) {
-      setBusinessError("Medewerker verwijderen mislukt");
+      setBusinessError("Verwijderen mislukt");
     }
   };
 
@@ -1099,31 +1118,88 @@ export default function AccountPage() {
               ) : (
                 <div className="space-y-3">
                   {employees.map((employee) => (
-                    <div key={employee.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-3">
-                                <span className="text-sm font-medium text-gray-600">
-                                  {employee.firstName?.[0]}{employee.lastName?.[0]}
-                                </span>
-                              </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{employee.firstName} {employee.lastName}</div>
-                        <div className="text-sm text-gray-600">{employee.email}</div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`text-xs px-2 py-1 rounded ${
-                          employee.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    <div key={employee.id || employee.invitationId} className="flex justify-between items-center p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+                      <div className="flex items-center flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-3 flex-shrink-0">
+                          <span className="text-sm font-medium text-gray-600">
+                            {employee.firstName?.[0] || employee.email[0].toUpperCase()}
+                            {employee.lastName?.[0] || ''}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {employee.firstName ? (
+                            <>
+                              <div className="font-medium text-gray-900">{employee.firstName} {employee.lastName}</div>
+                              <div className="text-sm text-gray-600 truncate">{employee.email}</div>
+                            </>
+                          ) : (
+                            <div className="font-medium text-gray-900 truncate">{employee.email}</div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${
+                          employee.status === 'accepted' 
+                            ? 'bg-green-100 text-green-800' 
+                            : employee.status === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {employee.status === 'accepted' ? 'Actief' : 'In afwachting'}
-                              </span>
-                      <button
-                        onClick={() => handleRemoveEmployee(employee.id)}
-                        className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
-                      >
-                        Verwijderen
-                      </button>
-                            </div>
+                          {employee.status === 'accepted' 
+                            ? 'Geaccepteerd' 
+                            : employee.status === 'rejected'
+                            ? 'Afgewezen'
+                            : 'Uitnodiging verzonden'}
+                        </span>
+                        
+                        {/* Three dots menu */}
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              const menuId = employee.invitationId || employee.id;
+                              setOpenMenuId(openMenuId === menuId ? null : menuId);
+                            }}
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                            aria-label="Menu"
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                            </svg>
+                          </button>
+                          
+                          {(openMenuId === employee.id || openMenuId === employee.invitationId) && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setOpenMenuId(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
+                                <button
+                                  onClick={() => {
+                                    handleRemoveEmployee(employee.invitationId || employee.id);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  Verwijderen
+                                </button>
+                                {employee.status === 'accepted' && (
+                                  <button
+                                    onClick={() => {
+                                      // TODO: Implement permissions modal
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                  >
+                                    Machtigingen
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

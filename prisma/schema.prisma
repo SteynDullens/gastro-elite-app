@@ -20,6 +20,7 @@ model User {
   company                 Company?  @relation("CompanyEmployees", fields: [companyId], references: [id])
   companyId               String?
   ownedCompany            Company?  @relation("CompanyOwner")
+  invitations             EmployeeInvitation[]
   recipes                 Recipe[]
   originalRecipes         Recipe[]  @relation("OriginalRecipeOwner")
   isBlocked               Boolean   @default(false)
@@ -47,9 +48,25 @@ model Company {
   owner           User      @relation("CompanyOwner", fields: [ownerId], references: [id])
   ownerId         String    @unique
   employees       User[]    @relation("CompanyEmployees")
+  invitations     EmployeeInvitation[]
   recipes         Recipe[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model EmployeeInvitation {
+  id          String    @id @default(cuid())
+  email       String
+  status      String    @default("pending") // pending, accepted, rejected
+  company     Company   @relation(fields: [companyId], references: [id])
+  companyId   String
+  invitedBy   String?   // User ID who sent the invitation
+  invitedUser User?     @relation(fields: [invitedUserId], references: [id])
+  invitedUserId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  @@index([companyId])
+  @@index([email])
 }
 
 model Category {

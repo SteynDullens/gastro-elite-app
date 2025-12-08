@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const employees = await safeDbOperation(async (prisma) => {
+    const result = await safeDbOperation(async (prisma) => {
       const company = await prisma.company.findUnique({
         where: { id: companyId },
         include: {
@@ -37,6 +37,21 @@ export async function GET(
               phone: true,
               createdAt: true
             }
+          },
+          invitations: {
+            include: {
+              invitedUser: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
           }
         }
       });
@@ -45,22 +60,40 @@ export async function GET(
         return null;
       }
 
-      return company.employees.map(employee => ({
+      // Combine employees and pending invitations
+      const employeeList = company.employees.map(employee => ({
         id: employee.id,
         firstName: employee.firstName,
         lastName: employee.lastName,
         email: employee.email,
         phone: employee.phone,
-        status: 'accepted', // Since they're linked, they're accepted
-        createdAt: employee.createdAt
+        status: 'accepted' as const,
+        createdAt: employee.createdAt,
+        invitationId: null
       }));
+
+      // Add pending invitations that don't have a user yet
+      const pendingInvitations = company.invitations
+        .filter(inv => inv.status === 'pending' && !inv.invitedUser)
+        .map(inv => ({
+          id: inv.id,
+          firstName: null,
+          lastName: null,
+          email: inv.email,
+          phone: null,
+          status: 'pending' as const,
+          createdAt: inv.createdAt,
+          invitationId: inv.id
+        }));
+
+      return [...employeeList, ...pendingInvitations];
     });
 
-    if (employees === null) {
+    if (result === null) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ employees });
+    return NextResponse.json({ employees: result });
   } catch (error) {
     console.error('Error fetching employees:', error);
     return NextResponse.json(
@@ -96,6 +129,8 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    const userId = decodedToken.userId;
+
     // Get company and owner info
     const result = await safeDbOperation(async (prisma) => {
       const company = await prisma.company.findUnique({
@@ -113,6 +148,12 @@ export async function POST(
               id: true,
               email: true
             }
+          },
+          invitations: {
+            where: {
+              email: email.toLowerCase().trim(),
+              status: 'pending'
+            }
           }
         }
       });
@@ -121,9 +162,14 @@ export async function POST(
         throw new Error('Company not found');
       }
 
+      // Check if invitation already exists
+      if (company.invitations.length > 0) {
+        throw new Error('Er is al een uitnodiging verzonden naar dit e-mailadres');
+      }
+
       // Check if user exists
       const existingUser = await prisma.user.findUnique({
-        where: { email },
+        where: { email: email.toLowerCase().trim() },
         include: {
           ownedCompany: {
             select: {
@@ -133,6 +179,9 @@ export async function POST(
           }
         }
       });
+
+      let emailSent = false;
+      let emailError: string | null = null;
 
       if (existingUser) {
         // User exists - check if they're already an employee
@@ -147,46 +196,100 @@ export async function POST(
           throw new Error('Deze gebruiker heeft al een bedrijfsaccount en kan niet als medewerker worden toegevoegd');
         }
 
+        // Create invitation record
+        const invitation = await prisma.employeeInvitation.create({
+          data: {
+            email: email.toLowerCase().trim(),
+            companyId: company.id,
+            invitedBy: userId,
+            invitedUserId: existingUser.id,
+            status: 'pending'
+          }
+        });
+
         // Link user to company (personal account joining as employee)
         await prisma.user.update({
           where: { id: existingUser.id },
           data: { companyId: company.id }
         });
 
+        // Update invitation to accepted
+        await prisma.employeeInvitation.update({
+          where: { id: invitation.id },
+          data: { status: 'accepted' }
+        });
+
         // Send invitation email to existing user
-        const employeeName = `${existingUser.firstName} ${existingUser.lastName}`;
-        const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
-        const userLanguage = language || 'nl';
-        
-        await sendEmployeeInvitationToExistingUser(
-          email,
-          employeeName,
-          company.name,
-          ownerName,
-          userLanguage
-        );
+        try {
+          const employeeName = `${existingUser.firstName} ${existingUser.lastName}`;
+          const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
+          const userLanguage = language || 'nl';
+          
+          emailSent = await sendEmployeeInvitationToExistingUser(
+            email,
+            employeeName,
+            company.name,
+            ownerName,
+            userLanguage
+          );
+
+          if (!emailSent) {
+            emailError = 'E-mail kon niet worden verzonden, maar gebruiker is toegevoegd';
+          }
+        } catch (emailErr: any) {
+          console.error('Email sending error:', emailErr);
+          emailError = `E-mail fout: ${emailErr.message}`;
+        }
 
         return {
           success: true,
-          message: 'Uitnodiging verzonden naar bestaande gebruiker',
-          userExists: true
+          message: emailSent 
+            ? 'Uitnodiging verzonden naar bestaande gebruiker' 
+            : 'Gebruiker toegevoegd, maar e-mail kon niet worden verzonden',
+          userExists: true,
+          emailSent,
+          emailError
         };
       } else {
-        // User doesn't exist - send registration invitation
-        const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
-        const userLanguage = language || 'nl';
-        
-        await sendEmployeeInvitationToNewUser(
-          email,
-          company.name,
-          ownerName,
-          userLanguage
-        );
+        // User doesn't exist - create invitation record
+        const invitation = await prisma.employeeInvitation.create({
+          data: {
+            email: email.toLowerCase().trim(),
+            companyId: company.id,
+            invitedBy: userId,
+            status: 'pending'
+          }
+        });
+
+        // Send registration invitation
+        try {
+          const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
+          const userLanguage = language || 'nl';
+          
+          emailSent = await sendEmployeeInvitationToNewUser(
+            email,
+            company.name,
+            ownerName,
+            userLanguage
+          );
+
+          if (!emailSent) {
+            emailError = 'E-mail kon niet worden verzonden';
+          }
+        } catch (emailErr: any) {
+          console.error('Email sending error:', emailErr);
+          emailError = `E-mail fout: ${emailErr.message}`;
+        }
 
         return {
           success: true,
-          message: 'Registratie-uitnodiging succesvol verzonden',
-          userExists: false
+          message: emailSent 
+            ? 'Registratie-uitnodiging succesvol verzonden' 
+            : 'Uitnodiging aangemaakt, maar e-mail kon niet worden verzonden',
+          userExists: false,
+          emailSent,
+          emailError,
+          invitationId: invitation.id
         };
       }
     });
