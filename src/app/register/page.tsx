@@ -628,13 +628,14 @@ export default function RegisterPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        Bedrijfstelefoon
+                        Zakelijk telefoonnummer *
                       </label>
                       <input
                         type="tel"
                         name="companyPhone"
                         value={formData.companyPhone}
                         onChange={handleInputChange}
+                        required
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                       />
                     </div>
@@ -730,7 +731,7 @@ export default function RegisterPage() {
                       {/* Straat - Third row, full width */}
                       <div className="space-y-2 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">
-                          Straat
+                          Straat *
                         </label>
                         <div className="relative">
                           <input
@@ -738,6 +739,7 @@ export default function RegisterPage() {
                             name="businessAddress.street"
                             value={formData.businessAddress.street ?? ''}
                             onChange={handleInputChange}
+                            required
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.street ? 'bg-gray-50' : 'bg-white'}`}
                             readOnly={!!formData.businessAddress.street}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.street ? "" : "Wordt automatisch ingevuld")}
@@ -763,7 +765,7 @@ export default function RegisterPage() {
                       {/* Plaats - Fourth row, full width */}
                       <div className="space-y-2 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">
-                          Plaats
+                          Plaats *
                         </label>
                         <div className="relative">
                           <input
@@ -771,6 +773,7 @@ export default function RegisterPage() {
                             name="businessAddress.city"
                             value={formData.businessAddress.city ?? ''}
                             onChange={handleInputChange}
+                            required
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.city ? 'bg-gray-50' : 'bg-white'}`}
                             readOnly={!!formData.businessAddress.city}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.city ? "" : "Wordt automatisch ingevuld")}
