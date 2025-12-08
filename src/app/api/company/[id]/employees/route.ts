@@ -150,29 +150,35 @@ export async function POST(
     console.log('✅ Authenticated user:', userId);
 
     // Get company and owner info
-    const result = await safeDbOperation(async (prisma) => {
-      const company = await prisma.company.findUnique({
-        where: { id: companyId },
-        include: {
-          owner: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          employees: {
-            select: {
-              id: true,
-              email: true
-            }
-          },
+    let result;
+    try {
+      result = await safeDbOperation(async (prisma) => {
+        if (!prisma) {
+          throw new Error('Database connection not available');
         }
-      });
 
-      if (!company) {
-        throw new Error('Company not found');
-      }
+        const company = await prisma.company.findUnique({
+          where: { id: companyId },
+          include: {
+            owner: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            employees: {
+              select: {
+                id: true,
+                email: true
+              }
+            },
+          }
+        });
+
+        if (!company) {
+          throw new Error('Company not found');
+        }
 
       // Check if invitation already exists (if model is available)
       try {
