@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
+import { getDbStatus } from '@/lib/db-connection';
 import { verifyToken } from '@/lib/auth';
 import { 
   sendEmployeeInvitationToExistingUser, 
