@@ -147,9 +147,11 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const userId = decodedToken.userId;
+    // JWT token contains 'id', not 'userId'
+    const userId = decodedToken.id || decodedToken.userId;
     console.log('✅ Authenticated user:', userId);
     console.log('🔍 Looking for company with ID:', companyId);
+    console.log('🔍 Decoded token:', { id: decodedToken.id, userId: decodedToken.userId, email: decodedToken.email });
 
     // Get company and owner info
     let result;
