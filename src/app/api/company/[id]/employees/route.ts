@@ -407,6 +407,17 @@ export async function POST(
     
     console.log('✅ Employee invitation completed:', result);
     return NextResponse.json(result);
+    } catch (dbError: any) {
+      // Handle errors from safeDbOperation
+      console.error('❌ Database operation error:', dbError);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: dbError.message || 'Database operation failed'
+        },
+        { status: 500 }
+      );
+    }
   } catch (error: any) {
     console.error('❌ Error adding employee:', error);
     console.error('Error details:', {
