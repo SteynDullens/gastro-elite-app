@@ -78,23 +78,36 @@ export default function CompanyDashboard() {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(employeeEmail)) {
+      setError("Voer een geldig e-mailadres in");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/company/${user?.companyId}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: employeeEmail }),
+        body: JSON.stringify({ 
+          email: employeeEmail,
+          language: 'nl' // Default to Dutch, can be enhanced with language context
+        }),
       });
 
       if (response.ok) {
-        setSuccess("Employee invitation sent successfully!");
+        const data = await response.json();
+        setSuccess(data.userExists 
+          ? "Uitnodiging succesvol verzonden naar bestaande gebruiker!" 
+          : "Registratie-uitnodiging succesvol verzonden!");
         setEmployeeEmail("");
         setShowAddEmployee(false);
         fetchCompanyData(); // Refresh employee list
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Uitnodiging verzenden mislukt");
+        setError(errorData.error || errorData.message || "Uitnodiging verzenden mislukt");
       }
     } catch (error) {
       setError("Uitnodiging verzenden mislukt");

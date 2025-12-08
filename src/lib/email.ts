@@ -749,6 +749,229 @@ export async function sendPasswordResetEmail(
   }
 }
 
+// Send employee invitation to existing user
+export async function sendEmployeeInvitationToExistingUser(
+  employeeEmail: string,
+  employeeName: string,
+  companyName: string,
+  companyOwnerName: string,
+  language: string = 'nl'
+): Promise<boolean> {
+  try {
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    const loginUrl = `${appUrl}/login`;
+    
+    const translations: Record<string, { subject: string; greeting: string; message: string; whatMeans: string; benefits: string[]; cta: string; footer: string }> = {
+      nl: {
+        subject: `${companyName} wil je in hun team!`,
+        greeting: `Beste ${employeeName},`,
+        message: `<strong>${companyOwnerName}</strong> van <strong style="color: #FF8C00;">${companyName}</strong> heeft je uitgenodigd om deel uit te maken van hun team op Gastro-Elite.`,
+        whatMeans: 'Wat betekent dit?',
+        benefits: [
+          `Je krijgt toegang tot de recepten van ${companyName}`,
+          'Je kunt samenwerken met je teamleden',
+          'Je behoudt je persoonlijke account'
+        ],
+        cta: 'Naar Inloggen',
+        footer: 'Log in met je bestaande account om de uitnodiging te accepteren.'
+      },
+      en: {
+        subject: `${companyName} wants you in their team!`,
+        greeting: `Dear ${employeeName},`,
+        message: `<strong>${companyOwnerName}</strong> from <strong style="color: #FF8C00;">${companyName}</strong> has invited you to join their team on Gastro-Elite.`,
+        whatMeans: 'What does this mean?',
+        benefits: [
+          `You'll get access to ${companyName}'s recipes`,
+          'You can collaborate with your team members',
+          'You keep your personal account'
+        ],
+        cta: 'Go to Login',
+        footer: 'Log in with your existing account to accept the invitation.'
+      }
+    };
+
+    const t = translations[language] || translations.nl;
+
+    const mailOptions = {
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: employeeEmail,
+      subject: t.subject,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
+              🎉 Team Uitnodiging
+            </h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              ${t.greeting}
+            </p>
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              ${t.message}
+            </p>
+
+            <!-- Info Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #FF8C00;">
+              <h2 style="color: #1f2937; margin: 0 0 12px; font-size: 18px;">
+                ${t.whatMeans}
+              </h2>
+              <ul style="color: #6b7280; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                ${t.benefits.map(benefit => `<li>${benefit}</li>`).join('')}
+              </ul>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${loginUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(255,140,0,0.4);">
+                ${t.cta}
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+              ${t.footer}
+            </p>
+
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    await getTransporter().sendMail(mailOptions);
+    console.log('✅ Employee invitation email sent to existing user:', employeeEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending employee invitation email:', error);
+    return false;
+  }
+}
+
+// Send employee invitation to new user (registration invitation)
+export async function sendEmployeeInvitationToNewUser(
+  employeeEmail: string,
+  companyName: string,
+  companyOwnerName: string,
+  language: string = 'nl'
+): Promise<boolean> {
+  try {
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    const registerUrl = `${appUrl}/register`;
+    
+    const translations: Record<string, { subject: string; greeting: string; message: string; whatGet: string; benefits: string[]; cta: string; footer: string }> = {
+      nl: {
+        subject: `Registreer en word lid van het team van ${companyName}!`,
+        greeting: `Beste toekomstige collega,`,
+        message: `<strong>${companyOwnerName}</strong> van <strong style="color: #FF8C00;">${companyName}</strong> heeft je uitgenodigd om deel uit te maken van hun team op Gastro-Elite.`,
+        whatGet: 'Wat krijg je?',
+        benefits: [
+          `Toegang tot alle recepten van ${companyName}`,
+          'Samenwerken met je teamleden',
+          'Gratis persoonlijk account',
+          'Professioneel receptenbeheer'
+        ],
+        cta: 'Account Aanmaken',
+        footer: 'Maak een gratis account aan om de uitnodiging te accepteren en direct te beginnen.'
+      },
+      en: {
+        subject: `Register and join ${companyName}'s team!`,
+        greeting: `Dear future colleague,`,
+        message: `<strong>${companyOwnerName}</strong> from <strong style="color: #FF8C00;">${companyName}</strong> has invited you to join their team on Gastro-Elite.`,
+        whatGet: 'What do you get?',
+        benefits: [
+          `Access to all recipes from ${companyName}`,
+          'Collaborate with your team members',
+          'Free personal account',
+          'Professional recipe management'
+        ],
+        cta: 'Create Account',
+        footer: 'Create a free account to accept the invitation and get started right away.'
+      }
+    };
+
+    const t = translations[language] || translations.nl;
+
+    const mailOptions = {
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: employeeEmail,
+      subject: t.subject,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
+              🚀 Word Lid van Ons Team!
+            </h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              ${t.greeting}
+            </p>
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              ${t.message}
+            </p>
+
+            <!-- Benefits Card -->
+            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #FF8C00;">
+              <h2 style="color: #1f2937; margin: 0 0 16px; font-size: 18px;">
+                ${t.whatGet}
+              </h2>
+              <ul style="color: #6b7280; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                ${t.benefits.map(benefit => `<li>✓ ${benefit}</li>`).join('')}
+              </ul>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${registerUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(255,140,0,0.4);">
+                ${t.cta}
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+              ${t.footer}
+            </p>
+
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    await getTransporter().sendMail(mailOptions);
+    console.log('✅ Employee registration invitation email sent to:', employeeEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending employee registration invitation email:', error);
+    return false;
+  }
+}
+
 export async function testEmailConfiguration(): Promise<boolean> {
   try {
     const emailConfig = getEmailConfig();
