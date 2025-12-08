@@ -190,12 +190,23 @@ export async function POST(
           throw new Error('Company not found');
         }
 
-        // Verify that the authenticated user owns this company or is an employee
+        // Verify that the authenticated user owns this company
+        // Only owners can add employees, not regular employees
         const userOwnsCompany = company.ownerId === userId;
-        const userIsEmployee = company.employees.some(emp => emp.id === userId);
         
-        if (!userOwnsCompany && !userIsEmployee) {
+        console.log('🔍 Permission check:', {
+          companyId,
+          companyOwnerId: company.ownerId,
+          requestingUserId: userId,
+          userOwnsCompany,
+          companyName: company.name,
+          ownerEmail: company.owner.email
+        });
+        
+        if (!userOwnsCompany) {
           console.error('❌ User does not have permission to add employees to this company');
+          console.error('   Company owner ID:', company.ownerId);
+          console.error('   Requesting user ID:', userId);
           throw new Error('You do not have permission to add employees to this company');
         }
 
