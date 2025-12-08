@@ -128,7 +128,7 @@ export default function AccountPage() {
     } catch (error) {
       console.error('Error fetching company data:', error);
     }
-  }, [user?.companyId]);
+  }, [user?.ownedCompany?.id, user?.companyId]);
 
   // Update user profile when user data changes
   useEffect(() => {
