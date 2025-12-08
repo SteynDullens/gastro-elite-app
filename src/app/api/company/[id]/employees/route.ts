@@ -302,14 +302,15 @@ export async function POST(
           emailError = `E-mail fout: ${emailErr.message}`;
         }
 
+        // Always return success if user was added, even if email failed
         return {
           success: true,
           message: emailSent 
             ? 'Uitnodiging verzonden naar bestaande gebruiker' 
-            : 'Gebruiker toegevoegd, maar e-mail kon niet worden verzonden',
+            : 'Gebruiker toegevoegd. E-mail kon niet worden verzonden - controleer de server logs.',
           userExists: true,
           emailSent,
-          emailError
+          emailError: emailError || (emailSent ? null : 'E-mail kon niet worden verzonden')
         };
       } else {
         // User doesn't exist - create invitation record (with error handling)
@@ -365,14 +366,15 @@ export async function POST(
           emailError = `E-mail fout: ${emailErr.message}`;
         }
 
+        // Always return success if invitation was created, even if email failed
         return {
           success: true,
           message: emailSent 
             ? 'Registratie-uitnodiging succesvol verzonden' 
-            : 'Uitnodiging aangemaakt, maar e-mail kon niet worden verzonden',
+            : 'Uitnodiging aangemaakt. E-mail kon niet worden verzonden - controleer de server logs.',
           userExists: false,
           emailSent,
-          emailError,
+          emailError: emailError || (emailSent ? null : 'E-mail kon niet worden verzonden'),
           invitationId: invitation?.id || null
         };
       }

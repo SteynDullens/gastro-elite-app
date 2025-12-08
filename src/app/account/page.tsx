@@ -193,18 +193,26 @@ export default function AccountPage() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setBusinessSuccess(data.userExists 
-          ? "Uitnodiging succesvol verzonden naar bestaande gebruiker!" 
-          : "Registratie-uitnodiging succesvol verzonden!");
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Show success message, but warn if email wasn't sent
+        if (data.emailSent) {
+          setBusinessSuccess(data.userExists 
+            ? "Uitnodiging succesvol verzonden naar bestaande gebruiker!" 
+            : "Registratie-uitnodiging succesvol verzonden!");
+        } else {
+          setBusinessSuccess(data.message || "Uitnodiging aangemaakt, maar e-mail kon niet worden verzonden.");
+          if (data.emailError) {
+            console.warn('Email sending failed:', data.emailError);
+          }
+        }
         setEmployeeEmail("");
         setShowAddEmployee(false);
         fetchCompanyData(); // Refresh employee list
       } else {
-        const errorData = await response.json();
-        console.error('API Error Response:', errorData);
-        const errorMessage = errorData.error || errorData.message || "Uitnodiging verzenden mislukt";
+        console.error('API Error Response:', data);
+        const errorMessage = data.error || data.message || "Uitnodiging verzenden mislukt";
         setBusinessError(errorMessage);
       }
     } catch (error: any) {
