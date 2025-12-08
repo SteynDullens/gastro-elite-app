@@ -194,21 +194,42 @@ export async function POST(
 
         // Verify that the authenticated user owns this company
         // Only owners can add employees, not regular employees
-        const userOwnsCompany = company.ownerId === userId;
+        // Ensure both IDs are strings for comparison
+        const companyOwnerId = String(company.ownerId);
+        const requestingUserId = String(userId);
+        const userOwnsCompany = companyOwnerId === requestingUserId;
+        
+        // Also verify by checking if the user has an ownedCompany relationship
+        const user = await prisma.user.findUnique({
+          where: { id: requestingUserId },
+          select: { 
+            id: true, 
+            email: true,
+            ownedCompany: {
+              select: { id: true, name: true }
+            }
+          }
+        });
+        
+        const userOwnsCompanyByRelation = user?.ownedCompany?.id === companyId;
         
         console.log('🔍 Permission check:', {
           companyId,
-          companyOwnerId: company.ownerId,
-          requestingUserId: userId,
+          companyOwnerId: companyOwnerId,
+          requestingUserId: requestingUserId,
           userOwnsCompany,
+          userOwnsCompanyByRelation,
           companyName: company.name,
-          ownerEmail: company.owner.email
+          ownerEmail: company.owner.email,
+          userEmail: user?.email,
+          userOwnedCompanyId: user?.ownedCompany?.id
         });
         
-        if (!userOwnsCompany) {
+        if (!userOwnsCompany && !userOwnsCompanyByRelation) {
           console.error('❌ User does not have permission to add employees to this company');
-          console.error('   Company owner ID:', company.ownerId);
-          console.error('   Requesting user ID:', userId);
+          console.error('   Company owner ID:', companyOwnerId);
+          console.error('   Requesting user ID:', requestingUserId);
+          console.error('   User owned company ID:', user?.ownedCompany?.id);
           throw new Error('You do not have permission to add employees to this company');
         }
 
