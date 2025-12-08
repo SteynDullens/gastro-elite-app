@@ -149,6 +149,7 @@ export async function POST(
 
     const userId = decodedToken.userId;
     console.log('✅ Authenticated user:', userId);
+    console.log('🔍 Looking for company with ID:', companyId);
 
     // Get company and owner info
     let result;
@@ -158,6 +159,7 @@ export async function POST(
           throw new Error('Database connection not available');
         }
 
+        console.log('🔍 Querying database for company:', companyId);
         const company = await prisma.company.findUnique({
           where: { id: companyId },
           include: {
