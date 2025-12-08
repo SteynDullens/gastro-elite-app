@@ -387,17 +387,25 @@ export async function POST(
       }
     });
 
-    console.log('✅ Employee invitation completed:', result);
-    
-    // Ensure result is not null
+    // Check if result is null (which means safeDbOperation caught an error)
     if (!result) {
-      console.error('❌ safeDbOperation returned null');
+      console.error('❌ safeDbOperation returned null - database operation failed');
+      // Check if it's a connection issue
+      const dbStatus = getDbStatus();
+      console.error('Database status:', dbStatus);
+      
       return NextResponse.json(
-        { error: 'Failed to process invitation - database operation returned null' },
+        { 
+          success: false,
+          error: dbStatus.connected 
+            ? 'Database operation failed. Please try again.' 
+            : 'Database connection error. Please check your connection and try again.'
+        },
         { status: 500 }
       );
     }
     
+    console.log('✅ Employee invitation completed:', result);
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('❌ Error adding employee:', error);
