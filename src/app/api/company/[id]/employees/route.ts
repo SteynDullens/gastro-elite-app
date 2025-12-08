@@ -165,6 +165,7 @@ export async function POST(
           include: {
             owner: {
               select: {
+                id: true,
                 firstName: true,
                 lastName: true,
                 email: true
@@ -180,8 +181,25 @@ export async function POST(
         });
 
         if (!company) {
+          console.error('❌ Company not found with ID:', companyId);
+          // Let's also check if there are any companies at all
+          const allCompanies = await prisma.company.findMany({
+            select: { id: true, name: true, ownerId: true }
+          });
+          console.log('📋 Available companies:', allCompanies);
           throw new Error('Company not found');
         }
+
+        // Verify that the authenticated user owns this company or is an employee
+        const userOwnsCompany = company.ownerId === userId;
+        const userIsEmployee = company.employees.some(emp => emp.id === userId);
+        
+        if (!userOwnsCompany && !userIsEmployee) {
+          console.error('❌ User does not have permission to add employees to this company');
+          throw new Error('You do not have permission to add employees to this company');
+        }
+
+        console.log('✅ Company found:', company.name, 'Owner:', company.ownerId, 'Requesting user:', userId);
 
       // Check if invitation already exists (if model is available)
       try {
