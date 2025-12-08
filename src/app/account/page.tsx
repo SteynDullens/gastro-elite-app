@@ -106,8 +106,9 @@ export default function AccountPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const fetchCompanyData = useCallback(async () => {
-    if (!user?.companyId) return;
-    const companyId = user.companyId;
+    // Get company ID (prefer ownedCompany.id for business owners)
+    const companyId = user?.ownedCompany?.id || user?.companyId;
+    if (!companyId) return;
 
     try {
       const [companyResponse, employeesResponse] = await Promise.all([
@@ -157,7 +158,9 @@ export default function AccountPage() {
       });
 
       // Fetch company data for business users
-      if (isBusiness && user.companyId) {
+      // Check if user has a company (either as owner or employee)
+      const hasCompany = user?.ownedCompany?.id || user?.companyId;
+      if (isBusiness && hasCompany) {
         fetchCompanyData();
       }
     }
