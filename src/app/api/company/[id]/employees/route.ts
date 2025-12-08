@@ -390,15 +390,52 @@ export async function POST(
     // Check if result is null (which means safeDbOperation caught an error)
     if (!result) {
       console.error('❌ safeDbOperation returned null - database operation failed');
-      // Check if it's a connection issue
+      // Check if it's a connection issue or a specific error
       const dbStatus = getDbStatus();
       console.error('Database status:', dbStatus);
       
+      // Check if the error is a business logic error (like "Company not found")
+      if (dbStatus.error) {
+        const errorMessage = dbStatus.error;
+        
+        // Handle specific business logic errors
+        if (errorMessage.includes('Company not found')) {
+          return NextResponse.json(
+            { 
+              success: false,
+              error: 'Company not found'
+            },
+            { status: 404 }
+          );
+        }
+        
+        if (errorMessage.includes('uitnodiging')) {
+          return NextResponse.json(
+            { 
+              success: false,
+              error: errorMessage
+            },
+            { status: 400 }
+          );
+        }
+        
+        if (errorMessage.includes('gebruiker') || errorMessage.includes('team')) {
+          return NextResponse.json(
+            { 
+              success: false,
+              error: errorMessage
+            },
+            { status: 400 }
+          );
+        }
+      }
+      
+      // Generic database error
       return NextResponse.json(
         { 
           success: false,
           error: dbStatus.connected 
-            ? 'Database operation failed. Please try again.' 
+            ? (dbStatus.error || 'Database operation failed. Please try again.')
             : 'Database connection error. Please check your connection and try again.'
         },
         { status: 500 }
