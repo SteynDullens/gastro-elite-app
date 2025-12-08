@@ -162,20 +162,30 @@ export default function RegisterPage() {
       console.log('Address lookup response:', data);
       
       if (data.success) {
-        // Update fields even if only partial data is available
-        setFormData(prev => ({
-          ...prev,
-          businessAddress: {
-            ...prev.businessAddress,
-            street: data.street || prev.businessAddress.street || '',
-            city: data.city || prev.businessAddress.city || '',
-            postalCode: data.postalCode || cleanPostalCode
-          }
-        }));
-        console.log('Address updated:', { street: data.street, city: data.city });
+        // Always update with the API response values, even if they're empty strings
+        const newStreet = data.street !== undefined ? data.street : '';
+        const newCity = data.city !== undefined ? data.city : '';
+        
+        console.log('Updating form with:', { street: newStreet, city: newCity });
+        
+        setFormData(prev => {
+          const updated = {
+            ...prev,
+            businessAddress: {
+              ...prev.businessAddress,
+              street: newStreet,
+              city: newCity,
+              postalCode: data.postalCode || cleanPostalCode
+            }
+          };
+          console.log('Form data after update:', updated.businessAddress);
+          return updated;
+        });
+        
+        console.log('Address updated successfully:', { street: newStreet, city: newCity });
         
         // If we got partial data, make fields editable
-        if (!data.street || !data.city) {
+        if (!newStreet || !newCity) {
           console.warn('Partial address data received. User can fill remaining fields manually.');
         }
       } else {
@@ -719,7 +729,7 @@ export default function RegisterPage() {
                             value={formData.businessAddress.street || ''}
                             onChange={handleInputChange}
                             className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.street ? 'bg-gray-50' : 'bg-white'}`}
-                            readOnly={!!formData.businessAddress.street && !addressLookupLoading}
+                            readOnly={!!formData.businessAddress.street}
                             placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.street ? "" : "Wordt automatisch ingevuld")}
                           />
                           {addressLookupLoading && (
