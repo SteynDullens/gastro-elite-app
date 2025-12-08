@@ -628,7 +628,8 @@ export default function RegisterPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        Zakelijk telefoonnummer *
+                        <span>Zakelijk telefoonnummer</span>
+                        <span className="text-red-500 ml-1">*</span>
                       </label>
                       <input
                         type="tel"
@@ -731,7 +732,8 @@ export default function RegisterPage() {
                       {/* Straat - Third row, full width */}
                       <div className="space-y-2 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">
-                          Straat *
+                          <span>Straat</span>
+                          <span className="text-red-500 ml-1">*</span>
                         </label>
                         <div className="relative">
                           <input
@@ -765,7 +767,8 @@ export default function RegisterPage() {
                       {/* Plaats - Fourth row, full width */}
                       <div className="space-y-2 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700">
-                          Plaats *
+                          <span>Plaats</span>
+                          <span className="text-red-500 ml-1">*</span>
                         </label>
                         <div className="relative">
                           <input
