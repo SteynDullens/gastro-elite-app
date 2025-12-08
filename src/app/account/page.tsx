@@ -193,13 +193,29 @@ export default function AccountPage() {
         }),
       });
 
-      const data = await response.json();
-      console.log('API Response:', data);
+      let data;
+      try {
+        data = await response.json();
+        console.log('API Response:', data);
+      } catch (parseError) {
+        console.error('Failed to parse JSON response:', parseError);
+        setBusinessError("Server response kon niet worden gelezen. Probeer het opnieuw.");
+        return;
+      }
       
-      if (response.ok && data && data.success !== false) {
+      // Handle null or undefined data
+      if (!data) {
+        console.error('API returned null or undefined');
+        setBusinessError("Geen response van server. Probeer het opnieuw.");
+        return;
+      }
+      
+      if (response.ok && data.success !== false) {
         // Show success message, but warn if email wasn't sent
         if (data.emailSent) {
-          setBusinessSuccess(data.userExists === true
+          // Safely check userExists - default to false if undefined/null
+          const userExists = data.userExists === true;
+          setBusinessSuccess(userExists
             ? "Uitnodiging succesvol verzonden naar bestaande gebruiker!" 
             : "Registratie-uitnodiging succesvol verzonden!");
         } else {
@@ -213,7 +229,7 @@ export default function AccountPage() {
         fetchCompanyData(); // Refresh employee list
       } else {
         console.error('API Error Response:', data);
-        const errorMessage = (data && (data.error || data.message)) || "Uitnodiging verzenden mislukt";
+        const errorMessage = data.error || data.message || "Uitnodiging verzenden mislukt";
         setBusinessError(errorMessage);
       }
     } catch (error: any) {
