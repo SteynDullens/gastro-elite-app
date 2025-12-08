@@ -12,7 +12,7 @@ type BusinessTab = 'edit-details' | 'language' | 'employees' | 'logout';
 
 export default function AccountPage() {
   const { t, language, setLanguage } = useLanguage();
-  const { user, logout, loading, isBusiness } = useAuth();
+  const { user, logout, loading, isBusiness, login } = useAuth();
   const router = useRouter();
   
   // Active tab state for business users
@@ -481,22 +481,14 @@ export default function AccountPage() {
     setLoginError("");
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(loginData),
-      });
+      const result = await login(loginData.email, loginData.password);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
         setFailedAttempts(0); // Reset on success
-        // The AuthContext will handle the user state update
+        // AuthContext already updated the user state, just refresh the page
         router.refresh();
       } else {
-        const errorData = await response.json();
-        setLoginError(errorData.error || errorData.message || "Inloggen mislukt");
+        setLoginError(result.error || "Inloggen mislukt");
         setFailedAttempts(prev => prev + 1);
       }
     } catch (error) {

@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         setUser(data.user);
-        setLoading(false); // Ensure loading is set to false after successful login
+        setLoading(false);
         return { success: true };
       } else {
         setUser(null);
