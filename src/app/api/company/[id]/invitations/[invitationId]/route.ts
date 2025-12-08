@@ -31,7 +31,13 @@ export async function DELETE(
         const invitation = await prisma.employeeInvitation.findUnique({
           where: { id: invitationId },
           include: {
-            company: true
+            company: true,
+            invitedUser: {
+              select: {
+                id: true,
+                companyId: true
+              }
+            }
           }
         });
 
@@ -43,12 +49,17 @@ export async function DELETE(
           throw new Error('Invitation does not belong to this company');
         }
 
-        // If invitation was accepted and user is linked, remove the link
-        if (invitation.status === 'accepted' && invitation.invitedUserId) {
-          await prisma.user.update({
-            where: { id: invitation.invitedUserId },
-            data: { companyId: null }
-          });
+        // If invitation has an invitedUser and they are linked to this company, remove the link
+        // This handles both pending invitations (where user might already be linked) and accepted ones
+        if (invitation.invitedUserId && invitation.invitedUser) {
+          // Check if user is actually linked to this company
+          if (invitation.invitedUser.companyId === companyId) {
+            await prisma.user.update({
+              where: { id: invitation.invitedUserId },
+              data: { companyId: null }
+            });
+            console.log('✅ Removed user company link:', invitation.invitedUserId);
+          }
         }
 
         // Delete invitation
@@ -56,16 +67,12 @@ export async function DELETE(
           where: { id: invitationId }
         });
 
+        console.log('✅ Invitation deleted:', invitationId);
         return { success: true };
       } catch (error: any) {
         // If table doesn't exist (P2021), handle gracefully
         if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('P2021')) {
           console.warn('⚠️ EmployeeInvitation table does not exist (P2021) - migration may not have been run');
-          // Try to find user by email and remove company link instead
-          console.log('Attempting to remove user company link as fallback...');
-          
-          // We can't find the invitation, but we can try to find the user by checking employees
-          // This is a fallback - ideally the migration should be run
           return { success: false, error: 'Invitation system not available - database migration required. Please run: npx prisma migrate deploy' };
         }
         throw error;

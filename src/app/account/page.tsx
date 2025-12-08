@@ -268,12 +268,20 @@ export default function AccountPage() {
     }
 
     try {
-      // Check if it's an invitation (pending) or actual employee
-      const employee = employees.find(emp => (emp.id === employeeId) || (emp.invitationId === employeeId));
+      // Find the employee/invitation by checking both id and invitationId
+      const employee = employees.find(emp => 
+        emp.id === employeeId || 
+        emp.invitationId === employeeId ||
+        (emp.invitationId && emp.invitationId === employeeId)
+      );
       
+      console.log('🔍 Removing employee/invitation:', { employeeId, employee });
+      
+      // If it has an invitationId, it's an invitation (pending or rejected)
+      // Delete the invitation first, which will also unlink the user if they were linked
       if (employee?.invitationId) {
-        // Delete invitation
-        const response = await fetch(`/api/company/${companyId}/invitations/${employeeId}`, {
+        console.log('🗑️ Deleting invitation:', employee.invitationId);
+        const response = await fetch(`/api/company/${companyId}/invitations/${employee.invitationId}`, {
           method: 'DELETE',
         });
 
@@ -281,11 +289,14 @@ export default function AccountPage() {
           setBusinessSuccess("Uitnodiging verwijderd!");
           fetchCompanyData();
         } else {
-          setBusinessError("Uitnodiging verwijderen mislukt");
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ Failed to delete invitation:', errorData);
+          setBusinessError(errorData.error || "Uitnodiging verwijderen mislukt");
         }
-      } else {
-        // Remove employee
-        const response = await fetch(`/api/company/${companyId}/employees/${employeeId}`, {
+      } else if (employee?.id) {
+        // It's an actual employee (no invitationId), remove the employee link
+        console.log('🗑️ Removing employee:', employee.id);
+        const response = await fetch(`/api/company/${companyId}/employees/${employee.id}`, {
           method: 'DELETE',
         });
 
@@ -293,11 +304,17 @@ export default function AccountPage() {
           setBusinessSuccess("Medewerker verwijderd!");
           fetchCompanyData();
         } else {
-          setBusinessError("Medewerker verwijderen mislukt");
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ Failed to remove employee:', errorData);
+          setBusinessError(errorData.error || "Medewerker verwijderen mislukt");
         }
+      } else {
+        console.error('❌ Employee/invitation not found:', employeeId);
+        setBusinessError("Medewerker of uitnodiging niet gevonden");
       }
-    } catch (error) {
-      setBusinessError("Verwijderen mislukt");
+    } catch (error: any) {
+      console.error('❌ Error removing employee/invitation:', error);
+      setBusinessError(error.message || "Verwijderen mislukt");
     }
   };
 

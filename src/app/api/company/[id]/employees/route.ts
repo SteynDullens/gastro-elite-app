@@ -373,6 +373,7 @@ export async function POST(
             employeeName,
             company.name,
             ownerName,
+            invitation?.id || 'no-invitation-id', // Pass invitation ID for action buttons
             userLanguage
           );
 

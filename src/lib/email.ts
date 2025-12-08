@@ -755,6 +755,7 @@ export async function sendEmployeeInvitationToExistingUser(
   employeeName: string,
   companyName: string,
   companyOwnerName: string,
+  invitationId: string,
   language: string = 'nl'
 ): Promise<boolean> {
   try {
@@ -827,12 +828,18 @@ export async function sendEmployeeInvitationToExistingUser(
               </ul>
             </div>
 
-            <!-- CTA Button -->
+            <!-- Action Buttons -->
             <div style="text-align: center; margin: 32px 0;">
-              <a href="${loginUrl}" 
-                 style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(255,140,0,0.4);">
-                ${t.cta}
-              </a>
+              <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <a href="${acceptUrl}" 
+                   style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(34,197,94,0.4);">
+                  ✅ Accepteren
+                </a>
+                <a href="${declineUrl}" 
+                   style="display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(239,68,68,0.4);">
+                  ❌ Afwijzen
+                </a>
+              </div>
             </div>
 
             <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
@@ -865,6 +872,7 @@ export async function sendEmployeeInvitationToNewUser(
   employeeEmail: string,
   companyName: string,
   companyOwnerName: string,
+  invitationId: string,
   language: string = 'nl'
 ): Promise<boolean> {
   try {
