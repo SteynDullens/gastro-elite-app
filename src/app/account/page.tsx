@@ -169,6 +169,13 @@ export default function AccountPage() {
     setBusinessError("");
     setBusinessSuccess("");
 
+    // Validate that user has a company ID
+    if (!user?.companyId) {
+      setBusinessError("U heeft geen bedrijfsaccount. Alleen bedrijfseigenaren kunnen medewerkers uitnodigen.");
+      console.error('❌ User does not have a companyId:', user);
+      return;
+    }
+
     if (!employeeEmail) {
       setBusinessError("Voer een e-mailadres in");
       return;
@@ -182,7 +189,7 @@ export default function AccountPage() {
     }
 
     try {
-      const response = await fetch(`/api/company/${user?.companyId}/employees`, {
+      const response = await fetch(`/api/company/${user.companyId}/employees`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -257,7 +264,7 @@ export default function AccountPage() {
         }
       } else {
         // Remove employee
-        const response = await fetch(`/api/company/${user?.companyId}/employees/${employeeId}`, {
+        const response = await fetch(`/api/company/${user.companyId}/employees/${employeeId}`, {
           method: 'DELETE',
         });
 
