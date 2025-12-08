@@ -381,6 +381,16 @@ export async function POST(
     });
 
     console.log('✅ Employee invitation completed:', result);
+    
+    // Ensure result is not null
+    if (!result) {
+      console.error('❌ safeDbOperation returned null');
+      return NextResponse.json(
+        { error: 'Failed to process invitation - database operation returned null' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('❌ Error adding employee:', error);
@@ -391,7 +401,10 @@ export async function POST(
       code: error.code
     });
     return NextResponse.json(
-      { error: error.message || 'Failed to add employee' },
+      { 
+        success: false,
+        error: error.message || 'Failed to add employee' 
+      },
       { status: 500 }
     );
   }

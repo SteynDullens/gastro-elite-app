@@ -194,11 +194,12 @@ export default function AccountPage() {
       });
 
       const data = await response.json();
+      console.log('API Response:', data);
       
-      if (response.ok && data.success) {
+      if (response.ok && data && data.success !== false) {
         // Show success message, but warn if email wasn't sent
         if (data.emailSent) {
-          setBusinessSuccess(data.userExists 
+          setBusinessSuccess(data.userExists === true
             ? "Uitnodiging succesvol verzonden naar bestaande gebruiker!" 
             : "Registratie-uitnodiging succesvol verzonden!");
         } else {
@@ -212,7 +213,7 @@ export default function AccountPage() {
         fetchCompanyData(); // Refresh employee list
       } else {
         console.error('API Error Response:', data);
-        const errorMessage = data.error || data.message || "Uitnodiging verzenden mislukt";
+        const errorMessage = (data && (data.error || data.message)) || "Uitnodiging verzenden mislukt";
         setBusinessError(errorMessage);
       }
     } catch (error: any) {
