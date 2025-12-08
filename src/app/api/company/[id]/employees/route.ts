@@ -428,14 +428,18 @@ export async function POST(
       console.error('❌ safeDbOperation returned null - database operation failed');
       // Check if it's a connection issue or a specific error
       const dbStatus = getDbStatus();
-      console.error('Database status:', dbStatus);
+      console.error('Database status:', JSON.stringify(dbStatus, null, 2));
       
       // Check if the error is a business logic error (like "Company not found")
       if (dbStatus.error) {
         const errorMessage = dbStatus.error;
+        console.log('🔍 Error message from dbStatus:', errorMessage);
         
-        // Handle specific business logic errors
-        if (errorMessage.includes('Company not found')) {
+        // Handle specific business logic errors (case-insensitive)
+        const lowerError = errorMessage.toLowerCase();
+        
+        if (lowerError.includes('company not found') || lowerError.includes('bedrijf niet gevonden')) {
+          console.log('✅ Detected: Company not found error');
           return NextResponse.json(
             { 
               success: false,
@@ -445,7 +449,8 @@ export async function POST(
           );
         }
         
-        if (errorMessage.includes('uitnodiging')) {
+        if (lowerError.includes('uitnodiging') || lowerError.includes('invitation')) {
+          console.log('✅ Detected: Invitation error');
           return NextResponse.json(
             { 
               success: false,
@@ -455,7 +460,8 @@ export async function POST(
           );
         }
         
-        if (errorMessage.includes('gebruiker') || errorMessage.includes('team')) {
+        if (lowerError.includes('gebruiker') || lowerError.includes('team') || lowerError.includes('bedrijfsaccount') || lowerError.includes('user')) {
+          console.log('✅ Detected: User/team error');
           return NextResponse.json(
             { 
               success: false,
@@ -464,17 +470,41 @@ export async function POST(
             { status: 400 }
           );
         }
+        
+        if (lowerError.includes('permission') || lowerError.includes('toegang')) {
+          console.log('✅ Detected: Permission error');
+          return NextResponse.json(
+            { 
+              success: false,
+              error: errorMessage
+            },
+            { status: 403 }
+          );
+        }
       }
+      
+      // Check if it's actually a connection error vs a business logic error
+      const isActualConnectionError = dbStatus.error && (
+        dbStatus.error.toLowerCase().includes('connect') ||
+        dbStatus.error.toLowerCase().includes('econnrefused') ||
+        dbStatus.error.toLowerCase().includes('timeout') ||
+        dbStatus.error.toLowerCase().includes('p1001') ||
+        dbStatus.error.toLowerCase().includes('p1002') ||
+        dbStatus.error.toLowerCase().includes('p2024')
+      );
+      
+      console.log('🔍 Is actual connection error?', isActualConnectionError);
+      console.log('🔍 DB connected status:', dbStatus.connected);
       
       // Generic database error
       return NextResponse.json(
         { 
           success: false,
-          error: dbStatus.connected 
-            ? (dbStatus.error || 'Database operation failed. Please try again.')
-            : 'Database connection error. Please check your connection and try again.'
+          error: isActualConnectionError || !dbStatus.connected
+            ? 'Database connection error. Please check your connection and try again.'
+            : (dbStatus.error || 'Database operation failed. Please try again.')
         },
-        { status: 500 }
+        { status: isActualConnectionError || !dbStatus.connected ? 503 : 500 }
       );
     }
     
