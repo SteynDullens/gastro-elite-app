@@ -159,20 +159,40 @@ export default function RegisterPage() {
       const response = await fetch(`/api/address/lookup?postalCode=${encodeURIComponent(cleanPostalCode)}&houseNumber=${encodeURIComponent(cleanHouseNumber)}`);
       const data = await response.json();
       
-      if (data.success && data.street && data.city) {
+      console.log('Address lookup response:', data);
+      
+      if (data.success) {
+        // Update fields even if only partial data is available
         setFormData(prev => ({
           ...prev,
           businessAddress: {
             ...prev.businessAddress,
-            street: data.street,
-            city: data.city,
+            street: data.street || prev.businessAddress.street || '',
+            city: data.city || prev.businessAddress.city || '',
             postalCode: data.postalCode || cleanPostalCode
           }
         }));
+        console.log('Address updated:', { street: data.street, city: data.city });
+        
+        // If we got partial data, make fields editable
+        if (!data.street || !data.city) {
+          console.warn('Partial address data received. User can fill remaining fields manually.');
+        }
+      } else {
+        console.warn('Address lookup returned no results:', data.message || data.error);
+        // Don't clear existing values, just leave them as-is so user can edit manually
       }
     } catch (error) {
       console.error('Address lookup error:', error);
-      // Silently fail - user can fill manually
+      // Clear fields on error
+      setFormData(prev => ({
+        ...prev,
+        businessAddress: {
+          ...prev.businessAddress,
+          street: '',
+          city: ''
+        }
+      }));
     } finally {
       setAddressLookupLoading(false);
     }
@@ -696,11 +716,11 @@ export default function RegisterPage() {
                           <input
                             type="text"
                             name="businessAddress.street"
-                            value={formData.businessAddress.street}
+                            value={formData.businessAddress.street || ''}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
-                            readOnly={!!formData.businessAddress.street}
-                            placeholder={addressLookupLoading ? "Zoeken..." : "Wordt automatisch ingevuld"}
+                            className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.street ? 'bg-gray-50' : 'bg-white'}`}
+                            readOnly={!!formData.businessAddress.street && !addressLookupLoading}
+                            placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.street ? "" : "Wordt automatisch ingevuld")}
                           />
                           {addressLookupLoading && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -722,11 +742,11 @@ export default function RegisterPage() {
                           <input
                             type="text"
                             name="businessAddress.city"
-                            value={formData.businessAddress.city}
+                            value={formData.businessAddress.city || ''}
                             onChange={handleInputChange}
-                            className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
-                            readOnly={!!formData.businessAddress.city}
-                            placeholder={addressLookupLoading ? "Zoeken..." : "Wordt automatisch ingevuld"}
+                            className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.city ? 'bg-gray-50' : 'bg-white'}`}
+                            readOnly={!!formData.businessAddress.city && !addressLookupLoading}
+                            placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.city ? "" : "Wordt automatisch ingevuld")}
                           />
                           {addressLookupLoading && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">

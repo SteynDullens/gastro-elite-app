@@ -43,12 +43,21 @@ export async function GET(request: NextRequest) {
 
       const data = await response.json();
       
+      console.log('PDOK API response:', JSON.stringify(data, null, 2));
+      
       if (data.response && data.response.docs && data.response.docs.length > 0) {
         const address = data.response.docs[0];
+        console.log('Address data:', address);
+        
+        const street = address.straatnaam || address.weergavenaam?.split(',')[0] || '';
+        const city = address.woonplaatsnaam || '';
+        
+        console.log('Extracted:', { street, city });
+        
         return NextResponse.json({
           success: true,
-          street: address.straatnaam || '',
-          city: address.woonplaatsnaam || '',
+          street: street,
+          city: city,
           postalCode: address.postcode || cleanPostalCode,
           houseNumber: address.huisnummer || houseNumber
         });
