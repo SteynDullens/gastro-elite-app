@@ -334,7 +334,12 @@ export async function POST(
           });
           console.log('✅ Invitation record created:', invitation.id);
         } catch (invitationError: any) {
-          console.warn('⚠️ Could not create invitation record:', invitationError.code || invitationError.message);
+          // P2021 = table doesn't exist - migration needed
+          if (invitationError.code === 'P2021') {
+            console.error('❌ EmployeeInvitation table does not exist (P2021). Migration required: npx prisma migrate deploy');
+          } else {
+            console.warn('⚠️ Could not create invitation record:', invitationError.code || invitationError.message);
+          }
           // If model doesn't exist or other database error, continue without invitation tracking
           // Don't throw - we can still add the employee and send email
           invitation = null;
@@ -391,6 +396,7 @@ export async function POST(
         }
 
         // Always return success if user was added, even if email failed
+        // But warn if invitation record wasn't created (migration needed)
         return {
           success: true,
           message: emailSent 
@@ -398,7 +404,9 @@ export async function POST(
             : 'Gebruiker toegevoegd. E-mail kon niet worden verzonden - controleer de server logs.',
           userExists: true,
           emailSent,
-          emailError: emailError || (emailSent ? null : 'E-mail kon niet worden verzonden')
+          emailError: emailError || (emailSent ? null : 'E-mail kon niet worden verzonden'),
+          invitationCreated: !!invitation,
+          migrationWarning: !invitation ? 'EmployeeInvitation table does not exist - run migration: npx prisma migrate deploy' : null
         };
       } else {
         // User doesn't exist - create invitation record (with error handling)

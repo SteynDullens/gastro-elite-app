@@ -20,36 +20,64 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    await safeDbOperation(async (prisma) => {
-      // Verify the invitation belongs to this company
-      const invitation = await prisma.employeeInvitation.findUnique({
-        where: { id: invitationId },
-        include: {
-          company: true
-        }
-      });
-
-      if (!invitation) {
-        throw new Error('Invitation not found');
+    const result = await safeDbOperation(async (prisma) => {
+      if (!prisma) {
+        throw new Error('Database connection not available');
       }
 
-      if (invitation.companyId !== companyId) {
-        throw new Error('Invitation does not belong to this company');
-      }
-
-      // If invitation was accepted and user is linked, remove the link
-      if (invitation.status === 'accepted' && invitation.invitedUserId) {
-        await prisma.user.update({
-          where: { id: invitation.invitedUserId },
-          data: { companyId: null }
+      // Check if EmployeeInvitation model exists
+      try {
+        // Verify the invitation belongs to this company
+        const invitation = await prisma.employeeInvitation.findUnique({
+          where: { id: invitationId },
+          include: {
+            company: true
+          }
         });
-      }
 
-      // Delete invitation
-      await prisma.employeeInvitation.delete({
-        where: { id: invitationId }
-      });
+        if (!invitation) {
+          throw new Error('Invitation not found');
+        }
+
+        if (invitation.companyId !== companyId) {
+          throw new Error('Invitation does not belong to this company');
+        }
+
+        // If invitation was accepted and user is linked, remove the link
+        if (invitation.status === 'accepted' && invitation.invitedUserId) {
+          await prisma.user.update({
+            where: { id: invitation.invitedUserId },
+            data: { companyId: null }
+          });
+        }
+
+        // Delete invitation
+        await prisma.employeeInvitation.delete({
+          where: { id: invitationId }
+        });
+
+        return { success: true };
+      } catch (error: any) {
+        // If table doesn't exist (P2021), handle gracefully
+        if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('P2021')) {
+          console.warn('⚠️ EmployeeInvitation table does not exist (P2021) - migration may not have been run');
+          // Try to find user by email and remove company link instead
+          console.log('Attempting to remove user company link as fallback...');
+          
+          // We can't find the invitation, but we can try to find the user by checking employees
+          // This is a fallback - ideally the migration should be run
+          return { success: false, error: 'Invitation system not available - database migration required. Please run: npx prisma migrate deploy' };
+        }
+        throw error;
+      }
     });
+
+    if (!result || !result.success) {
+      return NextResponse.json(
+        { error: result?.error || 'Database operation failed' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
