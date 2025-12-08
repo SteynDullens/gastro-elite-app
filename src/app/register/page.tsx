@@ -56,6 +56,8 @@ export default function RegisterPage() {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [kvkDocument, setKvkDocument] = useState<File | null>(null);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalType, setSuccessModalType] = useState<'business' | 'personal'>('personal');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addressLookupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -347,11 +349,10 @@ export default function RegisterPage() {
       console.log('Register result:', result);
       
       if (result.success) {
-        setSuccess(result.message || (
-          accountType === 'business' 
-            ? "Bedrijfsaccount registratie succesvol! U ontvangt een bevestigingsmail en uw account wordt binnen 24 uur beoordeeld."
-            : "Account succesvol aangemaakt! Controleer uw email voor verificatie."
-        ));
+        // Show professional success modal
+        setSuccessModalType(accountType === 'business' ? 'business' : 'personal');
+        setShowSuccessModal(true);
+        setSuccess(""); // Clear old success message
         
         // Reset form
         setFormData({
@@ -470,8 +471,8 @@ export default function RegisterPage() {
           </div>
 
 
-        {/* Success Message */}
-        {success && (
+        {/* Success Message - Keep for backward compatibility */}
+        {success && !showSuccessModal && (
           <div className="mb-4 p-4 bg-green-100 border border-green-400 rounded-lg text-green-800">
             {success}
           </div>
@@ -878,6 +879,91 @@ export default function RegisterPage() {
           </form>
         </div>
       </div>
+
+      {/* Professional Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scaleIn">
+            {/* Success Icon */}
+            <div className="flex flex-col items-center pt-8 pb-6 px-6">
+              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4 animate-bounce">
+                <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+                {successModalType === 'business' ? 'Registratie Succesvol!' : 'Account Aangemaakt!'}
+              </h2>
+              
+              {/* Content */}
+              <div className="text-center space-y-4">
+                {successModalType === 'business' ? (
+                  <>
+                    <p className="text-gray-600 text-base leading-relaxed">
+                      Uw bedrijfsaccount is succesvol geregistreerd!
+                    </p>
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mt-4">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="text-left">
+                          <p className="font-semibold text-orange-900 mb-1">Volgende stappen:</p>
+                          <ul className="text-sm text-orange-800 space-y-1">
+                            <li>• Controleer uw e-mail voor verificatie</li>
+                            <li>• Uw account wordt binnen 24 uur beoordeeld</li>
+                            <li>• U ontvangt een e-mail zodra uw account is goedgekeurd</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-600 text-base leading-relaxed">
+                      Uw account is succesvol aangemaakt!
+                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <div className="text-left">
+                          <p className="font-semibold text-blue-900 mb-1">Controleer uw e-mail</p>
+                          <p className="text-sm text-blue-800">
+                            We hebben een verificatielink gestuurd naar uw e-mailadres. Klik op de link om uw account te activeren.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* Action Button */}
+            <div className="px-6 pb-6">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push('/login');
+                }}
+                className="w-full py-3 px-6 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-transform"
+              >
+                Naar Inloggen
+              </button>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full mt-3 py-2 px-6 text-gray-600 hover:text-gray-800 transition-colors text-sm"
+              >
+                Sluiten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
