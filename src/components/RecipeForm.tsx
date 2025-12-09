@@ -363,30 +363,32 @@ export default function RecipeForm() {
       const { recipe } = await response.json();
       console.log('Recipe created successfully:', recipe);
 
-      // Update local list for immediate feedback
+      // Update local list - addRecipe will trigger fetchRecipes()
       addRecipe({
         name: recipe.name,
         image: recipe.image,
         batchSize: recipe.batchSize,
         servings: recipe.servings,
-        ingredients: recipe.ingredients,
+        ingredients: recipe.ingredients || [],
         instructions: recipe.instructions,
         categories: recipe.categories?.map((c: any) => c.name) || [],
-    });
+      });
     
-    // Reset form
-    setFormData({
-      name: "",
-      image: "",
+      // Reset form
+      setFormData({
+        name: "",
+        image: "",
         batchAmount: 1,
         batchUnit: "stuks",
-      ingredients: [],
+        ingredients: [],
         steps: [""],
-      categories: [],
-      saveTo: "personal",
-    });
+        categories: [],
+        saveTo: hasCompany ? "personal" : "personal", // Reset to personal
+      });
       setImagePreview("");
-    router.push("/recipes");
+      
+      // Navigate to recipes page - the refresh will happen via addRecipe -> fetchRecipes
+      router.push("/recipes");
     } catch (err) {
       alert(t.saveFailed);
     }
