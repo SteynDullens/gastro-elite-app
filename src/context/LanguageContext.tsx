@@ -212,6 +212,7 @@ interface Translations {
   saveIn: string;
   personalDatabase: string;
   businessDatabase: string;
+  personalDatabaseOnly: string;
   bothDatabases: string;
   chooseWhereToSave: string;
   preparationMethod: string;
@@ -493,7 +494,7 @@ const translations: Record<string, Translations> = {
     fillDetailsToAdd: "Fill in the details to add a new recipe.",
     recipePhoto: "Recipe photo", pieces: "pieces", persons: "persons", portion: "portion",
     selectCategories: "Select categories", done: "Done", newCategory: "New category...",
-    saveIn: "Save to", personalDatabase: "Personal database", businessDatabase: "Business database",
+    saveIn: "Save to", personalDatabase: "Personal database", businessDatabase: "Business database", personalDatabaseOnly: "Only personal database available",
     bothDatabases: "Both databases", chooseWhereToSave: "Choose where to save your recipe",
     preparationMethod: "Preparation method", step: "Step", stepDescription: "Step description",
     addStep: "Add step", uploading: "Uploading...",
