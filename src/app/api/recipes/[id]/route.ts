@@ -90,7 +90,7 @@ export async function PUT(
     const body = await request.json();
     console.log('Update request body:', JSON.stringify(body, null, 2));
     
-    const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo } = body as {
+    const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo: initialSaveTo } = body as {
       name: string;
       image?: string;
       batchAmount?: number;
@@ -100,6 +100,8 @@ export async function PUT(
       categories: string[]; // names
       saveTo: 'personal' | 'business' | 'both';
     };
+    
+    let saveTo = initialSaveTo;
 
     if (!name || !Array.isArray(ingredients) || !Array.isArray(steps)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
