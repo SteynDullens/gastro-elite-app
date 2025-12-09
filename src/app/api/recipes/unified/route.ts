@@ -52,6 +52,20 @@ export async function GET(request: NextRequest) {
           categories: true,
           ingredients: true
         },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          batchSize: true,
+          servings: true,
+          instructions: true,
+          userId: true,
+          companyId: true,
+          isSharedWithBusiness: true,
+          createdAt: true,
+          categories: true,
+          ingredients: true
+        },
         orderBy: { createdAt: 'desc' }
       });
     });

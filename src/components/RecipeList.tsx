@@ -21,6 +21,9 @@ interface Recipe {
   instructions?: string;
   categories: string[];
   createdAt: string;
+  userId?: string | null;
+  companyId?: string | null;
+  isSharedWithBusiness?: boolean;
 }
 
 interface RecipeListProps {
@@ -29,8 +32,10 @@ interface RecipeListProps {
 
 export default function RecipeList({ recipes }: RecipeListProps) {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [databaseFilter, setDatabaseFilter] = useState<"all" | "personal" | "business">("all");
 
   // Category translation map
   const translateCategory = (category: string): string => {
@@ -83,7 +88,18 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = !selectedCategory || recipe.categories.includes(selectedCategory);
-    return matchesSearch && matchesCategory;
+    
+    // Filter by database type
+    let matchesDatabase = true;
+    if (databaseFilter === "personal") {
+      // Personal recipes: have userId and no companyId (or isSharedWithBusiness is false)
+      matchesDatabase = !!recipe.userId && !recipe.companyId;
+    } else if (databaseFilter === "business") {
+      // Business recipes: have companyId
+      matchesDatabase = !!recipe.companyId;
+    }
+    
+    return matchesSearch && matchesCategory && matchesDatabase;
   });
 
   return (
@@ -98,6 +114,42 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           className="w-full px-5 py-3 border border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 shadow-md bg-white text-gray-700 placeholder-gray-500"
         />
       </div>
+
+      {/* Database Filter Buttons */}
+      {(user?.companyId || user?.ownedCompany?.id) && (
+        <div className="mb-4 flex gap-3">
+          <button
+            onClick={() => setDatabaseFilter("all")}
+            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+              databaseFilter === "all"
+                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg"
+                : "bg-white text-gray-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-300"
+            }`}
+          >
+            Alle recepten
+          </button>
+          <button
+            onClick={() => setDatabaseFilter("personal")}
+            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+              databaseFilter === "personal"
+                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
+            }`}
+          >
+            Persoonlijke database
+          </button>
+          <button
+            onClick={() => setDatabaseFilter("business")}
+            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+              databaseFilter === "business"
+                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
+                : "bg-white text-gray-700 hover:bg-green-50 border border-green-200 hover:border-green-300"
+            }`}
+          >
+            Bedrijfsdatabase
+          </button>
+        </div>
+      )}
 
       {/* Horizontal Scrollable Filter Bar */}
       <div className="mb-8">
