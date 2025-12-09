@@ -48,10 +48,6 @@ export async function GET(request: NextRequest) {
 
       return await prisma.recipe.findMany({
         where: whereClause,
-        include: {
-          categories: true,
-          ingredients: true
-        },
         select: {
           id: true,
           name: true,
@@ -63,8 +59,20 @@ export async function GET(request: NextRequest) {
           companyId: true,
           isSharedWithBusiness: true,
           createdAt: true,
-          categories: true,
-          ingredients: true
+          categories: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          ingredients: {
+            select: {
+              id: true,
+              quantity: true,
+              unit: true,
+              name: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
