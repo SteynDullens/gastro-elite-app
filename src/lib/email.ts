@@ -883,11 +883,43 @@ export async function sendEmployeeInvitationToExistingUser(
       html: emailHtml
     };
 
-    await getTransporter().sendMail(mailOptions);
-    console.log('✅ Employee invitation email sent to existing user:', employeeEmail);
+    console.log('📧 Attempting to send employee invitation email:', {
+      to: employeeEmail,
+      from: emailConfig.auth.user,
+      subject: t.subject,
+      acceptUrl,
+      declineUrl
+    });
+
+    // Verify SMTP connection first
+    const transporter = getTransporter();
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP connection verified');
+    } catch (verifyError: any) {
+      console.error('❌ SMTP verification failed:', verifyError);
+      throw new Error(`SMTP connection failed: ${verifyError.message}`);
+    }
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Employee invitation email sent successfully:', {
+      messageId: result.messageId,
+      to: employeeEmail,
+      accepted: result.accepted,
+      rejected: result.rejected
+    });
     return true;
-  } catch (error) {
-    console.error('Error sending employee invitation email:', error);
+  } catch (error: any) {
+    console.error('❌ Error sending employee invitation email:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      responseCode: error.responseCode,
+      response: error.response,
+      stack: error.stack
+    });
     return false;
   }
 }

@@ -26,31 +26,36 @@ export async function GET(
     }
 
     const result = await safeDbOperation(async (prisma) => {
+      // Verify company exists
       const company = await prisma.company.findUnique({
         where: { id: companyId },
-        include: {
-          employees: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-              companyId: true,
-              createdAt: true
-            }
-          }
-        }
+        select: { id: true }
       });
 
       if (!company) {
         return null;
       }
 
+      // Query users directly where companyId matches (not using relation to avoid caching issues)
+      // This ensures we get fresh data after deletions
+      const employeeUsers = await prisma.user.findMany({
+        where: {
+          companyId: companyId
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          companyId: true,
+          createdAt: true
+        }
+      });
+
       // Get employees list
       // Only include employees that are actually linked to this company
-      // Filter out any employees that might have been unlinked but still in the relation
-      const employeeList = company.employees
+      const employeeList = employeeUsers
         .filter(employee => employee.companyId === companyId)
         .map(employee => ({
           id: employee.id,
@@ -374,16 +379,19 @@ export async function POST(
             const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
             const userLanguage = language || 'nl';
             
-            console.log('📧 Sending invitation email to existing user:', {
+            console.log('📧 Preparing to send invitation email to existing user:', {
               email,
               employeeName,
               companyName: company.name,
               ownerName,
               invitationId: invitation.id,
               companyId: company.id,
-              language: userLanguage
+              language: userLanguage,
+              invitationExists: !!invitation,
+              invitationHasId: !!invitation.id
             });
             
+            // Send email with detailed logging
             emailSent = await sendEmployeeInvitationToExistingUser(
               email,
               employeeName,
@@ -394,10 +402,17 @@ export async function POST(
               userLanguage
             );
             
-            console.log(emailSent ? '✅ Email sent successfully' : '❌ Email sending returned false');
+            console.log('📧 Email sending result:', {
+              emailSent,
+              email,
+              invitationId: invitation.id
+            });
             
             if (!emailSent) {
               emailError = 'E-mail kon niet worden verzonden, maar gebruiker is toegevoegd';
+              console.error('❌ Email sending returned false - check email configuration and logs');
+            } else {
+              console.log('✅ Email sent successfully to:', email);
             }
           } catch (emailErr: any) {
             console.error('❌ Email sending error:', emailErr);
