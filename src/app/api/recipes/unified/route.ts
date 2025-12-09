@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         whereClause = {
           OR: [
             // Personal recipes: owned by user and not linked to any company
-            { userId: decoded.id, companyId: null },
+            { userId: decoded.id, companyId: { equals: null } },
             // Business recipes: companyId matches
             { companyId: companyId }
           ]
