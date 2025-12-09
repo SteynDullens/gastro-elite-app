@@ -88,17 +88,23 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = !selectedCategory || recipe.categories.includes(selectedCategory);
+    
+    // Handle categories - they might be objects with name property or strings
+    const recipeCategories = recipe.categories.map((cat: any) => 
+      typeof cat === 'string' ? cat : (cat?.name || cat)
+    );
+    const matchesCategory = !selectedCategory || recipeCategories.includes(selectedCategory);
     
     // Filter by database type
     let matchesDatabase = true;
     if (databaseFilter === "personal") {
-      // Personal recipes: have userId and no companyId (or isSharedWithBusiness is false)
+      // Personal recipes: have userId and no companyId
       matchesDatabase = !!recipe.userId && !recipe.companyId;
     } else if (databaseFilter === "business") {
       // Business recipes: have companyId
       matchesDatabase = !!recipe.companyId;
     }
+    // If filter is "all", show all recipes (matchesDatabase stays true)
     
     return matchesSearch && matchesCategory && matchesDatabase;
   });
