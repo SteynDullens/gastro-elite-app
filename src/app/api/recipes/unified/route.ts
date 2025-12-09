@@ -60,9 +60,10 @@ export async function GET(request: NextRequest) {
         };
       } else {
         // Personal users: ONLY personal recipes
+        // Use explicit null check to ensure we get recipes where companyId is null
         whereClause = {
           userId: decoded.id,
-          companyId: null
+          companyId: { equals: null }
         };
       }
 
