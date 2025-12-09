@@ -84,19 +84,53 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
     return categoryMap[category] || category;
   };
   
-  const [formData, setFormData] = useState<RecipeFormData>({
-    name: "",
-    image: "",
-    batchAmount: 1,
-    batchUnit: "stuks",
-    ingredients: [],
-    steps: [""],
-    categories: [],
-    saveTo: "personal", // Default to personal
+  const [formData, setFormData] = useState<RecipeFormData>(() => {
+    if (initialData) {
+      // Parse instructions back into steps
+      const steps = initialData.instructions 
+        ? initialData.instructions.split('\n').filter((s: string) => s.trim())
+        : [""];
+      
+      // Determine saveTo based on recipe data
+      let saveTo: "personal" | "business" | "both" = "personal";
+      if (initialData.companyId) {
+        saveTo = "business";
+      } else if (initialData.isSharedWithBusiness) {
+        saveTo = "both";
+      }
+      
+      return {
+        name: initialData.name || "",
+        image: initialData.image || "",
+        batchAmount: initialData.batchSize || initialData.servings || 1,
+        batchUnit: initialData.servings ? "personen" : "stuks",
+        ingredients: initialData.ingredients || [],
+        steps: steps.length > 0 ? steps : [""],
+        categories: initialData.categories?.map((c: any) => typeof c === 'string' ? c : c.name) || [],
+        saveTo: saveTo
+      };
+    }
+    return {
+      name: "",
+      image: "",
+      batchAmount: 1,
+      batchUnit: "stuks",
+      ingredients: [],
+      steps: [""],
+      categories: [],
+      saveTo: "personal", // Default to personal
+    };
   });
 
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imagePreview, setImagePreview] = useState<string>(initialData?.image || "");
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  
+  // Set image preview when initialData changes
+  useEffect(() => {
+    if (initialData?.image) {
+      setImagePreview(initialData.image);
+    }
+  }, [initialData]);
 
   const [newIngredient, setNewIngredient] = useState({
     quantity: "",
@@ -370,8 +404,11 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       
       console.log('Sending request data:', requestData);
       
-      const response = await fetch('/api/recipes', {
-        method: 'POST',
+      const url = isEditing ? `/api/recipes/${recipeId}` : '/api/recipes';
+      const method = isEditing ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData)
       });
@@ -379,13 +416,13 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        console.error('Recipe creation failed:', err);
+        console.error(`Recipe ${isEditing ? 'update' : 'creation'} failed:`, err);
         alert(err.error || t.saveFailed);
         return;
       }
       
       const { recipe } = await response.json();
-      console.log('Recipe created successfully:', recipe);
+      console.log(`Recipe ${isEditing ? 'updated' : 'created'} successfully:`, recipe);
 
       // Update local list - addRecipe will trigger fetchRecipes()
       addRecipe({
@@ -398,18 +435,20 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         categories: recipe.categories?.map((c: any) => c.name) || [],
       });
     
-      // Reset form
-      setFormData({
-        name: "",
-        image: "",
-        batchAmount: 1,
-        batchUnit: "stuks",
-        ingredients: [],
-        steps: [""],
-        categories: [],
-        saveTo: hasCompany ? "personal" : "personal", // Reset to personal
-      });
-      setImagePreview("");
+      if (!isEditing) {
+        // Reset form only when creating new recipe
+        setFormData({
+          name: "",
+          image: "",
+          batchAmount: 1,
+          batchUnit: "stuks",
+          ingredients: [],
+          steps: [""],
+          categories: [],
+          saveTo: hasCompany ? "personal" : "personal", // Reset to personal
+        });
+        setImagePreview("");
+      }
       
       // Navigate to recipes page - the refresh will happen via addRecipe -> fetchRecipes
       router.push("/recipes");
@@ -856,7 +895,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
         >
-          {t.saveRecipe}
+          {isEditing ? 'Recept bijwerken' : t.saveRecipe}
         </button>
         <button
           type="button"
