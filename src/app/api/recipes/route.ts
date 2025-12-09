@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Request body:', JSON.stringify(body, null, 2));
     
-    let { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo } = body as {
+    const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo: initialSaveTo } = body as {
       name: string;
       image?: string;
       batchAmount?: number;
@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
       categories: string[]; // names
       saveTo?: 'personal' | 'business' | 'both'; // Optional - will be enforced by role
     };
+    
+    let saveTo = initialSaveTo;
     
     // Enforce role-based saveTo rules
     if (isCompanyOwner) {
