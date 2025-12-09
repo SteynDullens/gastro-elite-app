@@ -117,3 +117,4 @@ export default function DesktopSidebar() {
       </div>
     </div>
   );
+}
