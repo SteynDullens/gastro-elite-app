@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useRecipes } from "@/context/RecipeContext";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function EditRecipePage() {
@@ -35,13 +36,13 @@ export default function EditRecipePage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
           <h1 className="text-2xl font-semibold mb-4">Recept niet gevonden</h1>
-          <a 
+          <Link 
             href="/recipes"
-            className="px-6 py-3 text-white rounded-xl font-medium"
+            className="inline-block px-6 py-3 text-white rounded-xl font-medium"
             style={{ backgroundColor: '#ff6b35' }}
           >
             Terug naar recepten
-          </a>
+          </Link>
         </div>
       </div>
     );

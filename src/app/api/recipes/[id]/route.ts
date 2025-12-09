@@ -115,7 +115,7 @@ export async function PUT(
     };
 
     // Determine if recipe should be personal or business
-    let updateData: any = { ...recipeData };
+    const updateData: any = { ...recipeData };
     
     if (saveTo === 'personal' || saveTo === 'both') {
       // Update as personal recipe
