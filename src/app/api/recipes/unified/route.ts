@@ -92,13 +92,21 @@ export async function GET(request: NextRequest) {
         );
         
         if (existing) {
-          // If we have both personal and business versions, prefer business version for employees/owners
+          // If we have both personal and business versions:
+          // - For employees: prefer business version (they see it in business context)
+          // - For company owners: prefer business version (they only see business)
+          // - For personal users: prefer personal version (they don't have company)
           if (companyId && recipe.companyId && !existing.companyId) {
-            // Replace personal with business version
+            // New recipe is business, existing is personal - replace with business
             const index = acc.indexOf(existing);
             acc[index] = recipe;
+            return acc; // Don't add the recipe again
           }
-          // Otherwise keep the existing one (don't add duplicate)
+          if (companyId && existing.companyId && !recipe.companyId) {
+            // Existing is business, new is personal - keep business
+            return acc; // Keep existing business version
+          }
+          // If both are same type, keep existing (don't add duplicate)
           return acc;
         }
       }

@@ -143,8 +143,10 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         />
       </div>
 
-      {/* Database Filter Buttons - Always show if user has company, or if there are mixed recipes */}
+      {/* Database Filter Buttons */}
       {(() => {
+        const isCompanyOwner = !!user?.ownedCompany?.id;
+        const isEmployee = !!user?.companyId && !user?.ownedCompany?.id;
         const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);
         const hasPersonalRecipes = recipes.some(r => !!r.userId && !r.companyId);
         const hasBusinessRecipes = recipes.some(r => !!r.companyId);
@@ -164,17 +166,21 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             >
               Alle recepten
             </button>
-            <button
-              onClick={() => setDatabaseFilter("personal")}
-              className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
-                databaseFilter === "personal"
-                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
-                  : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
-              }`}
-            >
-              Persoonlijke database
-            </button>
-            {hasCompany && (
+            {/* Only show personal database filter for employees and personal users, NOT for company owners */}
+            {!isCompanyOwner && hasPersonalRecipes && (
+              <button
+                onClick={() => setDatabaseFilter("personal")}
+                className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+                  databaseFilter === "personal"
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                    : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
+                }`}
+              >
+                {t.personalDatabase}
+              </button>
+            )}
+            {/* Show business database filter for company owners and employees */}
+            {hasCompany && hasBusinessRecipes && (
               <button
                 onClick={() => setDatabaseFilter("business")}
                 className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
@@ -183,7 +189,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     : "bg-white text-gray-700 hover:bg-green-50 border border-green-200 hover:border-green-300"
                 }`}
               >
-                Bedrijfsdatabase
+                {t.businessDatabase}
               </button>
             )}
           </div>
