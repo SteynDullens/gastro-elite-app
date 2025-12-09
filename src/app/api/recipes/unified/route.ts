@@ -44,26 +44,26 @@ export async function GET(request: NextRequest) {
       let whereClause: any;
       
       if (isCompanyOwner) {
-        // Company owners should ONLY see business recipes
+        // Company owners should ONLY see business recipes (companyId must match and NOT be null)
         whereClause = {
-          companyId: companyId
+          companyId: companyId,
+          userId: null // Ensure no userId (business recipes don't have userId)
         };
       } else if (isEmployee) {
         // Employees see their personal recipes AND business recipes
         whereClause = {
           OR: [
             // Personal recipes: owned by user and not linked to any company
-            { userId: decoded.id, companyId: { equals: null } },
+            { userId: decoded.id, companyId: null },
             // Business recipes: companyId matches
             { companyId: companyId }
           ]
         };
       } else {
         // Personal users: ONLY personal recipes
-        // Use explicit null check to ensure we get recipes where companyId is null
         whereClause = {
           userId: decoded.id,
-          companyId: { equals: null }
+          companyId: null
         };
       }
 
