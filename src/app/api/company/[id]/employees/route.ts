@@ -53,10 +53,15 @@ export async function GET(
         }
       });
 
+      console.log('🔍 Found employees:', {
+        companyId,
+        count: employeeUsers.length,
+        employees: employeeUsers.map(emp => ({ id: emp.id, email: emp.email, companyId: emp.companyId }))
+      });
+
       // Get employees list
-      // Only include employees that are actually linked to this company
+      // No need to filter again - we already queried with companyId filter
       const employeeList = employeeUsers
-        .filter(employee => employee.companyId === companyId)
         .map(employee => ({
           id: employee.id,
           firstName: employee.firstName,
@@ -125,7 +130,18 @@ export async function GET(
         console.warn('EmployeeInvitation model not available:', invError.message);
       }
 
-      return [...employeeList, ...pendingInvitations];
+      const allEmployees = [...employeeList, ...pendingInvitations];
+      
+      console.log('📋 Returning employees list:', {
+        companyId,
+        employeeCount: employeeList.length,
+        invitationCount: pendingInvitations.length,
+        totalCount: allEmployees.length,
+        employeeEmails: employeeList.map(e => e.email),
+        invitationEmails: pendingInvitations.map(i => i.email)
+      });
+      
+      return allEmployees;
     });
 
     if (result === null) {
