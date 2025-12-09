@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         };
       } else {
         // Personal users: ONLY personal recipes
+        // Query for recipes where userId matches AND companyId is null
         whereClause = {
           userId: decoded.id,
           companyId: null
