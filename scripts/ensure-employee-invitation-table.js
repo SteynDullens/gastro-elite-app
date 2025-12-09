@@ -3,7 +3,16 @@
 const { PrismaClient } = require('@prisma/client');
 
 async function ensureTableExists() {
-  const prisma = new PrismaClient();
+  const prisma = new PrismaClient({
+    log: ['error', 'warn'],
+  });
+  
+  // Set a timeout to prevent hanging
+  const timeout = setTimeout(() => {
+    console.log('⚠️  Script taking too long, assuming table exists or connection issue');
+    prisma.$disconnect().catch(() => {});
+    process.exit(0); // Exit successfully so build continues
+  }, 30000); // 30 second timeout
   
   try {
     console.log('🔍 Checking if EmployeeInvitation table exists...');
@@ -118,6 +127,7 @@ async function ensureTableExists() {
     }
     
     console.log('✅ EmployeeInvitation table setup complete!');
+    clearTimeout(timeout);
     return true;
     
   } catch (error) {
@@ -128,30 +138,37 @@ async function ensureTableExists() {
     try {
       await prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "EmployeeInvitation" LIMIT 1`;
       console.log('✅ Table exists after error (may have been created concurrently)');
+      clearTimeout(timeout);
       return true;
     } catch (finalCheck) {
       console.error('❌ Table definitely does not exist');
+      clearTimeout(timeout);
       return false;
     }
   } finally {
-    await prisma.$disconnect();
+    clearTimeout(timeout);
+    await prisma.$disconnect().catch(() => {});
   }
 }
 
-ensureTableExists()
+// Run with timeout protection
+Promise.race([
+  ensureTableExists(),
+  new Promise((resolve) => setTimeout(() => resolve(false), 25000)) // 25 second timeout
+])
   .then(success => {
     if (success) {
       console.log('🎉 Success! EmployeeInvitation table is ready.');
       process.exit(0);
     } else {
       // Even if creation failed, don't break the build - table might exist or be created manually
-      console.log('⚠️  Table creation had issues, but build will continue');
+      console.log('⚠️  Table creation had issues or timed out, but build will continue');
       console.log('ℹ️  If table is missing, features may not work until table is created manually');
       process.exit(0); // Exit with 0 so build continues
     }
   })
   .catch(error => {
-    console.error('💥 Fatal error:', error);
+    console.error('💥 Fatal error:', error.message || error);
     // Don't break build on fatal errors either
     console.log('⚠️  Fatal error occurred, but build will continue');
     process.exit(0);
