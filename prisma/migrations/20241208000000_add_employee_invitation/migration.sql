@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE IF NOT EXISTS "EmployeeInvitation" (
+CREATE TABLE "EmployeeInvitation" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'pending',
@@ -13,22 +13,14 @@ CREATE TABLE IF NOT EXISTS "EmployeeInvitation" (
 );
 
 -- CreateIndex
-CREATE INDEX IF NOT EXISTS "EmployeeInvitation_companyId_idx" ON "EmployeeInvitation"("companyId");
+CREATE INDEX "EmployeeInvitation_companyId_idx" ON "EmployeeInvitation"("companyId");
 
 -- CreateIndex
-CREATE INDEX IF NOT EXISTS "EmployeeInvitation_email_idx" ON "EmployeeInvitation"("email");
+CREATE INDEX "EmployeeInvitation_email_idx" ON "EmployeeInvitation"("email");
 
 -- AddForeignKey
-DO $$ BEGIN
-    ALTER TABLE "EmployeeInvitation" ADD CONSTRAINT "EmployeeInvitation_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+ALTER TABLE "EmployeeInvitation" ADD CONSTRAINT "EmployeeInvitation_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-DO $$ BEGIN
-    ALTER TABLE "EmployeeInvitation" ADD CONSTRAINT "EmployeeInvitation_invitedUserId_fkey" FOREIGN KEY ("invitedUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+ALTER TABLE "EmployeeInvitation" ADD CONSTRAINT "EmployeeInvitation_invitedUserId_fkey" FOREIGN KEY ("invitedUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
