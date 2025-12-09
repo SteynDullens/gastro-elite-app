@@ -24,6 +24,7 @@ interface Recipe {
   createdAt: string;
   userId?: string | null;
   companyId?: string | null;
+  originalOwnerId?: string | null; // Track who created the recipe
   isSharedWithBusiness?: boolean;
 }
 
@@ -37,6 +38,26 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [databaseFilter, setDatabaseFilter] = useState<"all" | "personal" | "business">("all");
+  
+  // Check if user can edit a recipe
+  const canEditRecipe = (recipe: Recipe): boolean => {
+    if (!user) return false;
+    
+    const isCompanyOwner = !!user.ownedCompany?.id;
+    const isEmployee = !!user.companyId && !user.ownedCompany?.id;
+    const isCompanyRecipe = !!recipe.companyId;
+    const isPersonalRecipe = !!recipe.userId && !recipe.companyId;
+    
+    if (isCompanyRecipe) {
+      // Company recipe: Company owner OR employee who created it can edit
+      const isRecipeCreator = recipe.originalOwnerId === user.id;
+      return isCompanyOwner || (isEmployee && isRecipeCreator);
+    } else if (isPersonalRecipe) {
+      // Personal recipe: Only the owner can edit
+      return recipe.userId === user.id;
+    }
+    return false;
+  };
 
   // Category translation map
   const translateCategory = (category: string): string => {
@@ -289,12 +310,14 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   >
                     {t.view}
                   </a>
-                  <a 
-                    href={`/recipes/${recipe.id}/edit`}
-                    className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 text-center"
-                  >
-                    {t.edit}
-                  </a>
+                  {canEditRecipe(recipe) && (
+                    <a 
+                      href={`/recipes/${recipe.id}/edit`}
+                      className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 text-center"
+                    >
+                      {t.edit}
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

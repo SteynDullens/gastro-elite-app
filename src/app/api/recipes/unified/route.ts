@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
           instructions: true,
           userId: true,
           companyId: true,
+          originalOwnerId: true, // Include for edit permission checks
           isSharedWithBusiness: true,
           createdAt: true,
           categories: {
@@ -78,7 +79,36 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    return NextResponse.json({ recipes: recipes || [] });
+    // Deduplicate recipes: if "both" was selected, we have two recipes (one personal, one business)
+    // Show only one in the frontend (prefer business version if user is employee/owner, otherwise personal)
+    const deduplicatedRecipes = (recipes || []).reduce((acc: any[], recipe: any) => {
+      // Only deduplicate recipes created by the current user (same originalOwnerId)
+      if (recipe.originalOwnerId === decoded.id) {
+        // Find if we already have a recipe with the same name and originalOwnerId
+        const existing = acc.find(r => 
+          r.name === recipe.name && 
+          r.originalOwnerId === recipe.originalOwnerId &&
+          r.originalOwnerId === decoded.id
+        );
+        
+        if (existing) {
+          // If we have both personal and business versions, prefer business version for employees/owners
+          if (companyId && recipe.companyId && !existing.companyId) {
+            // Replace personal with business version
+            const index = acc.indexOf(existing);
+            acc[index] = recipe;
+          }
+          // Otherwise keep the existing one (don't add duplicate)
+          return acc;
+        }
+      }
+      
+      // Add recipe if not a duplicate
+      acc.push(recipe);
+      return acc;
+    }, []);
+
+    return NextResponse.json({ recipes: deduplicatedRecipes });
   } catch (error: any) {
     console.error('Error fetching recipes:', error);
     return NextResponse.json({ error: 'Failed to fetch recipes' }, { status: 500 });

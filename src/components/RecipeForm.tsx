@@ -59,8 +59,15 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
   const { user } = useAuth();
   const isEditing = !!recipeId;
   
-  // Check if user is connected to a company (as employee or owner)
-  const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);
+  // Determine user role
+  const isCompanyOwner = !!user?.ownedCompany?.id;
+  const isEmployee = !!user?.companyId && !user?.ownedCompany?.id;
+  const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id;
+  
+  // Company owners always save to company (no choice)
+  // Personal users always save to personal (no choice)
+  // Employees can choose personal, company, or both
+  const showStorageOptions = isEmployee && !isEditing;
 
   // Category translation map
   const translateCategory = (category: string): string => {
@@ -110,6 +117,15 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         saveTo: saveTo
       };
     }
+    
+    // Set default saveTo based on user role
+    let defaultSaveTo: "personal" | "business" | "both" = "personal";
+    if (isCompanyOwner) {
+      defaultSaveTo = "business"; // Company owners always save to company
+    } else if (isEmployee) {
+      defaultSaveTo = "personal"; // Employees default to personal, but can choose
+    }
+    
     return {
       name: "",
       image: "",
@@ -118,7 +134,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       ingredients: [],
       steps: [""],
       categories: [],
-      saveTo: "personal", // Default to personal
+      saveTo: defaultSaveTo,
     };
   });
 
@@ -445,7 +461,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
           ingredients: [],
           steps: [""],
           categories: [],
-          saveTo: hasCompany ? "personal" : "personal", // Reset to personal
+          saveTo: isEmployee ? "personal" : (isCompanyOwner ? "business" : "personal"), // Reset based on role
         });
         setImagePreview("");
       }
@@ -662,57 +678,62 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         </div>
       </div>
 
-      {/* Save Destination Selector */}
-      <div>
-        <label className="block text-sm font-medium mb-2">{t.saveIn}</label>
-        <div className="space-y-2">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="saveTo"
-              value="personal"
-              checked={formData.saveTo === "personal"}
-              onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
-              className="mr-2"
-            />
-            <span className="text-sm">{t.personalDatabase}</span>
-          </label>
-          {hasCompany && (
-            <>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="saveTo"
-                  value="business"
-                  checked={formData.saveTo === "business"}
-                  onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
-                  className="mr-2"
-                />
-                <span className="text-sm">{t.businessDatabase}</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="saveTo"
-                  value="both"
-                  checked={formData.saveTo === "both"}
-                  onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
-                  className="mr-2"
-                />
-                <span className="text-sm">{t.bothDatabases}</span>
-              </label>
-            </>
+      {/* Save Destination Selector - Only show for employees */}
+      {showStorageOptions && (
+        <div>
+          <label className="block text-sm font-medium mb-2">{t.saveIn}</label>
+          <div className="space-y-2">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="saveTo"
+                value="personal"
+                checked={formData.saveTo === "personal"}
+                onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
+                className="mr-2"
+              />
+              <span className="text-sm">{t.personalDatabase}</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="saveTo"
+                value="business"
+                checked={formData.saveTo === "business"}
+                onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
+                className="mr-2"
+              />
+              <span className="text-sm">{t.businessDatabase}</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="saveTo"
+                value="both"
+                checked={formData.saveTo === "both"}
+                onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
+                className="mr-2"
+              />
+              <span className="text-sm">{t.bothDatabases}</span>
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {t.chooseWhereToSave}
+          </p>
+        </div>
+      )}
+      
+      {/* Hidden info for company owners and personal users */}
+      {!showStorageOptions && (
+        <div className="text-xs text-gray-500 mb-2">
+          {isCompanyOwner && (
+            <span>Dit recept wordt automatisch opgeslagen in de bedrijfsdatabase.</span>
+          )}
+          {isPersonalUser && (
+            <span>Dit recept wordt automatisch opgeslagen in je persoonlijke database.</span>
           )}
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {hasCompany ? t.chooseWhereToSave : t.personalDatabaseOnly}
-        </p>
-        {!hasCompany && formData.saveTo !== "personal" && (
-          <p className="text-xs text-orange-600 mt-1">
-            Je moet verbonden zijn met een bedrijf om recepten in de bedrijfsdatabase op te slaan.
-          </p>
-        )}
-      </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-2">{t.ingredients}</label>

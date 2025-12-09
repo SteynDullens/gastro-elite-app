@@ -29,10 +29,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found or inactive' }, { status: 401 });
     }
 
+    // Determine user role
+    const isCompanyOwner = !!user.ownedCompany?.id;
+    const isEmployee = !!user.companyId && !user.ownedCompany?.id;
+    const isPersonalUser = !user.companyId && !user.ownedCompany?.id;
+
     const body = await request.json();
     console.log('Request body:', JSON.stringify(body, null, 2));
     
-    const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo } = body as {
+    let { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo } = body as {
       name: string;
       image?: string;
       batchAmount?: number;
@@ -40,8 +45,27 @@ export async function POST(request: NextRequest) {
       ingredients: { quantity: number; unit: string; name: string }[];
       steps: string[];
       categories: string[]; // names
-      saveTo: 'personal' | 'business' | 'both'; // New field for recipe destination
+      saveTo?: 'personal' | 'business' | 'both'; // Optional - will be enforced by role
     };
+    
+    // Enforce role-based saveTo rules
+    if (isCompanyOwner) {
+      // Company owners ALWAYS save to company - no choice
+      saveTo = 'business';
+      console.log('🔒 Company owner: Forcing saveTo to business');
+    } else if (isPersonalUser) {
+      // Personal users ALWAYS save to personal - no choice
+      saveTo = 'personal';
+      console.log('🔒 Personal user: Forcing saveTo to personal');
+    } else if (isEmployee) {
+      // Employees can choose, but validate the choice
+      if (!saveTo || (saveTo !== 'personal' && saveTo !== 'business' && saveTo !== 'both')) {
+        saveTo = 'personal'; // Default to personal for employees
+      }
+      console.log('✅ Employee: Using chosen saveTo:', saveTo);
+    } else {
+      return NextResponse.json({ error: 'Invalid user state' }, { status: 400 });
+    }
 
     if (!name || !Array.isArray(ingredients) || !Array.isArray(steps)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -89,37 +113,83 @@ export async function POST(request: NextRequest) {
     console.log('Creating recipe with saveTo:', saveTo);
     console.log('Recipe data:', JSON.stringify(recipeData, null, 2));
     
-    if (saveTo === 'personal' || saveTo === 'both') {
-      // Create personal recipe
+    if (saveTo === 'both') {
+      // Create TWO separate recipes: one personal, one company
+      console.log('Creating both personal and company recipes for employee:', user.id);
+      
+      const companyId = user.companyId;
+      if (!companyId) {
+        return NextResponse.json({ error: 'Employee must be linked to a company to save to both' }, { status: 400 });
+      }
+      
+      const [personalRecipe, companyRecipe] = await Promise.all([
+        // Create personal recipe
+        safeDbOperation(async (prisma) => {
+          return await prisma.recipe.create({
+            data: {
+              ...recipeData,
+              userId: user.id,
+              companyId: null, // Explicitly null for personal
+              originalOwnerId: user.id,
+              isSharedWithBusiness: false, // Not shared, it's a separate copy
+            },
+            include: { categories: true, ingredients: true },
+          });
+        }),
+        // Create company recipe
+        safeDbOperation(async (prisma) => {
+          return await prisma.recipe.create({
+            data: {
+              ...recipeData,
+              userId: null, // No userId for company recipe
+              companyId: companyId,
+              originalOwnerId: user.id, // Track who created it, but company owns it
+            },
+            include: { categories: true, ingredients: true },
+          });
+        })
+      ]);
+      
+      console.log('Both recipes created - Personal:', personalRecipe?.id, 'Company:', companyRecipe?.id);
+      // Return the personal recipe (employee owns this one)
+      return NextResponse.json({ recipe: personalRecipe });
+      
+    } else if (saveTo === 'personal') {
+      // Create personal recipe only
       console.log('Creating personal recipe for user:', user.id);
       recipe = await safeDbOperation(async (prisma) => {
         return await prisma.recipe.create({
         data: {
           ...recipeData,
           userId: user.id,
+          companyId: null, // Explicitly null
           originalOwnerId: user.id,
-          isSharedWithBusiness: saveTo === 'both',
+          isSharedWithBusiness: false,
         },
         include: { categories: true, ingredients: true },
       });
       });
       console.log('Personal recipe created:', recipe?.id);
     } else if (saveTo === 'business') {
-      // Create business recipe
-      if (!user.ownedCompany && !user.company) {
+      // Create business recipe only
+      const companyId = user.ownedCompany?.id || user.company?.id;
+      if (!companyId) {
         return NextResponse.json({ error: 'User must be associated with a company to create business recipes' }, { status: 400 });
       }
       
+      console.log('Creating business recipe for company:', companyId);
       recipe = await safeDbOperation(async (prisma) => {
         return await prisma.recipe.create({
         data: {
           ...recipeData,
-          companyId: user.ownedCompany?.id || user.company?.id,
-          originalOwnerId: user.id,
+          userId: null, // No userId for company recipes
+          companyId: companyId,
+          originalOwnerId: user.id, // Track creator, but company owns it
         },
         include: { categories: true, ingredients: true },
         });
       });
+      console.log('Business recipe created:', recipe?.id);
     } else {
       return NextResponse.json({ error: 'Invalid saveTo option' }, { status: 400 });
     }
