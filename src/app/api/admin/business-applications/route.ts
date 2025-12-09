@@ -17,22 +17,22 @@ export async function GET(request: NextRequest) {
 
     const applications = await safeDbOperation(async (prisma) => {
       return await prisma.company.findMany({
-        include: {
-          owner: {
-            select: {
-              firstName: true,
-              lastName: true,
+      include: {
+        owner: {
+          select: {
+            firstName: true,
+            lastName: true,
               email: true,
               phone: true,
               emailVerified: true,
               emailVerifiedAt: true
-            }
           }
-        },
-        orderBy: {
-          createdAt: 'desc'
         }
-      });
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
     });
 
     if (!applications) {
@@ -120,14 +120,14 @@ export async function POST(request: NextRequest) {
     const isApproved = status === 'approved';
     await safeDbOperation(async (prisma) => {
       return await prisma.company.update({
-        where: { id: companyId },
-        data: {
+      where: { id: companyId },
+      data: {
           status: isApproved ? 'approved' : 'rejected',
           rejectionReason: isApproved ? null : (rejectionReason || null),
           approvedAt: isApproved ? new Date() : null,
           approvedBy: decodedToken.email || decodedToken.id
-        }
-      });
+      }
+    });
     });
 
     // Send email notification to the business owner

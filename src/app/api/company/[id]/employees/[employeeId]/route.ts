@@ -9,6 +9,8 @@ export async function DELETE(
   try {
     const { id: companyId, employeeId } = await params;
     
+    console.log('🗑️ DELETE employee request:', { companyId, employeeId });
+    
     // Verify authentication
     const token = request.cookies.get('auth-token')?.value;
     if (!token) {
@@ -20,7 +22,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    await safeDbOperation(async (prisma) => {
+    const result = await safeDbOperation(async (prisma) => {
+      if (!prisma) {
+        throw new Error('Database connection not available');
+      }
+
       // Verify the employee belongs to this company
       const employee = await prisma.user.findUnique({
         where: { id: employeeId },
@@ -29,11 +35,22 @@ export async function DELETE(
         }
       });
 
+      console.log('🔍 Found employee:', { 
+        found: !!employee, 
+        employeeId, 
+        employeeCompanyId: employee?.companyId, 
+        requestedCompanyId: companyId 
+      });
+
       if (!employee) {
         throw new Error('Employee not found');
       }
 
       if (employee.companyId !== companyId) {
+        console.error('❌ Employee company mismatch:', {
+          employeeCompanyId: employee.companyId,
+          requestedCompanyId: companyId
+        });
         throw new Error('Employee does not belong to this company');
       }
 
@@ -42,11 +59,27 @@ export async function DELETE(
         where: { id: employeeId },
         data: { companyId: null }
       });
+
+      console.log('✅ Employee removed successfully');
+      return { success: true };
     });
+
+    if (!result) {
+      console.error('❌ Database operation returned null');
+      return NextResponse.json(
+        { error: 'Database operation failed' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error removing employee:', error);
+    console.error('❌ Error removing employee:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    });
     return NextResponse.json(
       { error: error.message || 'Failed to remove employee' },
       { status: 500 }

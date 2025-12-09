@@ -271,46 +271,59 @@ export default function AccountPage() {
       // Find the employee/invitation by checking both id and invitationId
       const employee = employees.find(emp => 
         emp.id === employeeId || 
-        emp.invitationId === employeeId ||
-        (emp.invitationId && emp.invitationId === employeeId)
+        emp.invitationId === employeeId
       );
       
-      console.log('🔍 Removing employee/invitation:', { employeeId, employee });
+      console.log('🔍 Delete attempt:', { employeeId, employee, employees });
+      
+      if (!employee) {
+        setBusinessError("Medewerker of uitnodiging niet gevonden");
+        return;
+      }
       
       // If it has an invitationId, it's an invitation (pending or rejected)
-      // Delete the invitation first, which will also unlink the user if they were linked
-      if (employee?.invitationId) {
+      // Delete the invitation, which will also unlink the user if they were linked
+      if (employee.invitationId) {
         console.log('🗑️ Deleting invitation:', employee.invitationId);
         const response = await fetch(`/api/company/${companyId}/invitations/${employee.invitationId}`, {
           method: 'DELETE',
         });
 
+        const responseData = await response.json().catch(() => ({}));
+        console.log('📥 Invitation delete response:', { status: response.status, data: responseData });
+
         if (response.ok) {
           setBusinessSuccess("Uitnodiging verwijderd!");
-          fetchCompanyData();
+          // Force refresh by clearing employees first, then fetching
+          setEmployees([]);
+          setTimeout(() => {
+            fetchCompanyData();
+          }, 100);
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Failed to delete invitation:', errorData);
-          setBusinessError(errorData.error || "Uitnodiging verwijderen mislukt");
+          setBusinessError(responseData.error || "Uitnodiging verwijderen mislukt");
         }
-      } else if (employee?.id) {
+      } else if (employee.id) {
         // It's an actual employee (no invitationId), remove the employee link
         console.log('🗑️ Removing employee:', employee.id);
         const response = await fetch(`/api/company/${companyId}/employees/${employee.id}`, {
           method: 'DELETE',
         });
 
+        const responseData = await response.json().catch(() => ({}));
+        console.log('📥 Employee delete response:', { status: response.status, data: responseData });
+
         if (response.ok) {
           setBusinessSuccess("Medewerker verwijderd!");
-          fetchCompanyData();
+          // Force refresh by clearing employees first, then fetching
+          setEmployees([]);
+          setTimeout(() => {
+            fetchCompanyData();
+          }, 100);
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Failed to remove employee:', errorData);
-          setBusinessError(errorData.error || "Medewerker verwijderen mislukt");
+          setBusinessError(responseData.error || "Medewerker verwijderen mislukt");
         }
       } else {
-        console.error('❌ Employee/invitation not found:', employeeId);
-        setBusinessError("Medewerker of uitnodiging niet gevonden");
+        setBusinessError("Geen geldige ID gevonden");
       }
     } catch (error: any) {
       console.error('❌ Error removing employee/invitation:', error);
@@ -1202,7 +1215,7 @@ export default function AccountPage() {
                         <div className="flex-1 min-w-0">
                           {employee.firstName ? (
                             <>
-                              <div className="font-medium text-gray-900">{employee.firstName} {employee.lastName}</div>
+                        <div className="font-medium text-gray-900">{employee.firstName} {employee.lastName}</div>
                               <div className="text-sm text-gray-600 truncate">{employee.email}</div>
                             </>
                           ) : (
@@ -1228,7 +1241,7 @@ export default function AccountPage() {
                         
                         {/* Three dots menu */}
                         <div className="relative">
-                          <button
+                      <button
                             onClick={(e) => {
                               e.stopPropagation();
                               const menuId = employee.invitationId || employee.id;
@@ -1268,9 +1281,9 @@ export default function AccountPage() {
                                   }}
                                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                   type="button"
-                                >
-                                  Verwijderen
-                                </button>
+                      >
+                        Verwijderen
+                      </button>
                                 {employee.status === 'accepted' && (
                                   <button
                                     onClick={(e) => {

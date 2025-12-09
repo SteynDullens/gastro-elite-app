@@ -36,6 +36,7 @@ export async function GET(
               lastName: true,
               email: true,
               phone: true,
+              companyId: true,
               createdAt: true
             }
           }
@@ -47,16 +48,20 @@ export async function GET(
       }
 
       // Get employees list
-      const employeeList = company.employees.map(employee => ({
-        id: employee.id,
-        firstName: employee.firstName,
-        lastName: employee.lastName,
-        email: employee.email,
-        phone: employee.phone,
-        status: 'accepted' as const,
-        createdAt: employee.createdAt,
-        invitationId: null
-      }));
+      // Only include employees that are actually linked to this company
+      // Filter out any employees that might have been unlinked but still in the relation
+      const employeeList = company.employees
+        .filter(employee => employee.companyId === companyId)
+        .map(employee => ({
+          id: employee.id,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          email: employee.email,
+          phone: employee.phone,
+          status: 'accepted' as const,
+          createdAt: employee.createdAt,
+          invitationId: null
+        }));
 
       // Try to get invitations (if model exists)
       // Show ALL invitations (pending, accepted, rejected) so users can see the full history
@@ -337,12 +342,16 @@ export async function POST(
           // P2021 = table doesn't exist - migration needed
           if (invitationError.code === 'P2021') {
             console.error('❌ EmployeeInvitation table does not exist (P2021). Migration required: npx prisma migrate deploy');
+            throw new Error('EmployeeInvitation table does not exist. Please run: npx prisma migrate deploy');
           } else {
             console.warn('⚠️ Could not create invitation record:', invitationError.code || invitationError.message);
+            throw invitationError; // Re-throw other errors
           }
-          // If model doesn't exist or other database error, continue without invitation tracking
-          // Don't throw - we can still add the employee and send email
-          invitation = null;
+        }
+        
+        // If no invitation was created, we can't send email with action buttons
+        if (!invitation || !invitation.id) {
+          throw new Error('Failed to create invitation record');
         }
 
         // Link user to company (personal account joining as employee)
@@ -355,45 +364,53 @@ export async function POST(
         // Don't update to 'accepted' immediately - let it show as pending so users can see the invitation was sent
 
         // Send invitation email to existing user
-        try {
-          const employeeName = `${existingUser.firstName} ${existingUser.lastName}`;
-          const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
-          const userLanguage = language || 'nl';
-          
-          console.log('📧 Sending invitation email to existing user:', {
-            email,
-            employeeName,
-            companyName: company.name,
-            ownerName,
-            language: userLanguage
-          });
-          
-          emailSent = await sendEmployeeInvitationToExistingUser(
-            email,
-            employeeName,
-            company.name,
-            ownerName,
-            invitation?.id || 'no-invitation-id', // Pass invitation ID for action buttons
-            userLanguage
-          );
-
-          console.log(emailSent ? '✅ Email sent successfully' : '❌ Email sending returned false');
-          
-          if (!emailSent) {
-            emailError = 'E-mail kon niet worden verzonden, maar gebruiker is toegevoegd';
-            console.error('❌ Email sending failed - check SMTP configuration and logs');
+        // IMPORTANT: Only send email if invitation was created successfully (with valid ID)
+        if (!invitation || !invitation.id) {
+          console.error('❌ Cannot send email: invitation was not created or has no ID');
+          emailError = 'Uitnodiging kon niet worden aangemaakt - e-mail niet verzonden';
+        } else {
+          try {
+            const employeeName = `${existingUser.firstName} ${existingUser.lastName}`;
+            const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
+            const userLanguage = language || 'nl';
+            
+            console.log('📧 Sending invitation email to existing user:', {
+              email,
+              employeeName,
+              companyName: company.name,
+              ownerName,
+              invitationId: invitation.id,
+              companyId: company.id,
+              language: userLanguage
+            });
+            
+            emailSent = await sendEmployeeInvitationToExistingUser(
+              email,
+              employeeName,
+              company.name,
+              ownerName,
+              invitation.id, // Pass invitation ID for action buttons
+              company.id, // Pass company ID for action URLs
+              userLanguage
+            );
+            
+            console.log(emailSent ? '✅ Email sent successfully' : '❌ Email sending returned false');
+            
+            if (!emailSent) {
+              emailError = 'E-mail kon niet worden verzonden, maar gebruiker is toegevoegd';
+            }
+          } catch (emailErr: any) {
+            console.error('❌ Email sending error:', emailErr);
+            console.error('Error details:', {
+              name: emailErr.name,
+              message: emailErr.message,
+              code: emailErr.code,
+              command: emailErr.command,
+              responseCode: emailErr.responseCode,
+              stack: emailErr.stack
+            });
+            emailError = `E-mail fout: ${emailErr.message}`;
           }
-        } catch (emailErr: any) {
-          console.error('❌ Email sending error:', emailErr);
-          console.error('Error details:', {
-            name: emailErr.name,
-            message: emailErr.message,
-            code: emailErr.code,
-            command: emailErr.command,
-            responseCode: emailErr.responseCode,
-            stack: emailErr.stack
-          });
-          emailError = `E-mail fout: ${emailErr.message}`;
         }
 
         // Always return success if user was added, even if email failed

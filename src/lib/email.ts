@@ -62,14 +62,28 @@ export interface PersonalRegistrationData {
 }
 
 // Generate action token for email buttons
-function generateActionToken(companyId: string, action: string): string {
+// Overloaded: for employee invitations (with invitationId) or business approvals (without invitationId)
+function generateActionToken(companyId: string, invitationIdOrAction: string, action?: string): string {
   const crypto = require('crypto');
   const secret = process.env.JWT_SECRET || process.env.DWT_SECRET || 'gastro-elite-secret';
-  return crypto
-    .createHmac('sha256', secret)
-    .update(`${companyId}:${action}`)
-    .digest('hex')
-    .substring(0, 32);
+  
+  // If action is provided, it's an employee invitation (companyId, invitationId, action)
+  // Otherwise, it's a business approval (companyId, action)
+  if (action !== undefined) {
+    // Employee invitation format: companyId:invitationId:action
+    return crypto
+      .createHmac('sha256', secret)
+      .update(`${companyId}:${invitationIdOrAction}:${action}`)
+      .digest('hex')
+      .substring(0, 32);
+  } else {
+    // Business approval format: companyId:action
+    return crypto
+      .createHmac('sha256', secret)
+      .update(`${companyId}:${invitationIdOrAction}`)
+      .digest('hex')
+      .substring(0, 32);
+  }
 }
 
 // Send business registration notification to admin
@@ -756,14 +770,20 @@ export async function sendEmployeeInvitationToExistingUser(
   companyName: string,
   companyOwnerName: string,
   invitationId: string,
+  companyId: string,
   language: string = 'nl'
 ): Promise<boolean> {
   try {
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
-    const loginUrl = `${appUrl}/login`;
     
-    const translations: Record<string, { subject: string; greeting: string; message: string; whatMeans: string; benefits: string[]; cta: string; footer: string }> = {
+    // Generate action tokens and URLs
+    const acceptToken = generateActionToken(companyId, invitationId, 'accept');
+    const declineToken = generateActionToken(companyId, invitationId, 'decline');
+    const acceptUrl = `${appUrl}/api/employee-action?companyId=${companyId}&invitationId=${invitationId}&action=accept&token=${acceptToken}`;
+    const declineUrl = `${appUrl}/api/employee-action?companyId=${companyId}&invitationId=${invitationId}&action=decline&token=${declineToken}`;
+    
+    const translations: Record<string, { subject: string; greeting: string; message: string; whatMeans: string; benefits: string[]; acceptButton: string; declineButton: string; footer: string }> = {
       nl: {
         subject: `${companyName} wil je in hun team!`,
         greeting: `Beste ${employeeName},`,
@@ -774,8 +794,9 @@ export async function sendEmployeeInvitationToExistingUser(
           'Je kunt samenwerken met je teamleden',
           'Je behoudt je persoonlijke account'
         ],
-        cta: 'Naar Inloggen',
-        footer: 'Log in met je bestaande account om de uitnodiging te accepteren.'
+        acceptButton: '✅ Accepteren',
+        declineButton: '❌ Afwijzen',
+        footer: 'Klik op een van de knoppen hierboven om de uitnodiging te accepteren of af te wijzen.'
       },
       en: {
         subject: `${companyName} wants you in their team!`,
@@ -787,75 +808,79 @@ export async function sendEmployeeInvitationToExistingUser(
           'You can collaborate with your team members',
           'You keep your personal account'
         ],
-        cta: 'Go to Login',
-        footer: 'Log in with your existing account to accept the invitation.'
+        acceptButton: '✅ Accept',
+        declineButton: '❌ Decline',
+        footer: 'Click one of the buttons above to accept or decline the invitation.'
       }
     };
 
     const t = translations[language] || translations.nl;
 
+    // Build HTML email with action buttons
+    const emailHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
+            🎉 Team Uitnodiging
+          </h1>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+          
+          <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+            ${t.greeting}
+          </p>
+          
+          <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+            ${t.message}
+          </p>
+
+          <!-- Info Card -->
+          <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #FF8C00;">
+            <h2 style="color: #1f2937; margin: 0 0 12px; font-size: 18px;">
+              ${t.whatMeans}
+            </h2>
+            <ul style="color: #6b7280; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+              ${t.benefits.map(benefit => `<li>${benefit}</li>`).join('')}
+            </ul>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="text-align: center; margin: 32px 0;">
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+              <a href="${acceptUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(34,197,94,0.4);">
+                ${t.acceptButton}
+              </a>
+              <a href="${declineUrl}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(239,68,68,0.4);">
+                ${t.declineButton}
+              </a>
+            </div>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+            ${t.footer}
+          </p>
+
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
+          <p style="color: #9ca3af; margin: 0; font-size: 13px;">
+            © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
+          </p>
+        </div>
+      </div>
+    `;
+
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
       to: employeeEmail,
       subject: t.subject,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">
-              🎉 Team Uitnodiging
-            </h1>
-          </div>
-          
-          <!-- Content -->
-          <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
-            
-            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-              ${t.greeting}
-            </p>
-            
-            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
-              ${t.message}
-            </p>
-
-            <!-- Info Card -->
-            <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #FF8C00;">
-              <h2 style="color: #1f2937; margin: 0 0 12px; font-size: 18px;">
-                ${t.whatMeans}
-              </h2>
-              <ul style="color: #6b7280; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                ${t.benefits.map(benefit => `<li>${benefit}</li>`).join('')}
-              </ul>
-            </div>
-
-            <!-- Action Buttons -->
-            <div style="text-align: center; margin: 32px 0;">
-              <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-                <a href="${acceptUrl}" 
-                   style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(34,197,94,0.4);">
-                  ✅ Accepteren
-                </a>
-                <a href="${declineUrl}" 
-                   style="display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(239,68,68,0.4);">
-                  ❌ Afwijzen
-                </a>
-              </div>
-            </div>
-
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
-              ${t.footer}
-            </p>
-
-          </div>
-          
-          <!-- Footer -->
-          <div style="background-color: #1f2937; padding: 24px; text-align: center; border-radius: 0 0 8px 8px;">
-            <p style="color: #9ca3af; margin: 0; font-size: 13px;">
-              © ${new Date().getFullYear()} Gastro-Elite • Professioneel Receptenbeheer
-            </p>
-          </div>
-        </div>
-      `
+      html: emailHtml
     };
 
     await getTransporter().sendMail(mailOptions);
