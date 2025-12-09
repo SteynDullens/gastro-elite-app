@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "dev:network": "next dev --hostname 0.0.0.0",
-    "build": "prisma generate && npm run migrate:deploy:safe && next build",
+    "build": "prisma generate && npm run ensure-table && next build",
     "start": "next start",
     "lint": "eslint",
     "init-db": "tsx src/lib/init-db.ts",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:baseline": "node scripts/baseline-existing-migrations.js || true",
-    "migrate:deploy:safe": "npm run migrate:baseline || true; prisma migrate deploy || node scripts/check-and-create-table.js || true"
+    "migrate:deploy:safe": "npm run migrate:baseline || true; prisma migrate deploy || node scripts/check-and-create-table.js || true",
+    "ensure-table": "node scripts/ensure-employee-invitation-table.js || true"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
