@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Check if user is already linked to another company
-      if (invitation.invitedUser.companyId && invitation.invitedUser.companyId !== companyId) {
+      if (invitation.invitedUser && invitation.invitedUser.companyId && invitation.invitedUser.companyId !== companyId) {
         return new NextResponse(renderErrorPage('Je bent al gekoppeld aan een ander bedrijf.'), {
           status: 400,
           headers: { 'Content-Type': 'text/html; charset=utf-8' }
