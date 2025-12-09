@@ -116,41 +116,52 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         />
       </div>
 
-      {/* Database Filter Buttons */}
-      {(user?.companyId || user?.ownedCompany?.id) && (
-        <div className="mb-4 flex gap-3">
-          <button
-            onClick={() => setDatabaseFilter("all")}
-            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
-              databaseFilter === "all"
-                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-300"
-            }`}
-          >
-            Alle recepten
-          </button>
-          <button
-            onClick={() => setDatabaseFilter("personal")}
-            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
-              databaseFilter === "personal"
-                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
-            }`}
-          >
-            Persoonlijke database
-          </button>
-          <button
-            onClick={() => setDatabaseFilter("business")}
-            className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
-              databaseFilter === "business"
-                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-green-50 border border-green-200 hover:border-green-300"
-            }`}
-          >
-            Bedrijfsdatabase
-          </button>
-        </div>
-      )}
+      {/* Database Filter Buttons - Always show if user has company, or if there are mixed recipes */}
+      {(() => {
+        const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);
+        const hasPersonalRecipes = recipes.some(r => !!r.userId && !r.companyId);
+        const hasBusinessRecipes = recipes.some(r => !!r.companyId);
+        const shouldShowFilters = hasCompany || (hasPersonalRecipes && hasBusinessRecipes);
+        
+        if (!shouldShowFilters) return null;
+        
+        return (
+          <div className="mb-4 flex gap-3 flex-wrap">
+            <button
+              onClick={() => setDatabaseFilter("all")}
+              className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+                databaseFilter === "all"
+                  ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg"
+                  : "bg-white text-gray-700 hover:bg-orange-50 border border-orange-200 hover:border-orange-300"
+              }`}
+            >
+              Alle recepten
+            </button>
+            <button
+              onClick={() => setDatabaseFilter("personal")}
+              className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+                databaseFilter === "personal"
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                  : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
+              }`}
+            >
+              Persoonlijke database
+            </button>
+            {hasCompany && (
+              <button
+                onClick={() => setDatabaseFilter("business")}
+                className={`px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-200 font-medium shadow-md ${
+                  databaseFilter === "business"
+                    ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
+                    : "bg-white text-gray-700 hover:bg-green-50 border border-green-200 hover:border-green-300"
+                }`}
+              >
+                Bedrijfsdatabase
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Horizontal Scrollable Filter Bar */}
       <div className="mb-8">
