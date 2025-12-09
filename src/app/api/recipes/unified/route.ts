@@ -44,10 +44,13 @@ export async function GET(request: NextRequest) {
       let whereClause: any;
       
       if (isCompanyOwner) {
-        // Company owners should ONLY see business recipes (companyId must match and NOT be null)
+        // Company owners should ONLY see business recipes
+        // Business recipes have companyId set and userId is null
         whereClause = {
-          companyId: companyId,
-          userId: null // Ensure no userId (business recipes don't have userId)
+          AND: [
+            { companyId: companyId },
+            { userId: null }
+          ]
         };
       } else if (isEmployee) {
         // Employees see their personal recipes AND business recipes
