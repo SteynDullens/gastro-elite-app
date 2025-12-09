@@ -162,9 +162,27 @@ export default function RecipeForm() {
       if (!res.ok) return;
       // Handle duplicate path from API
       const createdName = (data.category?.name || trimmed) as string;
-      if (!allCategories.some(c => c.toLowerCase() === createdName.toLowerCase())) {
-        setAllCategories(prev => Array.from(new Set([...prev, createdName])).sort((a, b) => a.localeCompare(b)));
+      
+      // Refresh categories list from API to get all categories
+      try {
+        const refreshRes = await fetch('/api/recipes/categories', { cache: 'no-store' });
+        const refreshData = await refreshRes.json();
+        if (refreshRes.ok && Array.isArray(refreshData?.categories)) {
+          const names = (refreshData.categories as { name: string }[]).map((c) => c.name);
+          setAllCategories(names.length ? names : DEFAULT_CATEGORIES);
+        } else {
+          // Fallback: add to local state if refresh fails
+          if (!allCategories.some(c => c.toLowerCase() === createdName.toLowerCase())) {
+            setAllCategories(prev => Array.from(new Set([...prev, createdName])).sort((a, b) => a.localeCompare(b)));
+          }
+        }
+      } catch (refreshError) {
+        // If refresh fails, just add to local state
+        if (!allCategories.some(c => c.toLowerCase() === createdName.toLowerCase())) {
+          setAllCategories(prev => Array.from(new Set([...prev, createdName])).sort((a, b) => a.localeCompare(b)));
+        }
       }
+      
       // Select category
       setFormData(prev => ({ ...prev, categories: Array.from(new Set([...prev.categories, createdName])) }));
     } catch {}
