@@ -32,19 +32,39 @@ export async function GET(request: NextRequest) {
     });
 
     const companyId = user?.companyId || user?.ownedCompany?.id;
+    const isCompanyOwner = !!user?.ownedCompany?.id;
+    const isEmployee = !!user?.companyId && !user?.ownedCompany?.id;
+    const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id;
 
     const recipes = await safeDbOperation(async (prisma) => {
-      // Build where clause:
-      // 1. Always include personal recipes owned by this user (userId matches AND companyId is null)
-      // 2. If user is connected to a company, also include business recipes (companyId matches)
-      const whereClause: any = {
-        OR: [
-          // Personal recipes: owned by user and not linked to any company
-          { userId: decoded.id, companyId: null },
-          // If user has a company, also include business recipes
-          ...(companyId ? [{ companyId: companyId }] : [])
-        ]
-      };
+      // Build where clause based on user role:
+      // - Company owners: ONLY business recipes (companyId matches)
+      // - Employees: Personal recipes (userId matches AND companyId is null) + Business recipes (companyId matches)
+      // - Personal users: ONLY personal recipes (userId matches AND companyId is null)
+      let whereClause: any;
+      
+      if (isCompanyOwner) {
+        // Company owners should ONLY see business recipes
+        whereClause = {
+          companyId: companyId
+        };
+      } else if (isEmployee) {
+        // Employees see their personal recipes AND business recipes
+        whereClause = {
+          OR: [
+            // Personal recipes: owned by user and not linked to any company
+            { userId: decoded.id, companyId: null },
+            // Business recipes: companyId matches
+            { companyId: companyId }
+          ]
+        };
+      } else {
+        // Personal users: ONLY personal recipes
+        whereClause = {
+          userId: decoded.id,
+          companyId: null
+        };
+      }
 
       return await prisma.recipe.findMany({
         where: whereClause,
