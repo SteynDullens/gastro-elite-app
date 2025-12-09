@@ -5,11 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "dev:network": "next dev --hostname 0.0.0.0",
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && npm run migrate:baseline && npm run migrate:deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "init-db": "tsx src/lib/init-db.ts",
-    "migrate:deploy": "prisma migrate deploy"
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:baseline": "node scripts/baseline-existing-migrations.js || true",
+    "migrate:deploy:safe": "prisma migrate deploy || node scripts/check-and-create-table.js || true"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
