@@ -199,13 +199,7 @@ export async function POST(
                 lastName: true,
                 email: true
               }
-            },
-            employees: {
-              select: {
-                id: true,
-                email: true
-              }
-            },
+            }
           }
         });
 
@@ -319,7 +313,8 @@ export async function POST(
         }
 
         // Check if user is already an employee of this company
-        const isAlreadyEmployee = company.employees.some(emp => emp.id === existingUser.id);
+        // Use direct companyId check instead of relation to avoid caching issues
+        const isAlreadyEmployee = existingUser.companyId === companyId;
         
         if (isAlreadyEmployee) {
           throw new Error('Deze gebruiker is al lid van uw team');
