@@ -17,14 +17,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ recipes: [] });
     }
 
+    // Get user with company info to check companyId
+    const user = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: {
+          id: true,
+          companyId: true,
+          ownedCompany: {
+            select: { id: true }
+          }
+        }
+      });
+    });
+
+    const companyId = user?.companyId || user?.ownedCompany?.id;
+
     const recipes = await safeDbOperation(async (prisma) => {
+      const whereClause: any = {
+        userId: decoded.id
+      };
+
+      // Also include business recipes if user is connected to a company
+      if (companyId) {
+        whereClause.OR = [
+          { userId: decoded.id },
+          { companyId: companyId }
+        ];
+      }
+
       return await prisma.recipe.findMany({
-        where: {
-          OR: [
-            { userId: decoded.id },
-            { companyId: decoded.companyId || undefined }
-          ]
-        },
+        where: whereClause,
         include: {
           categories: true,
           ingredients: true

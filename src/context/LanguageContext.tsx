@@ -389,7 +389,7 @@ const translations: Record<string, Translations> = {
     fillDetailsToAdd: "Vul de gegevens in om een nieuwe receptuur toe te voegen.",
     recipePhoto: "Receptfoto", pieces: "stuks", persons: "personen", portion: "portie",
     selectCategories: "Selecteer categorieën", done: "Gereed", newCategory: "Nieuwe categorie...",
-    saveIn: "Opslaan in", personalDatabase: "Persoonlijke database", businessDatabase: "Bedrijfsdatabase",
+    saveIn: "Opslaan in", personalDatabase: "Persoonlijke database", businessDatabase: "Bedrijfsdatabase", personalDatabaseOnly: "Alleen persoonlijke database beschikbaar",
     bothDatabases: "Beide databases", chooseWhereToSave: "Kies waar je recept opgeslagen moet worden",
     preparationMethod: "Bereidingswijze", step: "Stap", stepDescription: "Omschrijving stap",
     addStep: "Stap toevoegen", uploading: "Bezig met uploaden...",

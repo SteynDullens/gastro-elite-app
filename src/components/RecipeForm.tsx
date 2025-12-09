@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRecipes } from "@/context/RecipeContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
 interface Ingredient {
@@ -50,6 +51,10 @@ export default function RecipeForm() {
   const { addRecipe } = useRecipes();
   const { t } = useLanguage();
   const router = useRouter();
+  const { user } = useAuth();
+  
+  // Check if user is connected to a company (as employee or owner)
+  const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);
 
   // Category translation map
   const translateCategory = (category: string): string => {
@@ -607,32 +612,41 @@ export default function RecipeForm() {
             />
             <span className="text-sm">{t.personalDatabase}</span>
           </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="saveTo"
-              value="business"
-              checked={formData.saveTo === "business"}
-              onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
-              className="mr-2"
-            />
-            <span className="text-sm">{t.businessDatabase}</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="saveTo"
-              value="both"
-              checked={formData.saveTo === "both"}
-              onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
-              className="mr-2"
-            />
-            <span className="text-sm">{t.bothDatabases}</span>
-          </label>
+          {hasCompany && (
+            <>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="saveTo"
+                  value="business"
+                  checked={formData.saveTo === "business"}
+                  onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
+                  className="mr-2"
+                />
+                <span className="text-sm">{t.businessDatabase}</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="saveTo"
+                  value="both"
+                  checked={formData.saveTo === "both"}
+                  onChange={(e) => setFormData({ ...formData, saveTo: e.target.value as "personal" | "business" | "both" })}
+                  className="mr-2"
+                />
+                <span className="text-sm">{t.bothDatabases}</span>
+              </label>
+            </>
+          )}
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          {t.chooseWhereToSave}
+          {hasCompany ? t.chooseWhereToSave : t.personalDatabaseOnly}
         </p>
+        {!hasCompany && formData.saveTo !== "personal" && (
+          <p className="text-xs text-orange-600 mt-1">
+            Je moet verbonden zijn met een bedrijf om recepten in de bedrijfsdatabase op te slaan.
+          </p>
+        )}
       </div>
 
       <div>
