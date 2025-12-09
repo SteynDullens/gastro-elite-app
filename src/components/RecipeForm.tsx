@@ -47,11 +47,17 @@ const autoReplaceText = (text: string): string => {
     .replace(/\bcelsius\b/gi, '°C');
 };
 
-export default function RecipeForm() {
+interface RecipeFormProps {
+  recipeId?: string;
+  initialData?: any;
+}
+
+export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = {}) {
   const { addRecipe } = useRecipes();
   const { t } = useLanguage();
   const router = useRouter();
   const { user } = useAuth();
+  const isEditing = !!recipeId;
   
   // Check if user is connected to a company (as employee or owner)
   const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);

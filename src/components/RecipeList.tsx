@@ -289,9 +289,12 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   >
                     {t.view}
                   </a>
-                  <button className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200">
+                  <a 
+                    href={`/recipes/${recipe.id}/edit`}
+                    className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 text-center"
+                  >
                     {t.edit}
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>

@@ -34,17 +34,17 @@ export async function GET(request: NextRequest) {
     const companyId = user?.companyId || user?.ownedCompany?.id;
 
     const recipes = await safeDbOperation(async (prisma) => {
+      // Build where clause:
+      // 1. Always include personal recipes owned by this user (userId matches AND companyId is null)
+      // 2. If user is connected to a company, also include business recipes (companyId matches)
       const whereClause: any = {
-        userId: decoded.id
+        OR: [
+          // Personal recipes: owned by user and not linked to any company
+          { userId: decoded.id, companyId: null },
+          // If user has a company, also include business recipes
+          ...(companyId ? [{ companyId: companyId }] : [])
+        ]
       };
-
-      // Also include business recipes if user is connected to a company
-      if (companyId) {
-        whereClause.OR = [
-          { userId: decoded.id },
-          { companyId: companyId }
-        ];
-      }
 
       return await prisma.recipe.findMany({
         where: whereClause,
