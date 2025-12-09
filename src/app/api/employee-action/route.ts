@@ -104,6 +104,9 @@ export async function GET(request: NextRequest) {
         });
       }
 
+      // Store in variable to ensure TypeScript knows it's not null
+      const invitedUserId = invitation.invitedUserId;
+
       // Check if user is already linked to another company
       if (invitation.invitedUser && invitation.invitedUser.companyId && invitation.invitedUser.companyId !== companyId) {
         return new NextResponse(renderErrorPage('Je bent al gekoppeld aan een ander bedrijf.'), {
@@ -115,7 +118,7 @@ export async function GET(request: NextRequest) {
       // Link user to company and update invitation status
       await safeDbOperation(async (prisma) => {
         await prisma.user.update({
-          where: { id: invitation.invitedUserId },
+          where: { id: invitedUserId },
           data: { companyId: companyId }
         });
 
@@ -123,7 +126,7 @@ export async function GET(request: NextRequest) {
           where: { id: invitationId },
           data: {
             status: 'accepted',
-            invitedUserId: invitation.invitedUserId
+            invitedUserId: invitedUserId
           }
         });
       });
