@@ -111,9 +111,16 @@ export default function AccountPage() {
     if (!companyId) return;
 
     try {
+      // Add cache-busting timestamp to ensure fresh data
+      const timestamp = Date.now();
       const [companyResponse, employeesResponse] = await Promise.all([
-        fetch(`/api/company/${companyId}`),
-        fetch(`/api/company/${companyId}/employees`)
+        fetch(`/api/company/${companyId}?t=${timestamp}`),
+        fetch(`/api/company/${companyId}/employees?t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
       ]);
 
       if (companyResponse.ok) {
@@ -123,6 +130,7 @@ export default function AccountPage() {
 
       if (employeesResponse.ok) {
         const employeesData = await employeesResponse.json();
+        console.log('📥 Fetched employees:', employeesData.employees?.length || 0);
         setEmployees(employeesData.employees || []);
       }
     } catch (error) {
@@ -294,11 +302,10 @@ export default function AccountPage() {
 
         if (response.ok) {
           setBusinessSuccess("Uitnodiging verwijderd!");
-          // Force refresh by clearing employees first, then fetching
-          setEmployees([]);
-          setTimeout(() => {
-            fetchCompanyData();
-          }, 100);
+          // Immediately remove from local state
+          setEmployees(prev => prev.filter(emp => emp.invitationId !== employee.invitationId));
+          // Then refresh from server to ensure consistency
+          await fetchCompanyData();
         } else {
           setBusinessError(responseData.error || "Uitnodiging verwijderen mislukt");
         }
@@ -314,11 +321,10 @@ export default function AccountPage() {
 
         if (response.ok) {
           setBusinessSuccess("Medewerker verwijderd!");
-          // Force refresh by clearing employees first, then fetching
-          setEmployees([]);
-          setTimeout(() => {
-            fetchCompanyData();
-          }, 100);
+          // Immediately remove from local state
+          setEmployees(prev => prev.filter(emp => emp.id !== employee.id && emp.invitationId !== employee.invitationId));
+          // Then refresh from server to ensure consistency
+          await fetchCompanyData();
         } else {
           setBusinessError(responseData.error || "Medewerker verwijderen mislukt");
         }

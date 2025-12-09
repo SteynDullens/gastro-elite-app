@@ -55,12 +55,32 @@ export async function DELETE(
       }
 
       // Remove employee from company
-      await prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id: employeeId },
-        data: { companyId: null }
+        data: { companyId: null },
+        select: {
+          id: true,
+          email: true,
+          companyId: true
+        }
       });
 
-      console.log('✅ Employee removed successfully');
+      console.log('✅ Employee removed successfully:', {
+        employeeId,
+        email: updatedUser.email,
+        companyIdAfterUpdate: updatedUser.companyId,
+        shouldBeNull: updatedUser.companyId === null
+      });
+      
+      // Verify the update worked
+      if (updatedUser.companyId !== null) {
+        console.error('❌ WARNING: Employee companyId was not set to null!', {
+          employeeId,
+          companyId: updatedUser.companyId
+        });
+        throw new Error('Failed to remove employee - companyId still set');
+      }
+      
       return { success: true };
     });
 
