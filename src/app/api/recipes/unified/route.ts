@@ -58,8 +58,13 @@ export async function GET(request: NextRequest) {
           OR: [
             // Personal recipes: owned by user and not linked to any company
             { userId: decoded.id, companyId: null },
-            // Business recipes: companyId matches
-            { companyId: companyId }
+            // Business recipes: companyId matches AND userId is null (ensures it's a business recipe, not personal)
+            { 
+              AND: [
+                { companyId: companyId },
+                { userId: null }
+              ]
+            }
           ]
         };
       } else {
