@@ -106,6 +106,11 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     return () => { isMounted = false; };
   }, []);
 
+  // Determine user role for additional filtering
+  const isCompanyOwner = !!user?.ownedCompany?.id;
+  const isEmployee = !!user?.companyId && !user?.ownedCompany?.id;
+  const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id;
+
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -116,16 +121,26 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     );
     const matchesCategory = !selectedCategory || recipeCategories.includes(selectedCategory);
     
-    // Filter by database type
+    // Filter by database type AND enforce role-based visibility
     let matchesDatabase = true;
-    if (databaseFilter === "personal") {
+    
+    // Company owners should NEVER see personal recipes (userId is set)
+    if (isCompanyOwner && recipe.userId) {
+      matchesDatabase = false; // Block personal recipes for company owners
+    }
+    // Personal users should NEVER see business recipes (companyId is set)
+    else if (isPersonalUser && recipe.companyId) {
+      matchesDatabase = false; // Block business recipes for personal users
+    }
+    // Employees can see both, but filter based on selected filter
+    else if (databaseFilter === "personal") {
       // Personal recipes: have userId and no companyId
       matchesDatabase = !!recipe.userId && !recipe.companyId;
     } else if (databaseFilter === "business") {
-      // Business recipes: have companyId
-      matchesDatabase = !!recipe.companyId;
+      // Business recipes: have companyId and no userId
+      matchesDatabase = !!recipe.companyId && !recipe.userId;
     }
-    // If filter is "all", show all recipes (matchesDatabase stays true)
+    // If filter is "all", show all recipes that match role (matchesDatabase stays true if not blocked above)
     
     return matchesSearch && matchesCategory && matchesDatabase;
   });
