@@ -38,35 +38,36 @@ export async function GET(request: NextRequest) {
 
     const recipes = await safeDbOperation(async (prisma) => {
       // Build where clause based on user role:
-      // - Company owners: ONLY business recipes (companyId matches)
-      // - Employees: Personal recipes (userId matches AND companyId is null) + Business recipes (companyId matches)
+      // - Company owners: ONLY business recipes (companyId matches AND userId is null)
+      // - Employees: Personal recipes (userId matches AND companyId is null) + Business recipes (companyId matches AND userId is null)
       // - Personal users: ONLY personal recipes (userId matches AND companyId is null)
       let whereClause: any;
       
       if (isCompanyOwner) {
         // Company owners should ONLY see business recipes
-        // Business recipes have companyId set and userId is null
+        // Business recipes: companyId matches AND userId is null (strict requirement)
         whereClause = {
-          AND: [
-            { companyId: companyId },
-            { userId: null }
-          ]
+          companyId: companyId,
+          userId: null
         };
+        console.log('🔒 Company owner query:', JSON.stringify(whereClause, null, 2));
       } else if (isEmployee) {
         // Employees see their personal recipes AND business recipes
         whereClause = {
           OR: [
             // Personal recipes: owned by user and not linked to any company
-            { userId: decoded.id, companyId: null },
+            { 
+              userId: decoded.id, 
+              companyId: null 
+            },
             // Business recipes: companyId matches AND userId is null (ensures it's a business recipe, not personal)
             { 
-              AND: [
-                { companyId: companyId },
-                { userId: null }
-              ]
+              companyId: companyId,
+              userId: null
             }
           ]
         };
+        console.log('👤 Employee query:', JSON.stringify(whereClause, null, 2));
       } else {
         // Personal users: ONLY personal recipes
         // Query for recipes where userId matches AND companyId is null
@@ -74,9 +75,10 @@ export async function GET(request: NextRequest) {
           userId: decoded.id,
           companyId: null
         };
+        console.log('👤 Personal user query:', JSON.stringify(whereClause, null, 2));
       }
 
-      return await prisma.recipe.findMany({
+      const fetchedRecipes = await prisma.recipe.findMany({
         where: whereClause,
         select: {
           id: true,
@@ -107,6 +109,57 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' }
       });
+
+      // Additional safety filter: Remove any recipes that don't match the role requirements
+      const filteredRecipes = fetchedRecipes.filter((recipe: any) => {
+        if (isCompanyOwner) {
+          // Company owners: ONLY recipes with companyId matching AND userId is null
+          const isValid = recipe.companyId === companyId && recipe.userId === null;
+          if (!isValid) {
+            console.warn('🚫 Filtered out invalid recipe for company owner:', {
+              id: recipe.id,
+              name: recipe.name,
+              userId: recipe.userId,
+              companyId: recipe.companyId,
+              expectedCompanyId: companyId
+            });
+          }
+          return isValid;
+        } else if (isEmployee) {
+          // Employees: Personal recipes (userId matches AND companyId is null) OR business recipes (companyId matches AND userId is null)
+          const isPersonal = recipe.userId === decoded.id && recipe.companyId === null;
+          const isBusiness = recipe.companyId === companyId && recipe.userId === null;
+          const isValid = isPersonal || isBusiness;
+          if (!isValid) {
+            console.warn('🚫 Filtered out invalid recipe for employee:', {
+              id: recipe.id,
+              name: recipe.name,
+              userId: recipe.userId,
+              companyId: recipe.companyId,
+              expectedCompanyId: companyId,
+              decodedId: decoded.id
+            });
+          }
+          return isValid;
+        } else {
+          // Personal users: ONLY recipes with userId matching AND companyId is null
+          const isValid = recipe.userId === decoded.id && recipe.companyId === null;
+          if (!isValid) {
+            console.warn('🚫 Filtered out invalid recipe for personal user:', {
+              id: recipe.id,
+              name: recipe.name,
+              userId: recipe.userId,
+              companyId: recipe.companyId,
+              decodedId: decoded.id
+            });
+          }
+          return isValid;
+        }
+      });
+
+      console.log(`✅ Filtered recipes: ${filteredRecipes.length} out of ${fetchedRecipes.length} for user ${decoded.id} (${isCompanyOwner ? 'company owner' : isEmployee ? 'employee' : 'personal user'})`);
+      
+      return filteredRecipes;
     });
 
     // Deduplicate recipes: if "both" was selected, we have two recipes (one personal, one business)
