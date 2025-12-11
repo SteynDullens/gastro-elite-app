@@ -158,6 +158,11 @@ export async function POST(request: NextRequest) {
       ]);
       
       console.log('✅ Both recipes created - Personal:', personalRecipe?.id, 'Company:', companyRecipe?.id);
+      
+      if (!personalRecipe) {
+        return NextResponse.json({ error: 'Failed to create personal recipe' }, { status: 500 });
+      }
+      
       // Return the personal recipe (employee owns this one)
       return NextResponse.json({ 
         recipe: {
@@ -189,6 +194,10 @@ export async function POST(request: NextRequest) {
         });
       });
       console.log('✅ Personal recipe created:', recipe?.id);
+      
+      if (!recipe) {
+        return NextResponse.json({ error: 'Failed to create personal recipe' }, { status: 500 });
+      }
       
       // Map to unified format
       return NextResponse.json({ 
@@ -227,6 +236,10 @@ export async function POST(request: NextRequest) {
         });
       });
       console.log('✅ Business recipe created:', recipe?.id);
+      
+      if (!recipe) {
+        return NextResponse.json({ error: 'Failed to create business recipe' }, { status: 500 });
+      }
       
       // Map to unified format
       return NextResponse.json({ 

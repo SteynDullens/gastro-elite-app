@@ -28,8 +28,9 @@ export async function DELETE(request: NextRequest) {
         where: { id: userId },
         include: {
           ownedCompany: true,
-          recipes: true,
-          originalRecipes: true
+          personalRecipes: true,
+          companyRecipesCreated: true,
+          companyMemberships: true
         }
       });
 
@@ -38,16 +39,25 @@ export async function DELETE(request: NextRequest) {
       }
 
       // Delete related data first
-      if (user.recipes.length > 0) {
-        await prisma.recipe.deleteMany({
+      // Delete personal recipes (cascade should handle this, but being explicit)
+      if (user.personalRecipes.length > 0) {
+        await prisma.personalRecipe.deleteMany({
           where: { userId: user.id }
         });
       }
 
-      if (user.originalRecipes.length > 0) {
-        await prisma.recipe.updateMany({
-          where: { originalOwnerId: user.id },
-          data: { originalOwnerId: null }
+      // Update company recipes: remove creator reference (company still owns them)
+      if (user.companyRecipesCreated.length > 0) {
+        await prisma.companyRecipe.updateMany({
+          where: { creatorId: user.id },
+          data: { creatorId: null }
+        });
+      }
+
+      // Remove company memberships
+      if (user.companyMemberships.length > 0) {
+        await prisma.companyMembership.deleteMany({
+          where: { userId: user.id }
         });
       }
 

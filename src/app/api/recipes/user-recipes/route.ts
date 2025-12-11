@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { safeDbOperation } from '@/lib/prisma';
 
-// GET - Fetch user's own recipes
+// GET - Fetch user's own personal recipes
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('auth-token')?.value;
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const recipes = await safeDbOperation(async (prisma) => {
-      return await prisma.recipe.findMany({
+      return await prisma.personalRecipe.findMany({
         where: { userId: decoded.id },
         include: {
           categories: true,
@@ -26,7 +26,15 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    return NextResponse.json({ recipes: recipes || [] });
+    // Map to unified format
+    const mappedRecipes = (recipes || []).map(recipe => ({
+      ...recipe,
+      companyId: null,
+      originalOwnerId: recipe.userId,
+      isSharedWithBusiness: false
+    }));
+
+    return NextResponse.json({ recipes: mappedRecipes });
 
   } catch (error: any) {
     console.error('Error fetching user recipes:', error);
