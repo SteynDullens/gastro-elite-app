@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user with company memberships
+    console.log('🔍 Looking up user:', decoded.id);
     const user = await safeDbOperation(async (prisma) => {
       return await prisma.user.findUnique({
         where: { id: decoded.id },
@@ -33,7 +34,22 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    if (!user || user.isBlocked) {
+    console.log('🔍 User lookup result:', {
+      found: !!user,
+      userId: decoded.id,
+      userEmail: user?.email,
+      isBlocked: user?.isBlocked,
+      hasOwnedCompany: !!user?.ownedCompany,
+      membershipsCount: user?.companyMemberships?.length || 0
+    });
+
+    if (!user) {
+      console.error('❌ User not found:', decoded.id);
+      return NextResponse.json({ error: 'User not found or inactive' }, { status: 401 });
+    }
+
+    if (user.isBlocked) {
+      console.error('❌ User is blocked:', decoded.id);
       return NextResponse.json({ error: 'User not found or inactive' }, { status: 401 });
     }
 
@@ -112,12 +128,18 @@ export async function POST(request: NextRequest) {
       // Create TWO completely separate recipes: one in PersonalRecipe, one in CompanyRecipe
       console.log('🔒 Creating both personal and company recipes for employee:', user.id);
       
-      // Get first company membership (for now, support multiple later)
-      const companyMembership = user.companyMemberships[0];
-      if (!companyMembership) {
+      // Get company ID from memberships or legacy companyId
+      let companyId: string | null = null;
+      if (user.companyMemberships && user.companyMemberships.length > 0) {
+        companyId = user.companyMemberships[0].companyId;
+      } else if (user.companyId) {
+        // Fallback to legacy companyId
+        companyId = user.companyId;
+      }
+      
+      if (!companyId) {
         return NextResponse.json({ error: 'Employee must be linked to a company to save to both' }, { status: 400 });
       }
-      const companyId = companyMembership.companyId;
 
       const [personalRecipe, companyRecipe] = await Promise.all([
         // Create PersonalRecipe - completely separate table
