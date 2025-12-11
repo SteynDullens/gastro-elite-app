@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
+// POST - Create recipe with STRICT multi-tenant isolation
 export async function POST(request: NextRequest) {
   try {
-    console.log('Recipe creation API called');
+    console.log('🔒 Recipe creation API called');
     
     // Authenticate user
     const token = request.cookies.get('auth-token')?.value;
     if (!token) {
-      console.log('No authentication token found');
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
 
@@ -18,10 +18,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    // Get user with company memberships
     const user = await safeDbOperation(async (prisma) => {
       return await prisma.user.findUnique({
-      where: { id: decoded.id },
-      include: { ownedCompany: true, company: true }
+        where: { id: decoded.id },
+        include: { 
+          ownedCompany: true,
+          companyMemberships: {
+            include: {
+              company: true
+            }
+          }
+        }
       });
     });
 
@@ -31,12 +39,10 @@ export async function POST(request: NextRequest) {
 
     // Determine user role
     const isCompanyOwner = !!user.ownedCompany?.id;
-    const isEmployee = !!user.companyId && !user.ownedCompany?.id;
-    const isPersonalUser = !user.companyId && !user.ownedCompany?.id;
+    const isEmployee = user.companyMemberships.length > 0;
+    const isPersonalUser = !user.ownedCompany && user.companyMemberships.length === 0;
 
     const body = await request.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
-    
     const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo: initialSaveTo } = body as {
       name: string;
       image?: string;
@@ -45,12 +51,11 @@ export async function POST(request: NextRequest) {
       ingredients: { quantity: number; unit: string; name: string }[];
       steps: string[];
       categories: string[]; // names
-      saveTo?: 'personal' | 'business' | 'both'; // Optional - will be enforced by role
+      saveTo?: 'personal' | 'business' | 'both';
     };
     
-    let saveTo = initialSaveTo;
-    
     // Enforce role-based saveTo rules
+    let saveTo = initialSaveTo;
     if (isCompanyOwner) {
       // Company owners ALWAYS save to company - no choice
       saveTo = 'business';
@@ -60,33 +65,31 @@ export async function POST(request: NextRequest) {
       saveTo = 'personal';
       console.log('🔒 Personal user: Forcing saveTo to personal');
     } else if (isEmployee) {
-      // Employees can choose, but validate the choice
+      // Employees can choose, but validate
       if (!saveTo || (saveTo !== 'personal' && saveTo !== 'business' && saveTo !== 'both')) {
-        saveTo = 'personal'; // Default to personal for employees
+        saveTo = 'personal'; // Default to personal
       }
       console.log('✅ Employee: Using chosen saveTo:', saveTo);
-    } else {
-      return NextResponse.json({ error: 'Invalid user state' }, { status: 400 });
     }
 
     if (!name || !Array.isArray(ingredients) || !Array.isArray(steps)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    // Ensure categories exist (create if missing) and collect IDs
+    // Ensure categories exist
     const categoryRecords = await safeDbOperation(async (prisma) => {
       return await Promise.all(
-      (categories || []).map(async (catName) => {
-        const trimmed = (catName || '').trim();
-        if (!trimmed) return null;
-        const existing = await prisma.category.findFirst({ where: { name: { equals: trimmed } } });
-        if (existing) return existing;
-        return prisma.category.create({ data: { name: trimmed } });
-      })
-    );
+        (categories || []).map(async (catName) => {
+          const trimmed = (catName || '').trim();
+          if (!trimmed) return null;
+          const existing = await prisma.category.findFirst({ where: { name: { equals: trimmed } } });
+          if (existing) return existing;
+          return prisma.category.create({ data: { name: trimmed } });
+        })
+      );
     }) || [];
 
-    // Create recipe(s) based on saveTo option
+    // Build recipe data
     const recipeData = {
       name,
       image,
@@ -96,13 +99,6 @@ export async function POST(request: NextRequest) {
         .map((s: string, i: number) => (s && s.trim() ? `${i + 1}. ${s.trim()}` : ''))
         .filter(Boolean)
         .join('\n'),
-      ingredients: {
-        create: ingredients.map((ing) => ({
-          name: ing.name,
-          quantity: ing.quantity,
-          unit: ing.unit as any,
-        })),
-      },
       categories: {
         connect: categoryRecords
           .filter((c) => Boolean(c && (c as any).id))
@@ -112,94 +108,141 @@ export async function POST(request: NextRequest) {
 
     let recipe;
     
-    console.log('Creating recipe with saveTo:', saveTo);
-    console.log('Recipe data:', JSON.stringify(recipeData, null, 2));
-    
     if (saveTo === 'both') {
-      // Create TWO separate recipes: one personal, one company
-      console.log('Creating both personal and company recipes for employee:', user.id);
+      // Create TWO completely separate recipes: one in PersonalRecipe, one in CompanyRecipe
+      console.log('🔒 Creating both personal and company recipes for employee:', user.id);
       
-      const companyId = user.companyId;
-      if (!companyId) {
+      // Get first company membership (for now, support multiple later)
+      const companyMembership = user.companyMemberships[0];
+      if (!companyMembership) {
         return NextResponse.json({ error: 'Employee must be linked to a company to save to both' }, { status: 400 });
       }
-      
+      const companyId = companyMembership.companyId;
+
       const [personalRecipe, companyRecipe] = await Promise.all([
-        // Create personal recipe
+        // Create PersonalRecipe - completely separate table
         safeDbOperation(async (prisma) => {
-          return await prisma.recipe.create({
+          return await prisma.personalRecipe.create({
             data: {
               ...recipeData,
-              userId: user.id,
-              companyId: null, // Explicitly null for personal
-              originalOwnerId: user.id,
-              isSharedWithBusiness: false, // Not shared, it's a separate copy
+              userId: user.id, // REQUIRED for personal recipes
+              ingredients: {
+                create: ingredients.map((ing) => ({
+                  name: ing.name,
+                  quantity: ing.quantity,
+                  unit: ing.unit as any,
+                })),
+              },
             },
             include: { categories: true, ingredients: true },
           });
         }),
-        // Create company recipe
+        // Create CompanyRecipe - completely separate table
         safeDbOperation(async (prisma) => {
-          return await prisma.recipe.create({
+          return await prisma.companyRecipe.create({
             data: {
               ...recipeData,
-              userId: null, // No userId for company recipe
-              companyId: companyId,
-              originalOwnerId: user.id, // Track who created it, but company owns it
+              companyId: companyId, // REQUIRED for company recipes
+              creatorId: user.id, // Track creator, but company owns it
+              ingredients: {
+                create: ingredients.map((ing) => ({
+                  name: ing.name,
+                  quantity: ing.quantity,
+                  unit: ing.unit as any,
+                })),
+              },
             },
             include: { categories: true, ingredients: true },
           });
         })
       ]);
       
-      console.log('Both recipes created - Personal:', personalRecipe?.id, 'Company:', companyRecipe?.id);
+      console.log('✅ Both recipes created - Personal:', personalRecipe?.id, 'Company:', companyRecipe?.id);
       // Return the personal recipe (employee owns this one)
-      return NextResponse.json({ recipe: personalRecipe });
+      return NextResponse.json({ 
+        recipe: {
+          ...personalRecipe,
+          userId: personalRecipe.userId,
+          companyId: null,
+          originalOwnerId: personalRecipe.userId,
+          isSharedWithBusiness: false,
+        }
+      });
       
     } else if (saveTo === 'personal') {
-      // Create personal recipe only
-      console.log('Creating personal recipe for user:', user.id);
+      // Create PersonalRecipe only
+      console.log('🔒 Creating personal recipe for user:', user.id);
       recipe = await safeDbOperation(async (prisma) => {
-        return await prisma.recipe.create({
-        data: {
-          ...recipeData,
-          userId: user.id,
-          companyId: null, // Explicitly null
-          originalOwnerId: user.id,
+        return await prisma.personalRecipe.create({
+          data: {
+            ...recipeData,
+            userId: user.id, // REQUIRED
+            ingredients: {
+              create: ingredients.map((ing) => ({
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit as any,
+              })),
+            },
+          },
+          include: { categories: true, ingredients: true },
+        });
+      });
+      console.log('✅ Personal recipe created:', recipe?.id);
+      
+      // Map to unified format
+      return NextResponse.json({ 
+        recipe: {
+          ...recipe,
+          userId: recipe.userId,
+          companyId: null,
+          originalOwnerId: recipe.userId,
           isSharedWithBusiness: false,
-        },
-        include: { categories: true, ingredients: true },
+        }
       });
-      });
-      console.log('Personal recipe created:', recipe?.id);
+      
     } else if (saveTo === 'business') {
-      // Create business recipe only
-      const companyId = user.ownedCompany?.id || user.company?.id;
+      // Create CompanyRecipe only
+      const companyId = user.ownedCompany?.id || user.companyMemberships[0]?.companyId;
       if (!companyId) {
         return NextResponse.json({ error: 'User must be associated with a company to create business recipes' }, { status: 400 });
       }
       
-      console.log('Creating business recipe for company:', companyId);
+      console.log('🔒 Creating business recipe for company:', companyId);
       recipe = await safeDbOperation(async (prisma) => {
-        return await prisma.recipe.create({
-        data: {
-          ...recipeData,
-          userId: null, // No userId for company recipes
-          companyId: companyId,
-          originalOwnerId: user.id, // Track creator, but company owns it
-        },
-        include: { categories: true, ingredients: true },
+        return await prisma.companyRecipe.create({
+          data: {
+            ...recipeData,
+            companyId: companyId, // REQUIRED
+            creatorId: user.id, // Track creator
+            ingredients: {
+              create: ingredients.map((ing) => ({
+                name: ing.name,
+                quantity: ing.quantity,
+                unit: ing.unit as any,
+              })),
+            },
+          },
+          include: { categories: true, ingredients: true },
         });
       });
-      console.log('Business recipe created:', recipe?.id);
+      console.log('✅ Business recipe created:', recipe?.id);
+      
+      // Map to unified format
+      return NextResponse.json({ 
+        recipe: {
+          ...recipe,
+          userId: null,
+          companyId: recipe.companyId,
+          originalOwnerId: recipe.creatorId,
+          isSharedWithBusiness: false,
+        }
+      });
     } else {
       return NextResponse.json({ error: 'Invalid saveTo option' }, { status: 400 });
     }
-
-    console.log('Recipe creation successful, returning recipe:', recipe?.id);
-    return NextResponse.json({ recipe });
   } catch (error) {
-    console.error('Create recipe error:', error);
+    console.error('❌ Create recipe error:', error);
     console.error('Error details:', (error as any).message);
     return NextResponse.json({ error: 'Failed to create recipe' }, { status: 500 });
   }

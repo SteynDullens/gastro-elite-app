@@ -11,101 +11,156 @@ datasource db {
 }
 
 model User {
-  id                      String    @id @default(cuid())
-  firstName               String
-  lastName                String
-  email                   String    @unique
-  password                String
-  phone                   String
-  company                 Company?  @relation("CompanyEmployees", fields: [companyId], references: [id])
-  companyId               String?
-  ownedCompany            Company?  @relation("CompanyOwner")
-  invitations             EmployeeInvitation[]
-  recipes                 Recipe[]
-  originalRecipes         Recipe[]  @relation("OriginalRecipeOwner")
-  isBlocked               Boolean   @default(false)
-  isAdmin                 Boolean   @default(false)
-  emailVerificationToken  String?
-  emailVerified           Boolean   @default(false)
-  emailVerifiedAt         DateTime?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  id                     String               @id @default(cuid())
+  firstName              String
+  lastName               String
+  email                  String               @unique
+  password               String
+  phone                  String
+  ownedCompany           Company?             @relation("CompanyOwner")
+  // Legacy: Keep for backward compatibility during migration
+  company                Company?             @relation("CompanyEmployees", fields: [companyId], references: [id])
+  companyId              String?
+  // Many-to-many relationship: users can belong to multiple companies
+  companyMemberships     CompanyMembership[]
+  invitations            EmployeeInvitation[]
+  personalRecipes        PersonalRecipe[]
+  companyRecipesCreated  CompanyRecipe[]      @relation("CompanyRecipeCreator")
+  isBlocked              Boolean              @default(false)
+  isAdmin                Boolean              @default(false)
+  emailVerificationToken String?
+  emailVerified          Boolean              @default(false)
+  emailVerifiedAt        DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 }
 
 model Company {
-  id              String    @id @default(cuid())
+  id              String               @id @default(cuid())
   name            String
   address         String
   kvkNumber       String
   vatNumber       String?
   companyPhone    String?
   kvkDocumentPath String?
-  kvkDocumentData String?   @db.Text // Base64 encoded document data (fallback storage)
-  status          String    @default("pending") // pending, approved, rejected
+  kvkDocumentData String?              @db.Text // Base64 encoded document data (fallback storage)
+  status          String               @default("pending") // pending, approved, rejected
   rejectionReason String?
   approvedAt      DateTime?
   approvedBy      String?
-  owner           User      @relation("CompanyOwner", fields: [ownerId], references: [id])
-  ownerId         String    @unique
-  employees       User[]    @relation("CompanyEmployees")
+  owner           User                 @relation("CompanyOwner", fields: [ownerId], references: [id])
+  ownerId         String               @unique
+  // Legacy: Keep for backward compatibility during migration
+  employees       User[]               @relation("CompanyEmployees")
+  // Many-to-many relationship: companies can have multiple employees
+  memberships     CompanyMembership[]
   invitations     EmployeeInvitation[]
-  recipes         Recipe[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  companyRecipes  CompanyRecipe[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+// Many-to-many relationship table for users and companies
+model CompanyMembership {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
 }
 
 model EmployeeInvitation {
-  id          String    @id @default(cuid())
-  email       String
-  status      String    @default("pending") // pending, accepted, rejected
-  company     Company   @relation(fields: [companyId], references: [id])
-  companyId   String
-  invitedBy   String?   // User ID who sent the invitation
-  invitedUser User?     @relation(fields: [invitedUserId], references: [id])
+  id            String   @id @default(cuid())
+  email         String
+  status        String   @default("pending") // pending, accepted, rejected
+  company       Company  @relation(fields: [companyId], references: [id])
+  companyId     String
+  invitedBy     String? // User ID who sent the invitation
+  invitedUser   User?    @relation(fields: [invitedUserId], references: [id])
   invitedUserId String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
   @@index([companyId])
   @@index([email])
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  recipes  Recipe[]  @relation("RecipeCategories")
+  id              String           @id @default(cuid())
+  name            String           @unique
+  personalRecipes PersonalRecipe[] @relation("PersonalRecipeCategories")
+  companyRecipes  CompanyRecipe[]  @relation("CompanyRecipeCategories")
 }
 
-model Recipe {
-  id          String       @id @default(cuid())
-  name        String
-  image       String?
-  batchSize   Int?
-  servings    Int?
-  company     Company?     @relation(fields: [companyId], references: [id])
-  companyId   String?
-  user        User?        @relation(fields: [userId], references: [id])
-  userId      String?
-  categories  Category[]   @relation("RecipeCategories")
-  ingredients Ingredient[]
+// Personal recipes - completely isolated from company recipes
+model PersonalRecipe {
+  id           String               @id @default(cuid())
+  name         String
+  image        String?
+  batchSize    Int?
+  servings     Int?
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String // REQUIRED - personal recipes always belong to a user
+  categories   Category[]           @relation("PersonalRecipeCategories")
+  ingredients  PersonalIngredient[]
   instructions String?
-  // Recipe sharing and ownership
-  isSharedWithBusiness Boolean @default(false)
-  originalOwner        User?   @relation("OriginalRecipeOwner", fields: [originalOwnerId], references: [id])
-  originalOwnerId      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  @@index([companyId, name])
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
   @@index([userId, name])
-  @@index([originalOwnerId])
+  @@index([userId])
 }
 
-model Ingredient {
-  id         String  @id @default(cuid())
-  recipe     Recipe  @relation(fields: [recipeId], references: [id])
-  recipeId   String
-  quantity   Float
-  unit       Unit
-  name       String
+// Company recipes - completely isolated from personal recipes
+model CompanyRecipe {
+  id           String              @id @default(cuid())
+  name         String
+  image        String?
+  batchSize    Int?
+  servings     Int?
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId    String // REQUIRED - company recipes always belong to a company
+  creator      User?               @relation("CompanyRecipeCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  creatorId    String? // Track who created it, but company owns it
+  categories   Category[]          @relation("CompanyRecipeCategories")
+  ingredients  CompanyIngredient[]
+  instructions String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([companyId, name])
+  @@index([companyId])
+  @@index([creatorId])
+}
+
+// Ingredients for personal recipes
+model PersonalIngredient {
+  id       String         @id @default(cuid())
+  recipe   PersonalRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+  quantity Float
+  unit     Unit
+  name     String
+
+  @@index([recipeId])
+}
+
+// Ingredients for company recipes
+model CompanyIngredient {
+  id       String        @id @default(cuid())
+  recipe   CompanyRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+  quantity Float
+  unit     Unit
+  name     String
+
+  @@index([recipeId])
 }
 
 enum Unit {
