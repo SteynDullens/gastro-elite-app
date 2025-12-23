@@ -16,73 +16,120 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user with company memberships (many-to-many) - try multiple strategies
+    console.log('🔍 Looking up user in unified endpoint:', decoded.id);
     let user: any = null;
+    let lookupError: any = null;
     
-    // Strategy 1: Try with companyMemberships
+    // Strategy 1: Try with companyMemberships (direct Prisma call)
     try {
-      user = await safeDbOperation(async (prisma) => {
-        return await prisma.user.findUnique({
-          where: { id: decoded.id },
-          select: {
-            id: true,
-            ownedCompany: {
-              select: { id: true }
-            },
-            companyMemberships: {
-              select: {
-                companyId: true,
-                company: {
-                  select: { id: true }
+      const prisma = await import('@/lib/prisma').then(m => m.getPrisma());
+      if (prisma) {
+        try {
+          user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: {
+              id: true,
+              companyId: true, // Include legacy field
+              ownedCompany: {
+                select: { id: true }
+              },
+              companyMemberships: {
+                select: {
+                  companyId: true,
+                  company: {
+                    select: { id: true }
+                  }
                 }
               }
             }
-          }
-        });
-      });
+          });
+          console.log('✅ Strategy 1 succeeded - user found with memberships:', {
+            userId: user?.id,
+            membershipsCount: user?.companyMemberships?.length || 0,
+            legacyCompanyId: user?.companyId
+          });
+        } catch (error: any) {
+          lookupError = error;
+          console.log('⚠️  Strategy 1 failed:', error.message, error.code);
+        }
+      }
     } catch (error: any) {
-      console.log('⚠️  Query with companyMemberships failed, trying fallback...');
+      lookupError = error;
+      console.log('⚠️  Prisma import failed:', error.message);
     }
     
     // Strategy 2: Fallback to legacy company relation
     if (!user) {
       try {
-        user = await safeDbOperation(async (prisma) => {
-          return await prisma.user.findUnique({
-            where: { id: decoded.id },
-            select: {
-              id: true,
-              ownedCompany: {
-                select: { id: true }
-              },
-              companyId: true // Legacy field
+        const prisma = await import('@/lib/prisma').then(m => m.getPrisma());
+        if (prisma) {
+          try {
+            user = await prisma.user.findUnique({
+              where: { id: decoded.id },
+              select: {
+                id: true,
+                companyId: true, // Legacy field
+                ownedCompany: {
+                  select: { id: true }
+                }
+              }
+            });
+            if (user) {
+              user.companyMemberships = [];
+              // Try to fetch memberships separately
+              try {
+                const memberships = await prisma.companyMembership.findMany({
+                  where: { userId: decoded.id },
+                  select: {
+                    companyId: true,
+                    company: {
+                      select: { id: true }
+                    }
+                  }
+                });
+                user.companyMemberships = memberships;
+                console.log('✅ Strategy 2 succeeded - fetched memberships separately:', memberships.length);
+              } catch (e: any) {
+                console.log('⚠️  Could not fetch memberships separately:', e.message);
+              }
             }
-          });
-        });
-        if (user) {
-          user.companyMemberships = [];
+          } catch (error: any) {
+            lookupError = error;
+            console.log('⚠️  Strategy 2 failed:', error.message, error.code);
+          }
         }
       } catch (error: any) {
-        console.log('⚠️  Fallback query also failed:', error.message);
+        lookupError = error;
+        console.log('⚠️  Prisma import failed in strategy 2:', error.message);
       }
     }
     
     // Strategy 3: Minimal query
     if (!user) {
       try {
-        user = await safeDbOperation(async (prisma) => {
-          return await prisma.user.findUnique({
-            where: { id: decoded.id },
-            select: {
-              id: true
+        const prisma = await import('@/lib/prisma').then(m => m.getPrisma());
+        if (prisma) {
+          try {
+            user = await prisma.user.findUnique({
+              where: { id: decoded.id },
+              select: {
+                id: true,
+                companyId: true
+              }
+            });
+            if (user) {
+              user.companyMemberships = [];
+              user.ownedCompany = null;
+              console.log('✅ Strategy 3 succeeded - minimal query');
             }
-          });
-        });
-        if (user) {
-          user.companyMemberships = [];
-          user.ownedCompany = null;
+          } catch (error: any) {
+            lookupError = error;
+            console.error('❌ Strategy 3 failed:', error.message, error.code);
+          }
         }
       } catch (error: any) {
-        console.error('❌ All user lookup strategies failed:', error.message);
+        lookupError = error;
+        console.error('❌ Prisma import failed in strategy 3:', error.message);
       }
     }
 
@@ -96,9 +143,11 @@ export async function GET(request: NextRequest) {
     const employeeCompanyIds = (user.companyMemberships || []).map((m: any) => m.companyId);
     const hasLegacyCompanyId = !!user.companyId;
     
-    // Employee = has active memberships OR legacy companyId (for backward compatibility)
+    // Employee = has active memberships (NOT just legacy companyId)
+    // If they have legacy companyId but NO active memberships, they're a personal user
     // Employees see BOTH personal AND business recipes
-    const isEmployee = employeeCompanyIds.length > 0 || hasLegacyCompanyId;
+    // Personal users see ONLY personal recipes
+    const isEmployee = employeeCompanyIds.length > 0; // Only active memberships make you an employee
     
     console.log('🔍 User role determination:', {
       userId: decoded.id,
@@ -305,6 +354,17 @@ export async function GET(request: NextRequest) {
 
         console.log(`✅ Found ${personal.length} personal recipes for personal user`);
         console.log('📋 Personal recipe IDs:', personal.map((r: any) => ({ id: r.id, name: r.name, userId: r.userId })));
+        
+        // Debug: Check total recipes in database
+        try {
+          const totalPersonalRecipes = await prisma.personalRecipe.count();
+          const recipesForThisUser = await prisma.personalRecipe.count({
+            where: { userId: decoded.id }
+          });
+          console.log(`📊 Debug: Total personal recipes in DB: ${totalPersonalRecipes}, For user ${decoded.id}: ${recipesForThisUser}`);
+        } catch (e: any) {
+          console.log('⚠️  Could not get recipe counts:', e.message);
+        }
         
         personalRecipes.push(...personal.map(r => ({
           ...r,
