@@ -95,7 +95,19 @@ export async function GET(request: NextRequest) {
     const ownedCompanyId = user.ownedCompany?.id;
     const employeeCompanyIds = (user.companyMemberships || []).map((m: any) => m.companyId);
     const hasLegacyCompanyId = !!user.companyId;
-    const isEmployee = employeeCompanyIds.length > 0 || hasLegacyCompanyId;
+    // Only treat as employee if they have ACTIVE company memberships, not just legacy companyId
+    // Legacy companyId alone doesn't make them an employee - they need active memberships
+    const isEmployee = employeeCompanyIds.length > 0; // Removed hasLegacyCompanyId check
+    
+    console.log('🔍 User role determination:', {
+      userId: decoded.id,
+      isCompanyOwner,
+      ownedCompanyId,
+      employeeCompanyIds,
+      hasLegacyCompanyId,
+      isEmployee,
+      membershipsCount: user.companyMemberships?.length || 0
+    });
 
     // STRICT BACKEND FILTERING - Multi-tenant isolation
     const result = await safeDbOperation(async (prisma) => {
@@ -200,9 +212,8 @@ export async function GET(request: NextRequest) {
         })));
 
         // Fetch company recipes - STRICT: only from companies user belongs to
-        const companyIdsToQuery = employeeCompanyIds.length > 0 
-          ? employeeCompanyIds 
-          : (user.companyId ? [user.companyId] : []);
+        // Only use active memberships, NOT legacy companyId (legacy companyId alone doesn't grant access)
+        const companyIdsToQuery = employeeCompanyIds; // Only active memberships
         
         console.log('🔍 Fetching company recipes for employee, companyIds:', companyIdsToQuery);
         const company = companyIdsToQuery.length > 0 ? await prisma.companyRecipe.findMany({
@@ -248,6 +259,12 @@ export async function GET(request: NextRequest) {
 
       } else {
         // Personal users: ONLY personal recipes
+        // This includes users with legacy companyId but NO active memberships
+        console.log('🔍 Fetching personal recipes for personal user:', decoded.id, {
+          hasLegacyCompanyId: user.companyId,
+          hasActiveMemberships: employeeCompanyIds.length > 0,
+          isCompanyOwner: isCompanyOwner
+        });
         const personal = await prisma.personalRecipe.findMany({
           where: {
             userId: decoded.id // STRICT: Only this user's recipes
