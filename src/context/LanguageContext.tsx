@@ -228,6 +228,10 @@ interface Translations {
   editCategory: string;
   changeFailed: string;
   deleteFailed: string;
+  confirmDelete: string;
+  deleteRecipeConfirmation: string;
+  recipeDeletedSuccessfully: string;
+  deleting: string;
   privateAccount: string;
   // Category translations
   catVoorgerecht: string;
@@ -397,6 +401,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Voer een ingrediënt naam in", enterValidQuantity: "Voer een geldige hoeveelheid in",
     saveFailed: "Opslaan mislukt", uploadFailed: "Upload mislukt", deleteCategory: "Categorie verwijderen?",
     editCategory: "Bewerken", changeFailed: "Wijzigen mislukt", deleteFailed: "Verwijderen mislukt",
+    confirmDelete: "Verwijderen bevestigen",
+    deleteRecipeConfirmation: "Weet je zeker dat je dit recept wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    recipeDeletedSuccessfully: "Recept succesvol verwijderd",
+    deleting: "Verwijderen...",
     privateAccount: "Particulier account",
     catVoorgerecht: "Voorgerecht", catTussengerecht: "Tussengerecht", catHoofdgerecht: "Hoofdgerecht",
     catDessert: "Dessert", catGroentegarnituur: "Groentegarnituur", catVlees: "Vlees", catVis: "Vis",
@@ -501,6 +509,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Enter an ingredient name", enterValidQuantity: "Enter a valid quantity",
     saveFailed: "Save failed", uploadFailed: "Upload failed", deleteCategory: "Delete category?",
     editCategory: "Edit", changeFailed: "Change failed", deleteFailed: "Delete failed",
+    confirmDelete: "Confirm Delete",
+    deleteRecipeConfirmation: "Are you sure you want to delete this recipe? This action cannot be undone.",
+    recipeDeletedSuccessfully: "Recipe deleted successfully",
+    deleting: "Deleting...",
     privateAccount: "Private account",
     catVoorgerecht: "Starter", catTussengerecht: "Intermediate course", catHoofdgerecht: "Main course",
     catDessert: "Dessert", catGroentegarnituur: "Vegetable garnish", catVlees: "Meat", catVis: "Fish",
@@ -598,6 +610,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Geben Sie einen Zutatennamen ein", enterValidQuantity: "Geben Sie eine gültige Menge ein",
     saveFailed: "Speichern fehlgeschlagen", uploadFailed: "Upload fehlgeschlagen", deleteCategory: "Kategorie löschen?",
     editCategory: "Bearbeiten", changeFailed: "Änderung fehlgeschlagen", deleteFailed: "Löschen fehlgeschlagen",
+    confirmDelete: "Löschen bestätigen",
+    deleteRecipeConfirmation: "Sind Sie sicher, dass Sie dieses Rezept löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    recipeDeletedSuccessfully: "Rezept erfolgreich gelöscht",
+    deleting: "Löschen...",
     privateAccount: "Privates Konto",
     catVoorgerecht: "Vorspeise", catTussengerecht: "Zwischengang", catHoofdgerecht: "Hauptgericht",
     catDessert: "Dessert", catGroentegarnituur: "Gemüsebeilage", catVlees: "Fleisch", catVis: "Fisch",
@@ -695,6 +711,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Entrez un nom d'ingrédient", enterValidQuantity: "Entrez une quantité valide",
     saveFailed: "Échec de l'enregistrement", uploadFailed: "Échec du téléchargement", deleteCategory: "Supprimer la catégorie?",
     editCategory: "Modifier", changeFailed: "Échec de la modification", deleteFailed: "Échec de la suppression",
+    confirmDelete: "Confirmer la suppression",
+    deleteRecipeConfirmation: "Êtes-vous sûr de vouloir supprimer cette recette ? Cette action ne peut pas être annulée.",
+    recipeDeletedSuccessfully: "Recette supprimée avec succès",
+    deleting: "Suppression...",
     privateAccount: "Compte particulier",
     catVoorgerecht: "Entrée", catTussengerecht: "Plat intermédiaire", catHoofdgerecht: "Plat principal",
     catDessert: "Dessert", catGroentegarnituur: "Garniture de légumes", catVlees: "Viande", catVis: "Poisson",
@@ -792,6 +812,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Ingrese un nombre de ingrediente", enterValidQuantity: "Ingrese una cantidad válida",
     saveFailed: "Error al guardar", uploadFailed: "Error al subir", deleteCategory: "¿Eliminar categoría?",
     editCategory: "Editar", changeFailed: "Error al cambiar", deleteFailed: "Error al eliminar",
+    confirmDelete: "Confirmar eliminación",
+    deleteRecipeConfirmation: "¿Está seguro de que desea eliminar esta receta? Esta acción no se puede deshacer.",
+    recipeDeletedSuccessfully: "Receta eliminada exitosamente",
+    deleting: "Eliminando...",
     privateAccount: "Cuenta particular",
     catVoorgerecht: "Entrante", catTussengerecht: "Plato intermedio", catHoofdgerecht: "Plato principal",
     catDessert: "Postre", catGroentegarnituur: "Guarnición de verduras", catVlees: "Carne", catVis: "Pescado",
@@ -889,6 +913,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Inserisci un nome ingrediente", enterValidQuantity: "Inserisci una quantità valida",
     saveFailed: "Salvataggio fallito", uploadFailed: "Caricamento fallito", deleteCategory: "Eliminare categoria?",
     editCategory: "Modifica", changeFailed: "Modifica fallita", deleteFailed: "Eliminazione fallita",
+    confirmDelete: "Conferma eliminazione",
+    deleteRecipeConfirmation: "Sei sicuro di voler eliminare questa ricetta? Questa azione non può essere annullata.",
+    recipeDeletedSuccessfully: "Ricetta eliminata con successo",
+    deleting: "Eliminazione...",
     privateAccount: "Account privato",
     catVoorgerecht: "Antipasto", catTussengerecht: "Piatto intermedio", catHoofdgerecht: "Piatto principale",
     catDessert: "Dessert", catGroentegarnituur: "Contorno di verdure", catVlees: "Carne", catVis: "Pesce",
@@ -986,6 +1014,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Digite um nome de ingrediente", enterValidQuantity: "Digite uma quantidade válida",
     saveFailed: "Falha ao salvar", uploadFailed: "Falha no envio", deleteCategory: "Excluir categoria?",
     editCategory: "Editar", changeFailed: "Falha ao alterar", deleteFailed: "Falha ao excluir",
+    confirmDelete: "Confirmar exclusão",
+    deleteRecipeConfirmation: "Tem certeza de que deseja excluir esta receita? Esta ação não pode ser desfeita.",
+    recipeDeletedSuccessfully: "Receita excluída com sucesso",
+    deleting: "Excluindo...",
     privateAccount: "Conta particular",
     catVoorgerecht: "Entrada", catTussengerecht: "Prato intermédio", catHoofdgerecht: "Prato principal",
     catDessert: "Sobremesa", catGroentegarnituur: "Guarnição de legumes", catVlees: "Carne", catVis: "Peixe",
@@ -1083,6 +1115,10 @@ const translations: Record<string, Translations> = {
     enterIngredientName: "Vendosni emrin e përbërësit", enterValidQuantity: "Vendosni një sasi të vlefshme",
     saveFailed: "Ruajtja dështoi", uploadFailed: "Ngarkimi dështoi", deleteCategory: "Fshij kategorinë?",
     editCategory: "Ndrysho", changeFailed: "Ndryshimi dështoi", deleteFailed: "Fshirja dështoi",
+    confirmDelete: "Konfirmo fshirjen",
+    deleteRecipeConfirmation: "Jeni të sigurt që dëshironi të fshini këtë recetë? Ky veprim nuk mund të zhbëhet.",
+    recipeDeletedSuccessfully: "Receta u fshi me sukses",
+    deleting: "Duke fshirë...",
     privateAccount: "Llogari private",
     catVoorgerecht: "Antipastë", catTussengerecht: "Pjatë e ndërmjetme", catHoofdgerecht: "Pjata kryesore",
     catDessert: "Ëmbëlsirë", catGroentegarnituur: "Garniturë perimesh", catVlees: "Mish", catVis: "Peshk",

@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRecipes } from "@/context/RecipeContext";
+import { useToast } from "@/hooks/useToast";
+import { ToastContainer } from "@/components/Toast";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface Ingredient {
   id: string;
@@ -35,9 +39,14 @@ interface RecipeListProps {
 export default function RecipeList({ recipes }: RecipeListProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { deleteRecipe: deleteRecipeFromContext, fetchRecipes } = useRecipes();
+  const { toasts, success, error, removeToast } = useToast();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [databaseFilter, setDatabaseFilter] = useState<"all" | "personal" | "business">("all");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Check if user can edit a recipe
   const canEditRecipe = (recipe: Recipe): boolean => {
@@ -57,6 +66,64 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       return recipe.userId === user.id;
     }
     return false;
+  };
+
+  // Check if user can delete a recipe
+  const canDeleteRecipe = (recipe: Recipe): boolean => {
+    if (!user) return false;
+    
+    const isCompanyOwner = !!user.ownedCompany?.id;
+    const isEmployee = !!user.companyId && !user.ownedCompany?.id;
+    const isCompanyRecipe = !!recipe.companyId;
+    const isPersonalRecipe = !!recipe.userId && !recipe.companyId;
+    
+    if (isCompanyRecipe) {
+      // Company recipe: Company owner OR employee who created it can delete
+      const isRecipeCreator = recipe.originalOwnerId === user.id;
+      return isCompanyOwner || (isEmployee && isRecipeCreator);
+    } else if (isPersonalRecipe) {
+      // Personal recipe: Only the owner can delete
+      return recipe.userId === user.id;
+    }
+    return false;
+  };
+
+  // Handle delete with confirmation
+  const handleDeleteClick = (recipeId: string) => {
+    setDeleteConfirmId(recipeId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/recipes/${deleteConfirmId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        // Remove from context immediately for instant UI update
+        deleteRecipeFromContext(deleteConfirmId);
+        // Refresh recipes from server to ensure consistency
+        await fetchRecipes();
+        success(t.recipeDeletedSuccessfully || 'Recipe deleted successfully');
+        setDeleteConfirmId(null);
+      } else {
+        const data = await response.json();
+        error(data.error || t.deleteFailed || 'Failed to delete recipe');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      error(t.deleteFailed || 'Failed to delete recipe');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmId(null);
   };
 
   // Category translation map
@@ -147,6 +214,38 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4 text-gray-900">
+              {t.confirmDelete || 'Confirm Delete'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {t.deleteRecipeConfirmation || 'Are you sure you want to delete this recipe? This action cannot be undone.'}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleDeleteCancel}
+                disabled={isDeleting}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium disabled:opacity-50"
+              >
+                {t.cancel || 'Cancel'}
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-medium disabled:opacity-50"
+              >
+                {isDeleting ? (t.deleting || 'Deleting...') : (t.delete || 'Delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Search Bar */}
       <div className="mb-6">
         <input
@@ -302,6 +401,19 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               </div>
               
               <div className="p-5 flex flex-col flex-grow">
+                {/* Recipe Type Badge */}
+                <div className="mb-2 flex justify-center">
+                  {recipe.companyId ? (
+                    <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-semibold shadow-sm">
+                      {t.businessDatabase || 'Business'}
+                    </span>
+                  ) : recipe.userId ? (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold shadow-sm">
+                      {t.personalDatabase || 'Personal'}
+                    </span>
+                  ) : null}
+                </div>
+                
                 <h3 className="font-bold text-lg mb-3 text-center text-gray-800">{recipe.name}</h3>
                 
                 <div className="space-y-2 text-sm text-gray-600 text-center flex-grow">
@@ -338,6 +450,15 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     >
                       {t.edit}
                     </a>
+                  )}
+                  {canDeleteRecipe(recipe) && (
+                    <button
+                      onClick={() => handleDeleteClick(recipe.id)}
+                      className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                      title={t.delete || 'Delete'}
+                    >
+                      🗑️
+                    </button>
                   )}
                 </div>
               </div>

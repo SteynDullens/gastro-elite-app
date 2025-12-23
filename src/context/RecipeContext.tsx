@@ -26,6 +26,7 @@ interface RecipeContextType {
   addRecipe: (recipe: Omit<Recipe, 'id' | 'createdAt'>) => void;
   updateRecipe: (id: string, recipe: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
+  fetchRecipes: () => Promise<void>;
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -66,24 +67,28 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
   };
 
   const addRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => {
-    // Refresh recipes from server instead of optimistic update
+    // Refresh recipes from server for real-time update
     fetchRecipes();
   };
 
   const updateRecipe = (id: string, recipeData: Partial<Recipe>) => {
+    // Optimistic update + refresh from server
     setRecipes(prev => 
       prev.map(recipe => 
         recipe.id === id ? { ...recipe, ...recipeData } : recipe
       )
     );
+    // Refresh from server to ensure consistency
+    fetchRecipes();
   };
 
   const deleteRecipe = (id: string) => {
+    // Optimistic update - remove immediately from UI
     setRecipes(prev => prev.filter(recipe => recipe.id !== id));
   };
 
   return (
-    <RecipeContext.Provider value={{ recipes, addRecipe, updateRecipe, deleteRecipe }}>
+    <RecipeContext.Provider value={{ recipes, addRecipe, updateRecipe, deleteRecipe, fetchRecipes }}>
       {children}
     </RecipeContext.Provider>
   );
