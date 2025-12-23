@@ -280,10 +280,23 @@ export async function POST(request: NextRequest) {
         })
       ]);
       
-      console.log('✅ Both recipes created - Personal:', personalRecipe?.id, 'Company:', companyRecipe?.id);
+      console.log('✅ Both recipes creation result:', {
+        personalRecipeId: personalRecipe?.id,
+        companyRecipeId: companyRecipe?.id,
+        personalSuccess: !!personalRecipe,
+        companySuccess: !!companyRecipe
+      });
       
       if (!personalRecipe) {
-        return NextResponse.json({ error: 'Failed to create personal recipe' }, { status: 500 });
+        console.error('❌ Failed to create personal recipe in "both" mode:', {
+          userId: user.id,
+          companyId: companyId,
+          error: 'Personal recipe creation returned null'
+        });
+        return NextResponse.json({ 
+          error: 'Failed to create personal recipe',
+          details: 'Personal recipe creation returned null'
+        }, { status: 500 });
       }
       
       // Return the personal recipe (employee owns this one)
@@ -299,27 +312,80 @@ export async function POST(request: NextRequest) {
       
     } else if (saveTo === 'personal') {
       // Create PersonalRecipe only
-      console.log('🔒 Creating personal recipe for user:', user.id);
-      recipe = await safeDbOperation(async (prisma) => {
-        return await prisma.personalRecipe.create({
-          data: {
-            ...recipeData,
-            userId: user.id, // REQUIRED
-            ingredients: {
-              create: ingredients.map((ing) => ({
-                name: ing.name,
-                quantity: ing.quantity,
-                unit: ing.unit as any,
-              })),
-            },
-          },
-          include: { categories: true, ingredients: true },
-        });
+      console.log('🔒 Creating personal recipe for user:', user.id, 'Type:', typeof user.id);
+      console.log('🔒 Recipe data:', {
+        name,
+        userId: user.id,
+        ingredientsCount: ingredients.length,
+        categoriesCount: categoryRecords.length
       });
-      console.log('✅ Personal recipe created:', recipe?.id);
+      
+      let createError: any = null;
+      // Try direct Prisma call first to get better error messages
+      try {
+        const prisma = await import('@/lib/prisma').then(m => m.getPrisma());
+        if (!prisma) {
+          throw new Error('Prisma client not available');
+        }
+        recipe = await prisma.personalRecipe.create({
+            data: {
+              ...recipeData,
+              userId: user.id, // REQUIRED
+              ingredients: {
+                create: ingredients.map((ing) => ({
+                  name: ing.name,
+                  quantity: ing.quantity,
+                  unit: ing.unit as any,
+                })),
+              },
+            },
+            include: { categories: true, ingredients: true },
+          });
+      } catch (error: any) {
+        createError = error;
+        console.error('❌ Error creating personal recipe:', {
+          message: error.message,
+          code: error.code,
+          meta: error.meta,
+          stack: error.stack?.substring(0, 500)
+        });
+        // Fallback to safeDbOperation
+        recipe = await safeDbOperation(async (prisma) => {
+          return await prisma.personalRecipe.create({
+            data: {
+              ...recipeData,
+              userId: user.id,
+              ingredients: {
+                create: ingredients.map((ing) => ({
+                  name: ing.name,
+                  quantity: ing.quantity,
+                  unit: ing.unit as any,
+                })),
+              },
+            },
+            include: { categories: true, ingredients: true },
+          });
+        });
+      }
+      
+      console.log('✅ Personal recipe creation result:', {
+        success: !!recipe,
+        recipeId: recipe?.id,
+        error: createError?.message
+      });
       
       if (!recipe) {
-        return NextResponse.json({ error: 'Failed to create personal recipe' }, { status: 500 });
+        console.error('❌ Failed to create personal recipe:', {
+          userId: user.id,
+          userIdType: typeof user.id,
+          error: createError?.message,
+          errorCode: createError?.code,
+          prismaMeta: createError?.meta
+        });
+        return NextResponse.json({ 
+          error: 'Failed to create personal recipe',
+          details: createError?.message || 'Recipe creation returned null'
+        }, { status: 500 });
       }
       
       // Map to unified format
