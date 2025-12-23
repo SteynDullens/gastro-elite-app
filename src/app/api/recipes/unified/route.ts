@@ -143,11 +143,10 @@ export async function GET(request: NextRequest) {
     const employeeCompanyIds = (user.companyMemberships || []).map((m: any) => m.companyId);
     const hasLegacyCompanyId = !!user.companyId;
     
-    // Employee = has active memberships (NOT just legacy companyId)
-    // If they have legacy companyId but NO active memberships, they're a personal user
+    // Employee = has active memberships OR legacy companyId (for backward compatibility)
     // Employees see BOTH personal AND business recipes
-    // Personal users see ONLY personal recipes
-    const isEmployee = employeeCompanyIds.length > 0; // Only active memberships make you an employee
+    // Personal users (no company connection) see ONLY personal recipes
+    const isEmployee = employeeCompanyIds.length > 0 || hasLegacyCompanyId;
     
     console.log('🔍 User role determination:', {
       userId: decoded.id,
