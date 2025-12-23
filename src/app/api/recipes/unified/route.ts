@@ -101,6 +101,15 @@ export async function GET(request: NextRequest) {
     const result = await safeDbOperation(async (prisma) => {
       const personalRecipes: any[] = [];
       const companyRecipes: any[] = [];
+      
+      console.log('🔍 Fetching recipes for user:', {
+        userId: decoded.id,
+        isCompanyOwner,
+        ownedCompanyId,
+        isEmployee,
+        employeeCompanyIds,
+        hasLegacyCompanyId: user.companyId
+      });
 
       if (isCompanyOwner) {
         // Company owners: ONLY company recipes from their owned company
@@ -181,6 +190,7 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: 'desc' }
         });
 
+        console.log(`✅ Found ${personal.length} personal recipes`);
         personalRecipes.push(...personal.map(r => ({
           ...r,
           companyId: null, // Personal recipes never have companyId
@@ -194,6 +204,7 @@ export async function GET(request: NextRequest) {
           ? employeeCompanyIds 
           : (user.companyId ? [user.companyId] : []);
         
+        console.log('🔍 Fetching company recipes for employee, companyIds:', companyIdsToQuery);
         const company = companyIdsToQuery.length > 0 ? await prisma.companyRecipe.findMany({
           where: {
             companyId: { in: companyIdsToQuery } // STRICT: Only companies user belongs to
@@ -226,6 +237,7 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: 'desc' }
         }) : [];
 
+        console.log(`✅ Found ${company.length} company recipes`);
         companyRecipes.push(...company.map(r => ({
           ...r,
           userId: null, // Company recipes never have userId
@@ -267,6 +279,7 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: 'desc' }
         });
 
+        console.log(`✅ Found ${personal.length} personal recipes for personal user`);
         personalRecipes.push(...personal.map(r => ({
           ...r,
           companyId: null,
@@ -275,8 +288,11 @@ export async function GET(request: NextRequest) {
           type: 'personal' as const
         })));
       }
+      
+      console.log(`📊 Final recipe counts - Personal: ${personalRecipes.length}, Company: ${companyRecipes.length}`);
 
       // Combine and deduplicate if "both" was selected
+      console.log(`📊 Combined recipes: ${personalRecipes.length} personal + ${companyRecipes.length} company = ${personalRecipes.length + companyRecipes.length} total`);
       const allRecipes = [...personalRecipes, ...companyRecipes];
       
       // Deduplicate: if employee selected "both", they have two separate recipes
