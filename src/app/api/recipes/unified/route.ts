@@ -309,7 +309,13 @@ export async function GET(request: NextRequest) {
       return deduplicated;
     });
 
-    console.log(`✅ Fetched ${result?.length || 0} recipes for user ${decoded.id} (${isCompanyOwner ? 'owner' : employeeCompanyIds.length > 0 ? 'employee' : 'personal'})`);
+    console.log(`✅ Fetched ${result?.length || 0} recipes for user ${decoded.id} (${isCompanyOwner ? 'owner' : isEmployee ? 'employee' : 'personal'})`);
+    console.log('📊 Recipe breakdown:', {
+      total: result?.length || 0,
+      personal: result?.filter((r: any) => r.userId && !r.companyId).length || 0,
+      business: result?.filter((r: any) => r.companyId && !r.userId).length || 0,
+      both: result?.filter((r: any) => r.userId && r.companyId).length || 0
+    });
 
     return NextResponse.json({ recipes: result || [] });
   } catch (error: any) {

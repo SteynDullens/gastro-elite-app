@@ -439,15 +439,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create business recipe' }, { status: 500 });
       }
       
-      // Map to unified format
+      // Map to unified format - ensure userId is explicitly null for business recipes
+      const mappedRecipe = {
+        ...recipe,
+        userId: null, // Business recipes NEVER have userId
+        companyId: recipe.companyId,
+        originalOwnerId: recipe.creatorId,
+        isSharedWithBusiness: false,
+        type: 'company' as const
+      };
+      
+      console.log('✅ Business recipe mapped:', {
+        id: mappedRecipe.id,
+        name: mappedRecipe.name,
+        companyId: mappedRecipe.companyId,
+        userId: mappedRecipe.userId,
+        originalOwnerId: mappedRecipe.originalOwnerId
+      });
+      
       return NextResponse.json({ 
-        recipe: {
-          ...recipe,
-          userId: null,
-          companyId: recipe.companyId,
-          originalOwnerId: recipe.creatorId,
-          isSharedWithBusiness: false,
-        }
+        recipe: mappedRecipe
       });
     } else {
       return NextResponse.json({ error: 'Invalid saveTo option' }, { status: 400 });
