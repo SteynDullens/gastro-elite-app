@@ -42,17 +42,25 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch('/api/recipes/unified', {
-        credentials: 'include'
+      // Add cache-busting timestamp to ensure fresh data
+      const response = await fetch(`/api/recipes/unified?t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Fetched recipes:', data.recipes?.length || 0);
         setRecipes(data.recipes || []);
       } else {
+        console.error('❌ Failed to fetch recipes:', response.status);
         setRecipes(initialRecipes);
       }
     } catch (error) {
-      console.error('Error fetching recipes:', error);
+      console.error('❌ Error fetching recipes:', error);
       setRecipes(initialRecipes);
     }
   };

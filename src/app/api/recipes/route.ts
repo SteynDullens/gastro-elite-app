@@ -299,15 +299,32 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
       
-      // Return the personal recipe (employee owns this one)
+      // Return the personal recipe (employee owns this one) - map to unified format
+      const mappedPersonalRecipe = {
+        id: personalRecipe.id,
+        name: personalRecipe.name,
+        image: personalRecipe.image,
+        batchSize: personalRecipe.batchSize,
+        servings: personalRecipe.servings,
+        instructions: personalRecipe.instructions,
+        ingredients: personalRecipe.ingredients || [],
+        categories: personalRecipe.categories || [],
+        createdAt: personalRecipe.createdAt,
+        userId: personalRecipe.userId,
+        companyId: null, // Personal recipes NEVER have companyId
+        originalOwnerId: personalRecipe.userId,
+        isSharedWithBusiness: false,
+        type: 'personal' as const
+      };
+      
+      console.log('✅ Both recipes created - returning personal recipe:', {
+        id: mappedPersonalRecipe.id,
+        name: mappedPersonalRecipe.name,
+        userId: mappedPersonalRecipe.userId
+      });
+      
       return NextResponse.json({ 
-        recipe: {
-          ...personalRecipe,
-          userId: personalRecipe.userId,
-          companyId: null,
-          originalOwnerId: personalRecipe.userId,
-          isSharedWithBusiness: false,
-        }
+        recipe: mappedPersonalRecipe
       });
       
     } else if (saveTo === 'personal') {
@@ -441,7 +458,15 @@ export async function POST(request: NextRequest) {
       
       // Map to unified format - ensure userId is explicitly null for business recipes
       const mappedRecipe = {
-        ...recipe,
+        id: recipe.id,
+        name: recipe.name,
+        image: recipe.image,
+        batchSize: recipe.batchSize,
+        servings: recipe.servings,
+        instructions: recipe.instructions,
+        ingredients: recipe.ingredients || [],
+        categories: recipe.categories || [],
+        createdAt: recipe.createdAt,
         userId: null, // Business recipes NEVER have userId
         companyId: recipe.companyId,
         originalOwnerId: recipe.creatorId,
@@ -449,12 +474,14 @@ export async function POST(request: NextRequest) {
         type: 'company' as const
       };
       
-      console.log('✅ Business recipe mapped:', {
+      console.log('✅ Business recipe mapped and ready:', {
         id: mappedRecipe.id,
         name: mappedRecipe.name,
         companyId: mappedRecipe.companyId,
         userId: mappedRecipe.userId,
-        originalOwnerId: mappedRecipe.originalOwnerId
+        originalOwnerId: mappedRecipe.originalOwnerId,
+        ingredientsCount: mappedRecipe.ingredients.length,
+        categoriesCount: mappedRecipe.categories.length
       });
       
       return NextResponse.json({ 

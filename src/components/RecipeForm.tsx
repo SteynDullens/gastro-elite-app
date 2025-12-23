@@ -440,20 +440,6 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       const { recipe } = await response.json();
       console.log(`Recipe ${isEditing ? 'updated' : 'created'} successfully:`, recipe);
 
-      // Force refresh recipes from server - addRecipe will trigger fetchRecipes()
-      // Add a small delay to ensure database consistency
-      setTimeout(() => {
-        addRecipe({
-          name: recipe.name,
-          image: recipe.image,
-          batchSize: recipe.batchSize,
-          servings: recipe.servings,
-          ingredients: recipe.ingredients || [],
-          instructions: recipe.instructions,
-          categories: recipe.categories?.map((c: any) => c.name || (typeof c === 'string' ? c : c.name)) || [],
-        });
-      }, 500);
-    
       if (!isEditing) {
         // Reset form only when creating new recipe
         setFormData({
@@ -469,7 +455,19 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         setImagePreview("");
       }
       
-      // Navigate to recipes page - the refresh will happen via addRecipe -> fetchRecipes
+      // Immediately refresh recipes with cache-busting - don't wait
+      console.log('🔄 Immediately refreshing recipes after creation...');
+      addRecipe({
+        name: recipe.name,
+        image: recipe.image,
+        batchSize: recipe.batchSize,
+        servings: recipe.servings,
+        ingredients: recipe.ingredients || [],
+        instructions: recipe.instructions,
+        categories: recipe.categories?.map((c: any) => c.name || (typeof c === 'string' ? c : c.name)) || [],
+      });
+      
+      // Navigate to recipes page - recipes should already be refreshed
       router.push("/recipes");
     } catch (err) {
       alert(t.saveFailed);
