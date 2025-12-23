@@ -95,9 +95,10 @@ export async function GET(request: NextRequest) {
     const ownedCompanyId = user.ownedCompany?.id;
     const employeeCompanyIds = (user.companyMemberships || []).map((m: any) => m.companyId);
     const hasLegacyCompanyId = !!user.companyId;
-    // Only treat as employee if they have ACTIVE company memberships, not just legacy companyId
-    // Legacy companyId alone doesn't make them an employee - they need active memberships
-    const isEmployee = employeeCompanyIds.length > 0; // Removed hasLegacyCompanyId check
+    
+    // Employee = has active memberships OR legacy companyId (for backward compatibility)
+    // Employees see BOTH personal AND business recipes
+    const isEmployee = employeeCompanyIds.length > 0 || hasLegacyCompanyId;
     
     console.log('🔍 User role determination:', {
       userId: decoded.id,
@@ -106,7 +107,8 @@ export async function GET(request: NextRequest) {
       employeeCompanyIds,
       hasLegacyCompanyId,
       isEmployee,
-      membershipsCount: user.companyMemberships?.length || 0
+      membershipsCount: user.companyMemberships?.length || 0,
+      willSeeBothDatabases: isEmployee && !isCompanyOwner
     });
 
     // STRICT BACKEND FILTERING - Multi-tenant isolation
@@ -212,10 +214,15 @@ export async function GET(request: NextRequest) {
         })));
 
         // Fetch company recipes - STRICT: only from companies user belongs to
-        // Only use active memberships, NOT legacy companyId (legacy companyId alone doesn't grant access)
-        const companyIdsToQuery = employeeCompanyIds; // Only active memberships
+        // Use active memberships OR legacy companyId (for backward compatibility)
+        const companyIdsToQuery = employeeCompanyIds.length > 0 
+          ? employeeCompanyIds 
+          : (user.companyId ? [user.companyId] : []);
         
-        console.log('🔍 Fetching company recipes for employee, companyIds:', companyIdsToQuery);
+        console.log('🔍 Fetching company recipes for employee, companyIds:', companyIdsToQuery, {
+          fromMemberships: employeeCompanyIds.length,
+          fromLegacy: user.companyId ? 1 : 0
+        });
         const company = companyIdsToQuery.length > 0 ? await prisma.companyRecipe.findMany({
           where: {
             companyId: { in: companyIdsToQuery } // STRICT: Only companies user belongs to
