@@ -304,6 +304,8 @@ export async function GET(request: NextRequest) {
         });
 
         console.log(`✅ Found ${personal.length} personal recipes for personal user`);
+        console.log('📋 Personal recipe IDs:', personal.map((r: any) => ({ id: r.id, name: r.name, userId: r.userId })));
+        
         personalRecipes.push(...personal.map(r => ({
           ...r,
           companyId: null,
@@ -314,6 +316,7 @@ export async function GET(request: NextRequest) {
       }
       
       console.log(`📊 Final recipe counts - Personal: ${personalRecipes.length}, Company: ${companyRecipes.length}`);
+      console.log('📋 All personal recipe IDs:', personalRecipes.map((r: any) => ({ id: r.id, name: r.name, userId: r.userId, companyId: r.companyId })));
 
       // Combine and deduplicate if "both" was selected
       console.log(`📊 Combined recipes: ${personalRecipes.length} personal + ${companyRecipes.length} company = ${personalRecipes.length + companyRecipes.length} total`);
@@ -321,41 +324,83 @@ export async function GET(request: NextRequest) {
       
       // Deduplicate: if employee selected "both", they have two separate recipes
       // Show only one (prefer company version for employees/owners)
-      const deduplicated = allRecipes.reduce((acc: any[], recipe: any) => {
-        if (recipe.originalOwnerId === decoded.id) {
-          const existing = acc.find(r => 
-            r.name === recipe.name && 
-            r.originalOwnerId === recipe.originalOwnerId
-          );
-          
-          if (existing) {
-            // Prefer company version if available
-            if (recipe.type === 'company' && existing.type === 'personal') {
-              const index = acc.indexOf(existing);
-              acc[index] = recipe;
-              return acc;
+      // BUT: Only deduplicate for employees/owners, NOT for pure personal users
+      let deduplicated = allRecipes;
+      
+      if (isEmployee || isCompanyOwner) {
+        // Only deduplicate for employees/owners who might have "both" recipes
+        console.log('🔄 Deduplicating recipes for employee/owner...');
+        deduplicated = allRecipes.reduce((acc: any[], recipe: any) => {
+          if (recipe.originalOwnerId === decoded.id) {
+            const existing = acc.find(r => 
+              r.name === recipe.name && 
+              r.originalOwnerId === recipe.originalOwnerId
+            );
+            
+            if (existing) {
+              // Prefer company version if available
+              if (recipe.type === 'company' && existing.type === 'personal') {
+                const index = acc.indexOf(existing);
+                acc[index] = recipe;
+                return acc;
+              }
+              if (recipe.type === 'personal' && existing.type === 'company') {
+                return acc; // Keep company version
+              }
+              return acc; // Same type, keep existing
             }
-            if (recipe.type === 'personal' && existing.type === 'company') {
-              return acc; // Keep company version
-            }
-            return acc; // Same type, keep existing
           }
-        }
+          
+          acc.push(recipe);
+          return acc;
+        }, []);
         
-        acc.push(recipe);
-        return acc;
-      }, []);
+        console.log(`📊 After deduplication: ${deduplicated.length} recipes (from ${allRecipes.length} total)`);
+      } else {
+        // Personal users: No deduplication needed, show ALL personal recipes
+        console.log('📊 Personal user: No deduplication needed, showing all recipes');
+        deduplicated = allRecipes;
+      }
 
       return deduplicated;
     });
 
-    console.log(`✅ Fetched ${result?.length || 0} recipes for user ${decoded.id} (${isCompanyOwner ? 'owner' : isEmployee ? 'employee' : 'personal'})`);
+    const userType = isCompanyOwner ? 'owner' : isEmployee ? 'employee' : 'personal';
+    console.log(`✅ Fetched ${result?.length || 0} recipes for user ${decoded.id} (${userType})`);
     console.log('📊 Recipe breakdown:', {
       total: result?.length || 0,
       personal: result?.filter((r: any) => r.userId && !r.companyId).length || 0,
       business: result?.filter((r: any) => r.companyId && !r.userId).length || 0,
-      both: result?.filter((r: any) => r.userId && r.companyId).length || 0
+      both: result?.filter((r: any) => r.userId && r.companyId).length || 0,
+      userType,
+      userId: decoded.id
     });
+    
+    // Log first few recipe IDs for debugging
+    if (result && result.length > 0) {
+      console.log('📋 Sample recipe IDs:', result.slice(0, 3).map((r: any) => ({ 
+        id: r.id, 
+        name: r.name, 
+        userId: r.userId, 
+        companyId: r.companyId,
+        type: r.type 
+      })));
+    } else {
+      console.log('⚠️  No recipes returned - checking if recipes exist in database...');
+      // Try a direct query to see if recipes exist
+      try {
+        const prisma = await import('@/lib/prisma').then(m => m.getPrisma());
+        if (prisma) {
+          const directCheck = await prisma.personalRecipe.findFirst({
+            where: { userId: decoded.id },
+            select: { id: true, name: true, userId: true }
+          });
+          console.log('🔍 Direct check for personal recipes:', directCheck);
+        }
+      } catch (e: any) {
+        console.error('❌ Direct check failed:', e.message);
+      }
+    }
 
     return NextResponse.json({ recipes: result || [] });
   } catch (error: any) {
