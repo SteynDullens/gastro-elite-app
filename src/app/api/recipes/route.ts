@@ -18,21 +18,80 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Get user with company memberships
+    // Get user with company memberships - try multiple query strategies
     console.log('🔍 Looking up user:', decoded.id);
-    const user = await safeDbOperation(async (prisma) => {
-      return await prisma.user.findUnique({
-        where: { id: decoded.id },
-        include: { 
-          ownedCompany: true,
-          companyMemberships: {
-            include: {
-              company: true
+    let user: any = null;
+    let lookupError: any = null;
+    
+    // Strategy 1: Try with companyMemberships (new schema)
+    try {
+      user = await safeDbOperation(async (prisma) => {
+        return await prisma.user.findUnique({
+          where: { id: decoded.id },
+          include: { 
+            ownedCompany: true,
+            companyMemberships: {
+              include: {
+                company: true
+              }
             }
           }
-        }
+        });
       });
-    });
+    } catch (error: any) {
+      lookupError = error;
+      console.log('⚠️  Query with companyMemberships failed:', error.message);
+    }
+    
+    // Strategy 2: If that failed, try with legacy company relation
+    if (!user) {
+      try {
+        console.log('⚠️  Trying query with legacy company relation...');
+        user = await safeDbOperation(async (prisma) => {
+          return await prisma.user.findUnique({
+            where: { id: decoded.id },
+            include: { 
+              ownedCompany: true,
+              company: true // Legacy relation
+            }
+          });
+        });
+        // Set empty array for memberships if using legacy query
+        if (user) {
+          user.companyMemberships = [];
+        }
+      } catch (error: any) {
+        lookupError = error;
+        console.log('⚠️  Query with legacy company also failed:', error.message);
+      }
+    }
+    
+    // Strategy 3: Last resort - minimal query
+    if (!user) {
+      try {
+        console.log('⚠️  Trying minimal query...');
+        user = await safeDbOperation(async (prisma) => {
+          return await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: {
+              id: true,
+              email: true,
+              isBlocked: true,
+              companyId: true,
+              ownedCompany: {
+                select: { id: true }
+              }
+            }
+          });
+        });
+        if (user) {
+          user.companyMemberships = [];
+        }
+      } catch (error: any) {
+        lookupError = error;
+        console.error('❌ All query strategies failed:', error.message);
+      }
+    }
 
     console.log('🔍 User lookup result:', {
       found: !!user,
@@ -40,12 +99,17 @@ export async function POST(request: NextRequest) {
       userEmail: user?.email,
       isBlocked: user?.isBlocked,
       hasOwnedCompany: !!user?.ownedCompany,
-      membershipsCount: user?.companyMemberships?.length || 0
+      legacyCompanyId: user?.companyId,
+      membershipsCount: user?.companyMemberships?.length || 0,
+      error: lookupError?.message
     });
 
     if (!user) {
-      console.error('❌ User not found:', decoded.id);
-      return NextResponse.json({ error: 'User not found or inactive' }, { status: 401 });
+      console.error('❌ User not found:', decoded.id, 'Error:', lookupError?.message);
+      return NextResponse.json({ 
+        error: 'User not found or inactive',
+        details: lookupError?.message || 'User query returned null'
+      }, { status: 401 });
     }
 
     if (user.isBlocked) {
@@ -53,10 +117,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found or inactive' }, { status: 401 });
     }
 
-    // Determine user role
+    // Determine user role (check both new companyMemberships and legacy companyId)
     const isCompanyOwner = !!user.ownedCompany?.id;
-    const isEmployee = user.companyMemberships.length > 0;
-    const isPersonalUser = !user.ownedCompany && user.companyMemberships.length === 0;
+    const hasCompanyMemberships = user.companyMemberships && user.companyMemberships.length > 0;
+    const hasLegacyCompanyId = !!user.companyId;
+    const isEmployee = hasCompanyMemberships || hasLegacyCompanyId;
+    const isPersonalUser = !isCompanyOwner && !isEmployee;
 
     const body = await request.json();
     const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo: initialSaveTo } = body as {
@@ -234,7 +300,16 @@ export async function POST(request: NextRequest) {
       
     } else if (saveTo === 'business') {
       // Create CompanyRecipe only
-      const companyId = user.ownedCompany?.id || user.companyMemberships[0]?.companyId;
+      // Get company ID from ownedCompany, memberships, or legacy companyId
+      let companyId: string | null = null;
+      if (user.ownedCompany?.id) {
+        companyId = user.ownedCompany.id;
+      } else if (user.companyMemberships && user.companyMemberships.length > 0) {
+        companyId = user.companyMemberships[0].companyId;
+      } else if (user.companyId) {
+        // Fallback to legacy companyId
+        companyId = user.companyId;
+      }
       if (!companyId) {
         return NextResponse.json({ error: 'User must be associated with a company to create business recipes' }, { status: 400 });
       }
