@@ -10,16 +10,24 @@ export async function POST(request: NextRequest) {
     // Authenticate user
     const token = request.cookies.get('auth-token')?.value;
     if (!token) {
+      console.error('❌ No auth token found');
       return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
     }
 
     const decoded = verifyToken(token);
     if (!decoded) {
+      console.error('❌ Token verification failed');
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    console.log('✅ Token decoded successfully:', {
+      id: decoded.id,
+      email: decoded.email,
+      account_type: decoded.account_type
+    });
+
     // Get user with company memberships - try multiple query strategies
-    console.log('🔍 Looking up user:', decoded.id);
+    console.log('🔍 Looking up user in database:', decoded.id, 'Type:', typeof decoded.id);
     let user: any = null;
     let lookupError: any = null;
     
@@ -96,19 +104,46 @@ export async function POST(request: NextRequest) {
     console.log('🔍 User lookup result:', {
       found: !!user,
       userId: decoded.id,
+      userIdType: typeof decoded.id,
       userEmail: user?.email,
+      userDbId: user?.id,
+      userDbIdType: typeof user?.id,
       isBlocked: user?.isBlocked,
       hasOwnedCompany: !!user?.ownedCompany,
       legacyCompanyId: user?.companyId,
       membershipsCount: user?.companyMemberships?.length || 0,
-      error: lookupError?.message
+      error: lookupError?.message,
+      errorCode: lookupError?.code
     });
 
     if (!user) {
-      console.error('❌ User not found:', decoded.id, 'Error:', lookupError?.message);
+      console.error('❌ User not found after all query strategies:', {
+        searchedId: decoded.id,
+        searchedIdType: typeof decoded.id,
+        error: lookupError?.message,
+        errorCode: lookupError?.code
+      });
+      
+      // Try one more direct query by email to see if user exists
+      try {
+        const prisma = await import('@/lib/prisma').then(m => m.getPrisma());
+        if (prisma && decoded.email) {
+          const directCheck = await prisma.user.findFirst({
+            where: { email: decoded.email },
+            select: { id: true, email: true }
+          });
+          console.log('🔍 Direct email lookup result:', directCheck);
+          if (directCheck && directCheck.id !== decoded.id) {
+            console.error('⚠️  ID mismatch! Token ID:', decoded.id, 'DB ID:', directCheck.id);
+          }
+        }
+      } catch (e: any) {
+        console.error('❌ Direct email lookup also failed:', e.message);
+      }
+      
       return NextResponse.json({ 
         error: 'User not found or inactive',
-        details: lookupError?.message || 'User query returned null'
+        details: lookupError?.message || 'User query returned null after all fallback strategies'
       }, { status: 401 });
     }
 
