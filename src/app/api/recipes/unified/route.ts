@@ -15,34 +15,87 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ recipes: [] });
     }
 
-    // Get user with company memberships (many-to-many)
-    const user = await safeDbOperation(async (prisma) => {
-      return await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: {
-          id: true,
-          ownedCompany: {
-            select: { id: true }
-          },
-          companyMemberships: {
-            select: {
-              companyId: true,
-              company: {
-                select: { id: true }
+    // Get user with company memberships (many-to-many) - try multiple strategies
+    let user: any = null;
+    
+    // Strategy 1: Try with companyMemberships
+    try {
+      user = await safeDbOperation(async (prisma) => {
+        return await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: {
+            id: true,
+            ownedCompany: {
+              select: { id: true }
+            },
+            companyMemberships: {
+              select: {
+                companyId: true,
+                company: {
+                  select: { id: true }
+                }
               }
             }
           }
-        }
+        });
       });
-    });
+    } catch (error: any) {
+      console.log('⚠️  Query with companyMemberships failed, trying fallback...');
+    }
+    
+    // Strategy 2: Fallback to legacy company relation
+    if (!user) {
+      try {
+        user = await safeDbOperation(async (prisma) => {
+          return await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: {
+              id: true,
+              ownedCompany: {
+                select: { id: true }
+              },
+              companyId: true // Legacy field
+            }
+          });
+        });
+        if (user) {
+          user.companyMemberships = [];
+        }
+      } catch (error: any) {
+        console.log('⚠️  Fallback query also failed:', error.message);
+      }
+    }
+    
+    // Strategy 3: Minimal query
+    if (!user) {
+      try {
+        user = await safeDbOperation(async (prisma) => {
+          return await prisma.user.findUnique({
+            where: { id: decoded.id },
+            select: {
+              id: true
+            }
+          });
+        });
+        if (user) {
+          user.companyMemberships = [];
+          user.ownedCompany = null;
+        }
+      } catch (error: any) {
+        console.error('❌ All user lookup strategies failed:', error.message);
+      }
+    }
 
     if (!user) {
+      console.log('⚠️  User not found, returning empty recipes');
       return NextResponse.json({ recipes: [] });
     }
 
     const isCompanyOwner = !!user.ownedCompany?.id;
     const ownedCompanyId = user.ownedCompany?.id;
-    const employeeCompanyIds = user.companyMemberships.map(m => m.companyId);
+    const employeeCompanyIds = (user.companyMemberships || []).map((m: any) => m.companyId);
+    const hasLegacyCompanyId = !!user.companyId;
+    const isEmployee = employeeCompanyIds.length > 0 || hasLegacyCompanyId;
 
     // STRICT BACKEND FILTERING - Multi-tenant isolation
     const result = await safeDbOperation(async (prisma) => {
@@ -93,7 +146,7 @@ export async function GET(request: NextRequest) {
           type: 'company' as const
         })));
 
-      } else if (employeeCompanyIds.length > 0) {
+      } else if (isEmployee) {
         // Employees: Personal recipes (their own) + Company recipes (from companies they belong to)
         
         // Fetch personal recipes - STRICT: only recipes owned by this user
@@ -137,9 +190,13 @@ export async function GET(request: NextRequest) {
         })));
 
         // Fetch company recipes - STRICT: only from companies user belongs to
-        const company = await prisma.companyRecipe.findMany({
+        const companyIdsToQuery = employeeCompanyIds.length > 0 
+          ? employeeCompanyIds 
+          : (user.companyId ? [user.companyId] : []);
+        
+        const company = companyIdsToQuery.length > 0 ? await prisma.companyRecipe.findMany({
           where: {
-            companyId: { in: employeeCompanyIds } // STRICT: Only companies user belongs to
+            companyId: { in: companyIdsToQuery } // STRICT: Only companies user belongs to
           },
           select: {
             id: true,
@@ -167,7 +224,7 @@ export async function GET(request: NextRequest) {
             }
           },
           orderBy: { createdAt: 'desc' }
-        });
+        }) : [];
 
         companyRecipes.push(...company.map(r => ({
           ...r,
