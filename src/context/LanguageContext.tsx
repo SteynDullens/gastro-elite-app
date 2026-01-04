@@ -74,6 +74,10 @@ interface Translations {
   tryAdjustingSearch: string;
   startAddingRecipe: string;
   addNewRecipe: string;
+  gridView: string;
+  rowView: string;
+  alphabeticalView: string;
+  switchView: string;
   
   // Recipe form
   recipeName: string;
@@ -340,6 +344,7 @@ const translations: Record<string, Translations> = {
     allCategories: "Alle Categorieën", noRecipesFound: "Geen recepten gevonden",
     tryAdjustingSearch: "Probeer uw zoek- of filtercriteria aan te passen",
     startAddingRecipe: "Begin met het toevoegen van uw eerste recept!", addNewRecipe: "Nieuw Recept Toevoegen",
+    gridView: "Rasterweergave", rowView: "Rijweergave", alphabeticalView: "Alfabetische weergave", switchView: "Weergave wijzigen",
     recipeName: "Recept Naam", recipeNameRequired: "Recept Naam *", imageUrl: "Afbeelding URL",
     batchSize: "Batch Grootte", servings: "Porties", ingredients: "Ingrediënten", instructions: "Instructies",
     addIngredient: "Toevoegen", quantity: "Hoeveelheid", ingredientName: "Naam ingrediënt",
@@ -447,6 +452,7 @@ const translations: Record<string, Translations> = {
     avgIngredients: "Avg Ingredients/Recipe", searchPlaceholder: "Search recipes or ingredients...",
     allCategories: "All Categories", noRecipesFound: "No recipes found",
     tryAdjustingSearch: "Try adjusting your search or filter criteria",
+    gridView: "Grid View", rowView: "Row View", alphabeticalView: "Alphabetical View", switchView: "Switch View",
     startAddingRecipe: "Start by adding your first recipe!", addNewRecipe: "Add New Recipe",
     recipeName: "Recipe Name", recipeNameRequired: "Recipe Name *", imageUrl: "Image URL",
     batchSize: "Batch Size", servings: "Servings", ingredients: "Ingredients", instructions: "Instructions",
@@ -549,6 +555,7 @@ const translations: Record<string, Translations> = {
     avgIngredients: "Durchschn. Zutaten/Rezept", searchPlaceholder: "Rezepte oder Zutaten suchen...",
     allCategories: "Alle Kategorien", noRecipesFound: "Keine Rezepte gefunden",
     tryAdjustingSearch: "Versuchen Sie, Ihre Such- oder Filterkriterien anzupassen",
+    gridView: "Rasteransicht", rowView: "Zeilenansicht", alphabeticalView: "Alphabetische Ansicht", switchView: "Ansicht wechseln",
     startAddingRecipe: "Fügen Sie Ihr erstes Rezept hinzu!", addNewRecipe: "Neues Rezept hinzufügen",
     recipeName: "Rezeptname", recipeNameRequired: "Rezeptname *", imageUrl: "Bild-URL",
     batchSize: "Chargengröße", servings: "Portionen", ingredients: "Zutaten", instructions: "Anleitung",
@@ -650,6 +657,7 @@ const translations: Record<string, Translations> = {
     avgIngredients: "Moy. ingrédients/recette", searchPlaceholder: "Rechercher des recettes ou des ingrédients...",
     allCategories: "Toutes les catégories", noRecipesFound: "Aucune recette trouvée",
     tryAdjustingSearch: "Essayez d'ajuster vos critères de recherche ou de filtre",
+    gridView: "Vue en grille", rowView: "Vue en ligne", alphabeticalView: "Vue alphabétique", switchView: "Changer de vue",
     startAddingRecipe: "Commencez par ajouter votre première recette!", addNewRecipe: "Ajouter une nouvelle recette",
     recipeName: "Nom de la recette", recipeNameRequired: "Nom de la recette *", imageUrl: "URL de l'image",
     batchSize: "Taille du lot", servings: "Portions", ingredients: "Ingrédients", instructions: "Instructions",
@@ -751,6 +759,7 @@ const translations: Record<string, Translations> = {
     avgIngredients: "Prom. ingredientes/receta", searchPlaceholder: "Buscar recetas o ingredientes...",
     allCategories: "Todas las categorías", noRecipesFound: "No se encontraron recetas",
     tryAdjustingSearch: "Intente ajustar sus criterios de búsqueda o filtro",
+    gridView: "Vista de cuadrícula", rowView: "Vista de filas", alphabeticalView: "Vista alfabética", switchView: "Cambiar vista",
     startAddingRecipe: "¡Comience agregando su primera receta!", addNewRecipe: "Añadir nueva receta",
     recipeName: "Nombre de la receta", recipeNameRequired: "Nombre de la receta *", imageUrl: "URL de la imagen",
     batchSize: "Tamaño del lote", servings: "Porciones", ingredients: "Ingredientes", instructions: "Instrucciones",
@@ -852,6 +861,7 @@ const translations: Record<string, Translations> = {
     avgIngredients: "Media ingredienti/ricetta", searchPlaceholder: "Cerca ricette o ingredienti...",
     allCategories: "Tutte le categorie", noRecipesFound: "Nessuna ricetta trovata",
     tryAdjustingSearch: "Prova a modificare i criteri di ricerca o filtro",
+    gridView: "Vista griglia", rowView: "Vista righe", alphabeticalView: "Vista alfabetica", switchView: "Cambia vista",
     startAddingRecipe: "Inizia aggiungendo la tua prima ricetta!", addNewRecipe: "Aggiungi nuova ricetta",
     recipeName: "Nome ricetta", recipeNameRequired: "Nome ricetta *", imageUrl: "URL immagine",
     batchSize: "Dimensione lotto", servings: "Porzioni", ingredients: "Ingredienti", instructions: "Istruzioni",
@@ -952,6 +962,7 @@ const translations: Record<string, Translations> = {
     totalRecipes: "Total de receitas", categories: "Categorias", totalIngredients: "Total de ingredientes",
     avgIngredients: "Méd. ingredientes/receita", searchPlaceholder: "Pesquisar receitas ou ingredientes...",
     allCategories: "Todas as categorias", noRecipesFound: "Nenhuma receita encontrada",
+    gridView: "Vista em grade", rowView: "Vista em linhas", alphabeticalView: "Vista alfabética", switchView: "Mudar vista",
     tryAdjustingSearch: "Tente ajustar seus critérios de pesquisa ou filtro",
     startAddingRecipe: "Comece adicionando sua primeira receita!", addNewRecipe: "Adicionar nova receita",
     recipeName: "Nome da receita", recipeNameRequired: "Nome da receita *", imageUrl: "URL da imagem",
@@ -1054,6 +1065,7 @@ const translations: Record<string, Translations> = {
     avgIngredients: "Mes. përbërës/recetë", searchPlaceholder: "Kërko receta ose përbërës...",
     allCategories: "Të gjitha kategoritë", noRecipesFound: "Nuk u gjetën receta",
     tryAdjustingSearch: "Provoni të rregulloni kriteret e kërkimit ose filtrit",
+    gridView: "Pamje grilë", rowView: "Pamje rreshtash", alphabeticalView: "Pamje alfabetike", switchView: "Ndrysho pamjen",
     startAddingRecipe: "Filloni duke shtuar recetën tuaj të parë!", addNewRecipe: "Shto recetë të re",
     recipeName: "Emri i recetës", recipeNameRequired: "Emri i recetës *", imageUrl: "URL e imazhit",
     batchSize: "Madhësia e grupit", servings: "Porcione", ingredients: "Përbërësit", instructions: "Udhëzimet",
