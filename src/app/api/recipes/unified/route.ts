@@ -377,51 +377,17 @@ export async function GET(request: NextRequest) {
       console.log(`📊 Final recipe counts - Personal: ${personalRecipes.length}, Company: ${companyRecipes.length}`);
       console.log('📋 All personal recipe IDs:', personalRecipes.map((r: any) => ({ id: r.id, name: r.name, userId: r.userId, companyId: r.companyId })));
 
-      // Combine and deduplicate if "both" was selected
+      // Combine all recipes - NO deduplication
+      // When "both" is selected, two separate recipes are created (one personal, one company)
+      // Both should be shown separately with their respective labels
       console.log(`📊 Combined recipes: ${personalRecipes.length} personal + ${companyRecipes.length} company = ${personalRecipes.length + companyRecipes.length} total`);
       const allRecipes = [...personalRecipes, ...companyRecipes];
       
-      // Deduplicate: if employee selected "both", they have two separate recipes
-      // Show only one (prefer company version for employees/owners)
-      // BUT: Only deduplicate for employees/owners, NOT for pure personal users
-      let deduplicated = allRecipes;
+      // NO deduplication - show all recipes separately
+      // Each recipe will show its own database label (personal or business)
+      console.log('📊 Showing all recipes without deduplication - "both" recipes will appear twice with different labels');
       
-      if (isEmployee || isCompanyOwner) {
-        // Only deduplicate for employees/owners who might have "both" recipes
-        console.log('🔄 Deduplicating recipes for employee/owner...');
-        deduplicated = allRecipes.reduce((acc: any[], recipe: any) => {
-          if (recipe.originalOwnerId === decoded.id) {
-            const existing = acc.find(r => 
-              r.name === recipe.name && 
-              r.originalOwnerId === recipe.originalOwnerId
-            );
-            
-            if (existing) {
-              // Prefer company version if available
-              if (recipe.type === 'company' && existing.type === 'personal') {
-                const index = acc.indexOf(existing);
-                acc[index] = recipe;
-                return acc;
-              }
-              if (recipe.type === 'personal' && existing.type === 'company') {
-                return acc; // Keep company version
-              }
-              return acc; // Same type, keep existing
-            }
-          }
-          
-          acc.push(recipe);
-          return acc;
-        }, []);
-        
-        console.log(`📊 After deduplication: ${deduplicated.length} recipes (from ${allRecipes.length} total)`);
-      } else {
-        // Personal users: No deduplication needed, show ALL personal recipes
-        console.log('📊 Personal user: No deduplication needed, showing all recipes');
-        deduplicated = allRecipes;
-      }
-
-      return deduplicated;
+      return allRecipes;
     });
 
     const userType = isCompanyOwner ? 'owner' : isEmployee ? 'employee' : 'personal';

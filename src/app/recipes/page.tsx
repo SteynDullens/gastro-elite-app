@@ -5,11 +5,28 @@ import { useRecipes } from "@/context/RecipeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import Bubble, { BackBubble } from "@/components/Bubble";
+import { useEffect } from "react";
 
 export default function RecipesPage() {
-  const { recipes } = useRecipes();
+  const { recipes, fetchRecipes } = useRecipes();
   const { t } = useLanguage();
   const { user, loading } = useAuth();
+  
+  // Force fetch recipes when page loads and user is ready
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('📄 RecipesPage: User ready, ensuring recipes are fetched...', {
+        userId: user.id
+      });
+      // Small delay to ensure RecipeContext has initialized
+      const timer = setTimeout(() => {
+        console.log('📄 RecipesPage: Triggering fetchRecipes...');
+        fetchRecipes();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user?.id]);
   
   if (loading) {
     return (

@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
+import { useAuth } from "./AuthContext";
 
 interface Ingredient {
   id: string;
@@ -36,35 +37,102 @@ const initialRecipes: Recipe[] = [];
 
 export function RecipeProvider({ children }: { children: ReactNode }) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [lastUserId, setLastUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRecipes();
-  }, []);
-
-  const fetchRecipes = async () => {
+  const fetchRecipes = useCallback(async () => {
     try {
+      console.log('🔄 RecipeContext: Fetching recipes from server...', {
+        timestamp: new Date().toISOString(),
+        userId: user?.id
+      });
       // Add cache-busting timestamp to ensure fresh data
-      const response = await fetch(`/api/recipes/unified?t=${Date.now()}`, {
+      const url = `/api/recipes/unified?t=${Date.now()}&_=${Math.random()}`;
+      console.log('📡 Fetching from URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
         credentials: 'include',
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
+      
+      console.log('📡 Response status:', response.status, response.statusText);
+      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Fetched recipes:', data.recipes?.length || 0);
+        const recipeCount = data.recipes?.length || 0;
+        console.log(`✅ RecipeContext: Fetched ${recipeCount} recipes from server`);
+        console.log('📦 Response data:', {
+          recipeCount,
+          hasRecipes: !!data.recipes,
+          isArray: Array.isArray(data.recipes)
+        });
+        
+        if (recipeCount > 0) {
+          console.log('📋 Recipe names:', data.recipes.map((r: any) => ({ 
+            name: r.name, 
+            type: r.companyId ? 'company' : 'personal',
+            id: r.id,
+            userId: r.userId,
+            companyId: r.companyId
+          })));
+        } else {
+          console.warn('⚠️ RecipeContext: No recipes returned from server');
+        }
+        
         setRecipes(data.recipes || []);
       } else {
-        console.error('❌ Failed to fetch recipes:', response.status);
+        const errorText = await response.text();
+        console.error('❌ RecipeContext: Failed to fetch recipes:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
         setRecipes(initialRecipes);
       }
-    } catch (error) {
-      console.error('❌ Error fetching recipes:', error);
+    } catch (error: any) {
+      console.error('❌ RecipeContext: Error fetching recipes:', {
+        message: error.message,
+        stack: error.stack
+      });
       setRecipes(initialRecipes);
     }
-  };
+  }, [user?.id]);
+
+  // Fetch recipes when auth is ready and user is loaded
+  useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) {
+      console.log('⏳ RecipeContext: Waiting for auth to finish loading...');
+      return;
+    }
+    
+    const currentUserId = user?.id || null;
+    
+    // Always fetch on mount or when user changes
+    // Use a ref-like pattern with state to track if we've fetched for this user
+    if (currentUserId !== lastUserId) {
+      console.log('🔄 RecipeContext: User changed, fetching recipes...', { 
+        hasUser: !!user, 
+        userId: currentUserId,
+        lastUserId,
+        reason: lastUserId === null ? 'initial-load' : 'user-changed'
+      });
+      fetchRecipes();
+      setLastUserId(currentUserId);
+    } else if (lastUserId === null && !user) {
+      // No user logged in, but auth is ready - fetch anyway (will return empty array)
+      console.log('🔄 RecipeContext: No user, fetching empty recipes...');
+      fetchRecipes();
+      setLastUserId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user?.id]);
 
   const addRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt'>) => {
     // Refresh recipes from server for real-time update

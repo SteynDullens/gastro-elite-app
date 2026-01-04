@@ -31,6 +31,14 @@ interface User {
     createdAt: string;
     updatedAt: string;
   };
+  companyMemberships?: Array<{
+    id: string;
+    companyId: string;
+    company: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 interface AuthContextType {

@@ -39,7 +39,17 @@ export async function GET(request: NextRequest) {
           where: { id: decoded.id },
           include: {
             ownedCompany: true,
-            company: true
+            company: true,
+            companyMemberships: {
+              include: {
+                company: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
           }
         });
       });

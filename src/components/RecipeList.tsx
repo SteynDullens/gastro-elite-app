@@ -53,14 +53,25 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     if (!user) return false;
     
     const isCompanyOwner = !!user.ownedCompany?.id;
-    const isEmployee = !!user.companyId && !user.ownedCompany?.id;
+    // Check both active memberships and legacy companyId for employees
+    const hasActiveMemberships = user.companyMemberships && user.companyMemberships.length > 0;
+    const hasLegacyCompanyId = !!user.companyId;
+    const isEmployee = (hasActiveMemberships || hasLegacyCompanyId) && !isCompanyOwner;
     const isCompanyRecipe = !!recipe.companyId;
     const isPersonalRecipe = !!recipe.userId && !recipe.companyId;
     
     if (isCompanyRecipe) {
       // Company recipe: Company owner OR employee who created it can edit
       const isRecipeCreator = recipe.originalOwnerId === user.id;
-      return isCompanyOwner || (isEmployee && isRecipeCreator);
+      // Check if user belongs to the recipe's company
+      const employeeCompanyIds = (user.companyMemberships || []).map((m) => m.companyId);
+      const companyIdsToCheck = employeeCompanyIds.length > 0 
+        ? employeeCompanyIds 
+        : (user.companyId ? [user.companyId] : []);
+      const belongsToCompany = isCompanyOwner 
+        ? user.ownedCompany?.id === recipe.companyId
+        : companyIdsToCheck.includes(recipe.companyId!);
+      return belongsToCompany && (isCompanyOwner || (isEmployee && isRecipeCreator));
     } else if (isPersonalRecipe) {
       // Personal recipe: Only the owner can edit
       return recipe.userId === user.id;
@@ -73,14 +84,25 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     if (!user) return false;
     
     const isCompanyOwner = !!user.ownedCompany?.id;
-    const isEmployee = !!user.companyId && !user.ownedCompany?.id;
+    // Check both active memberships and legacy companyId for employees
+    const hasActiveMemberships = user.companyMemberships && user.companyMemberships.length > 0;
+    const hasLegacyCompanyId = !!user.companyId;
+    const isEmployee = (hasActiveMemberships || hasLegacyCompanyId) && !isCompanyOwner;
     const isCompanyRecipe = !!recipe.companyId;
     const isPersonalRecipe = !!recipe.userId && !recipe.companyId;
     
     if (isCompanyRecipe) {
       // Company recipe: Company owner OR employee who created it can delete
       const isRecipeCreator = recipe.originalOwnerId === user.id;
-      return isCompanyOwner || (isEmployee && isRecipeCreator);
+      // Check if user belongs to the recipe's company
+      const employeeCompanyIds = (user.companyMemberships || []).map((m) => m.companyId);
+      const companyIdsToCheck = employeeCompanyIds.length > 0 
+        ? employeeCompanyIds 
+        : (user.companyId ? [user.companyId] : []);
+      const belongsToCompany = isCompanyOwner 
+        ? user.ownedCompany?.id === recipe.companyId
+        : companyIdsToCheck.includes(recipe.companyId!);
+      return belongsToCompany && (isCompanyOwner || (isEmployee && isRecipeCreator));
     } else if (isPersonalRecipe) {
       // Personal recipe: Only the owner can delete
       return recipe.userId === user.id;
@@ -98,10 +120,16 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     
     setIsDeleting(true);
     try {
+      console.log('🗑️  Sending delete request for recipe:', deleteConfirmId);
       const response = await fetch(`/api/recipes/${deleteConfirmId}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+      
+      console.log('📡 Delete response status:', response.status);
 
       if (response.ok) {
         // Remove from context immediately for instant UI update
@@ -175,8 +203,11 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
   // Determine user role for additional filtering
   const isCompanyOwner = !!user?.ownedCompany?.id;
-  const isEmployee = !!user?.companyId && !user?.ownedCompany?.id;
-  const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id;
+  // Check both active memberships and legacy companyId for employees
+  const hasActiveMemberships = user?.companyMemberships && user.companyMemberships.length > 0;
+  const hasLegacyCompanyId = !!user?.companyId;
+  const isEmployee = (hasActiveMemberships || hasLegacyCompanyId) && !isCompanyOwner;
+  const isPersonalUser = !isCompanyOwner && !isEmployee;
 
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -218,34 +249,65 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       
       {/* Delete Confirmation Modal */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold mb-4 text-gray-900">
-              {t.confirmDelete || 'Confirm Delete'}
-            </h3>
-            <p className="text-gray-600 mb-6">
-              {t.deleteRecipeConfirmation || 'Are you sure you want to delete this recipe? This action cannot be undone.'}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handleDeleteCancel}
-                disabled={isDeleting}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium disabled:opacity-50"
-              >
-                {t.cancel || 'Cancel'}
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-medium disabled:opacity-50"
-              >
-                {isDeleting ? (t.deleting || 'Deleting...') : (t.delete || 'Delete')}
-              </button>
+      {deleteConfirmId && (() => {
+        const recipeToDelete = recipes.find(r => r.id === deleteConfirmId);
+        return (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              // Close modal if clicking outside
+              if (e.target === e.currentTarget && !isDeleting) {
+                handleDeleteCancel();
+              }
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold mb-4 text-gray-900">
+                {t.confirmDelete || 'Confirm Delete'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {t.deleteRecipeConfirmation || 'Are you sure you want to delete this recipe? This action cannot be undone.'}
+              </p>
+              {recipeToDelete && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
+                  <p className="text-sm text-gray-700 mb-1">
+                    <strong>{t.recipeName || 'Recipe'}:</strong>
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    &ldquo;{recipeToDelete.name}&rdquo;
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={handleDeleteCancel}
+                  disabled={isDeleting}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 font-medium disabled:opacity-50"
+                >
+                  {t.cancel || 'Cancel'}
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>{t.deleting || 'Deleting...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🗑️</span>
+                      <span>{t.delete || 'Delete'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {/* Search Bar */}
       <div className="mb-6">
         <input
