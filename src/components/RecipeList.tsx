@@ -52,6 +52,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("grid"); // Default to grid (current view)
   const alphabetRef = useRef<HTMLDivElement>(null);
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   
   // Check if user can edit a recipe
   const canEditRecipe = (recipe: Recipe): boolean => {
@@ -186,6 +188,23 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     })();
     return () => { isMounted = false; };
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setFilterDropdownOpen(false);
+      }
+    };
+
+    if (filterDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [filterDropdownOpen]);
 
   const isCompanyOwner = !!user?.ownedCompany?.id;
   const hasActiveMemberships = user?.companyMemberships && user.companyMemberships.length > 0;
@@ -562,7 +581,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         />
       </div>
 
-      {/* View Switcher */}
+      {/* View Switcher and Filter */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-gray-700">{t.switchView || 'Switch View'}:</span>
@@ -611,84 +630,131 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Database Filter Buttons */}
-      {(() => {
-        const isCompanyOwner = !!user?.ownedCompany?.id;
-        const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);
-        const hasPersonalRecipes = recipes.some(r => !!r.userId && !r.companyId);
-        const hasBusinessRecipes = recipes.some(r => !!r.companyId);
-        const shouldShowFilters = hasCompany || (hasPersonalRecipes && hasBusinessRecipes);
-        
-        if (!shouldShowFilters) return null;
-        
-        return (
-          <div className="mb-4 flex gap-3 flex-wrap">
-            <button
-              onClick={() => setDatabaseFilter("all")}
-              className={`px-5 py-2.5 rounded-lg whitespace-nowrap transition-all duration-200 font-medium ${
-                databaseFilter === "all"
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-              }`}
-            >
-              Alle recepten
-            </button>
-            {!isCompanyOwner && hasPersonalRecipes && (
-              <button
-                onClick={() => setDatabaseFilter("personal")}
-                className={`px-5 py-2.5 rounded-lg whitespace-nowrap transition-all duration-200 font-medium ${
-                  databaseFilter === "personal"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-300"
-                }`}
-              >
-                {t.personalDatabase}
-              </button>
-            )}
-            {hasCompany && hasBusinessRecipes && (
-              <button
-                onClick={() => setDatabaseFilter("business")}
-                className={`px-5 py-2.5 rounded-lg whitespace-nowrap transition-all duration-200 font-medium ${
-                  databaseFilter === "business"
-                    ? "bg-green-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-green-50 border border-green-300"
-                }`}
-              >
-                {t.businessDatabase}
-              </button>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* Category Filter */}
-      <div className="mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        {/* Filter Dropdown Button */}
+        <div className="relative" ref={filterDropdownRef}>
           <button
-            onClick={() => setSelectedCategory("")}
-            className={`px-5 py-2.5 rounded-lg whitespace-nowrap transition-all duration-200 font-medium ${
-              selectedCategory === ""
-                ? "bg-gray-900 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+            onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+              filterDropdownOpen || databaseFilter !== "all" || selectedCategory !== ""
+                ? "bg-gray-900 text-white border-gray-900"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
+            title={t.filter || 'Filter'}
           >
-            {t.allCategories}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span className="hidden sm:inline text-sm font-medium">{t.filter || 'Filter'}</span>
+            {(databaseFilter !== "all" || selectedCategory !== "") && (
+              <span className="w-2 h-2 bg-white rounded-full"></span>
+            )}
           </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-5 py-2.5 rounded-lg whitespace-nowrap transition-all duration-200 font-medium ${
-                selectedCategory === category
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-              }`}
-            >
-              {translateCategory(category)}
-            </button>
-          ))}
+
+          {/* Filter Dropdown Menu */}
+          {filterDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+              <div className="p-4">
+                {/* Database Filter Section */}
+                {(() => {
+                  const isCompanyOwner = !!user?.ownedCompany?.id;
+                  const hasCompany = !!(user?.companyId || user?.ownedCompany?.id);
+                  const hasPersonalRecipes = recipes.some(r => !!r.userId && !r.companyId);
+                  const hasBusinessRecipes = recipes.some(r => !!r.companyId);
+                  const shouldShowFilters = hasCompany || (hasPersonalRecipes && hasBusinessRecipes);
+                  
+                  if (!shouldShowFilters) return null;
+                  
+                  return (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">{t.database || 'Database'}</h3>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => {
+                            setDatabaseFilter("all");
+                            setFilterDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                            databaseFilter === "all"
+                              ? "bg-gray-900 text-white"
+                              : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          {t.allRecipes || 'Alle recepten'}
+                        </button>
+                        {!isCompanyOwner && hasPersonalRecipes && (
+                          <button
+                            onClick={() => {
+                              setDatabaseFilter("personal");
+                              setFilterDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                              databaseFilter === "personal"
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            {t.personalDatabase}
+                          </button>
+                        )}
+                        {hasCompany && hasBusinessRecipes && (
+                          <button
+                            onClick={() => {
+                              setDatabaseFilter("business");
+                              setFilterDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                              databaseFilter === "business"
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            {t.businessDatabase}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Category Filter Section */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">{t.categories}</h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    <button
+                      onClick={() => {
+                        setSelectedCategory("");
+                        setFilterDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                        selectedCategory === ""
+                          ? "bg-gray-900 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {t.allCategories}
+                    </button>
+                    {categories.map((category) => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setFilterDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
+                          selectedCategory === category
+                            ? "bg-gray-900 text-white"
+                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        {translateCategory(category)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
