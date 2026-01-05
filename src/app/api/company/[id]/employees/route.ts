@@ -87,7 +87,8 @@ export async function GET(
                 id: true,
                 firstName: true,
                 lastName: true,
-                email: true
+                email: true,
+                phone: true
               }
             }
           },
@@ -96,23 +97,30 @@ export async function GET(
           }
         });
 
-        // Show ALL invitations, including those for existing users
-        // If a user is already an employee AND has an accepted invitation, we'll filter it out to avoid duplicates
-        // But if they have a pending invitation, show it so users can see "Uitnodiging verzonden" status
+        // Filter invitations to avoid duplicates with employee list
+        // Key logic: Only show invitations that don't have a corresponding employee entry
+        // - Pending invitations: Show (user hasn't accepted yet, so not in employee list)
+        // - Accepted invitations: Only show if user is NOT in employee list (shouldn't happen, but handle it)
+        // - Rejected invitations: Show (for history)
+        const employeeEmails = new Set(employeeList.map(emp => emp.email.toLowerCase()));
         const employeeIds = new Set(employeeList.map(emp => emp.id));
         
         pendingInvitations = invitations
           .filter(inv => {
-            // Show invitations without an invitedUser (new user invitations)
-            if (!inv.invitedUser) return true;
+            const invEmail = inv.email.toLowerCase();
             
-            // For existing users: only filter out if invitation is 'accepted' AND user is already an employee
-            // This way, pending invitations for employees still show up
-            if (inv.status === 'accepted' && employeeIds.has(inv.invitedUser.id)) {
-              return false; // Don't show accepted invitations for users who are already employees (duplicate)
+            // If invitation is accepted AND there's an employee with the same email/user ID, hide it (duplicate)
+            if (inv.status === 'accepted') {
+              if (inv.invitedUser && employeeIds.has(inv.invitedUser.id)) {
+                return false; // User is already an employee, hide accepted invitation
+              }
+              if (employeeEmails.has(invEmail)) {
+                return false; // Email matches an employee, hide accepted invitation
+              }
             }
             
-            // Show all other invitations (pending, rejected, or accepted for non-employees)
+            // Show all pending and rejected invitations (they don't have corresponding employees yet)
+            // Show accepted invitations only if user is not in employee list
             return true;
           })
           .map(inv => ({
@@ -120,7 +128,7 @@ export async function GET(
             firstName: inv.invitedUser?.firstName || null,
             lastName: inv.invitedUser?.lastName || null,
             email: inv.email,
-            phone: null,
+            phone: inv.invitedUser?.phone || null,
             status: inv.status as 'pending' | 'accepted' | 'rejected',
             createdAt: inv.createdAt,
             invitationId: inv.id
@@ -370,14 +378,9 @@ export async function POST(
           throw new Error('Failed to create invitation record');
         }
 
-        // Link user to company (personal account joining as employee)
-        await prisma.user.update({
-          where: { id: existingUser.id },
-          data: { companyId: company.id }
-        });
-
-        // Keep invitation as 'pending' so it shows in the list with status "Uitnodiging verzonden"
-        // Don't update to 'accepted' immediately - let it show as pending so users can see the invitation was sent
+        // DO NOT link user to company immediately - wait for them to accept via verification link
+        // This prevents duplicate entries (one "accepted" and one "pending")
+        // The user will be linked to the company only when they click the accept button in the email
 
         // Send invitation email to existing user
         // IMPORTANT: Only send email if invitation was created successfully (with valid ID)
@@ -439,13 +442,13 @@ export async function POST(
           }
         }
 
-        // Always return success if user was added, even if email failed
-        // But warn if invitation record wasn't created (migration needed)
+        // Return success - invitation created and email sent
+        // User will be linked to company only when they accept via verification link
         return {
           success: true,
           message: emailSent 
             ? 'Uitnodiging verzonden naar bestaande gebruiker' 
-            : 'Gebruiker toegevoegd. E-mail kon niet worden verzonden - controleer de server logs.',
+            : 'Uitnodiging aangemaakt. E-mail kon niet worden verzonden - controleer de server logs.',
           userExists: true,
           emailSent,
           emailError: emailError || (emailSent ? null : 'E-mail kon niet worden verzonden'),

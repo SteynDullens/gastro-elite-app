@@ -116,18 +116,23 @@ export async function GET(request: NextRequest) {
       }
 
       // Link user to company and update invitation status
+      // IMPORTANT: Only link user to company when they accept via the verification link
+      // This ensures we don't create duplicate entries (one "accepted" employee + one "pending" invitation)
       await safeDbOperation(async (prisma) => {
-        await prisma.user.update({
-          where: { id: invitedUserId },
-          data: { companyId: companyId }
-        });
-
+        // First, update the invitation status to 'accepted'
         await prisma.employeeInvitation.update({
           where: { id: invitationId },
           data: {
             status: 'accepted',
             invitedUserId: invitedUserId
           }
+        });
+
+        // Then, link the user to the company
+        // This ensures the user only appears once in the employee list with status "accepted"
+        await prisma.user.update({
+          where: { id: invitedUserId },
+          data: { companyId: companyId }
         });
       });
 
