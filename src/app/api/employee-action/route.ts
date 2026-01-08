@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
     const token = searchParams.get('token');
 
-    if (!companyId || !invitationId || !action || !token) {
+    if (!companyId || !invitationId || !action) {
       return new NextResponse(renderErrorPage('Ongeldige link. Controleer of u de volledige link heeft gebruikt.'), {
         status: 400,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
@@ -39,12 +39,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Verify token
-    if (!verifyActionToken(companyId, invitationId, action, token)) {
-      return new NextResponse(renderErrorPage('Ongeldige of verlopen verificatielink.'), {
-        status: 401,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' }
-      });
+    // Verify token if provided (for email links), or check authentication (for account page)
+    if (token) {
+      // Email link - verify token
+      if (!verifyActionToken(companyId, invitationId, action, token)) {
+        return new NextResponse(renderErrorPage('Ongeldige of verlopen verificatielink.'), {
+          status: 401,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+      }
+    } else {
+      // Account page - verify authentication
+      const authToken = request.cookies.get('auth-token')?.value;
+      if (!authToken) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const { verifyToken } = await import('@/lib/auth');
+      const decodedToken = verifyToken(authToken);
+      if (!decodedToken) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      }
     }
 
     // Get invitation info
@@ -136,6 +150,11 @@ export async function GET(request: NextRequest) {
         });
       });
 
+      // Return JSON for account page, HTML for email links
+      if (!token) {
+        return NextResponse.json({ success: true, message: 'Invitation accepted' });
+      }
+      
       return new NextResponse(renderSuccessPage(invitation.company.name, 'accepted'), {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
@@ -151,6 +170,16 @@ export async function GET(request: NextRequest) {
         });
       });
 
+      // Return JSON for account page, HTML for email links
+      if (!token) {
+        return NextResponse.json({ success: true, message: 'Invitation declined' });
+      }
+      
+      // Return JSON for account page, HTML for email links
+      if (!token) {
+        return NextResponse.json({ success: true, message: 'Invitation declined' });
+      }
+      
       return new NextResponse(renderSuccessPage(invitation.company.name, 'declined'), {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }

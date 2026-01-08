@@ -930,12 +930,14 @@ export async function sendEmployeeInvitationToNewUser(
   companyName: string,
   companyOwnerName: string,
   invitationId: string,
+  companyId: string,
   language: string = 'nl'
 ): Promise<boolean> {
   try {
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
-    const registerUrl = `${appUrl}/register`;
+    // Include invitation ID and company ID in registration URL so we can track it
+    const registerUrl = `${appUrl}/register?invitation=${invitationId}&company=${companyId}`;
     
     const translations: Record<string, { subject: string; greeting: string; message: string; whatGet: string; benefits: string[]; cta: string; footer: string }> = {
       nl: {

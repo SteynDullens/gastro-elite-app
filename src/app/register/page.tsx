@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
@@ -15,109 +15,65 @@ interface BusinessAddress {
   city: string;
 }
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const { t } = useLanguage();
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showBackArrow, setShowBackArrow] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // Get invitation parameters from URL
+  const invitationId = searchParams.get('invitation');
+  const companyId = searchParams.get('company');
   
   // Account type selection
   const [accountType, setAccountType] = useState<'personal' | 'business'>('personal');
   
   // Form data
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
+    firstName: "",
+    lastName: "",
     phone: "",
-    // Business fields
     companyName: "",
     kvkNumber: "",
     vatNumber: "",
     companyPhone: "",
     businessAddress: {
-      country: "Nederland",
+      country: "",
       postalCode: "",
       houseNumber: "",
       street: "",
       city: ""
-    } as BusinessAddress,
+    } as BusinessAddress
   });
-  
-  // UI state
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [uploadingDocument, setUploadingDocument] = useState(false);
-  const [kvkDocument, setKvkDocument] = useState<File | null>(null);
-  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successModalType, setSuccessModalType] = useState<'business' | 'personal'>('personal');
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const addressLookupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const formDataRef = useRef(formData);
-  
-  // Keep ref in sync with formData
-  useEffect(() => {
-    formDataRef.current = formData;
-  }, [formData]);
 
-  // Handle mount and scroll
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [kvkDocument, setKvkDocument] = useState<File | null>(null);
+  const [kvkDocumentPreview, setKvkDocumentPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     setMounted(true);
-    
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      // Show arrow if there's history OR if scrolled down
-      const hasHistory = window.history.length > 1;
-      setShowBackArrow(hasHistory || scrollY > 100);
-    };
-
-    // Initial check
-    handleScroll();
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
   }, []);
 
-  // Check if mobile and redirect after mount
   useEffect(() => {
-    if (mounted) {
-      const checkMobile = () => {
-        const isMobileDevice = window.innerWidth < 768;
-        if (isMobileDevice) {
-          router.push('/mobile-startup');
-        }
-      };
-      
-      // Small delay to prevent hydration issues
-      const timer = setTimeout(checkMobile, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [mounted, router]);
-
-  // Handle back navigation
-  const handleBackClick = () => {
-    if (window.history.length > 1) {
-      router.back();
-    } else {
-      router.push('/');
-    }
-  };
+    const handleScroll = () => {
+      setShowBackArrow(window.scrollY > 100);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
-    if (name.startsWith('businessAddress.')) {
-      const field = name.split('.')[1];
+    if (name.startsWith("businessAddress.")) {
+      const field = name.split(".")[1] as keyof BusinessAddress;
       setFormData(prev => ({
         ...prev,
         businessAddress: {
@@ -125,204 +81,147 @@ export default function RegisterPage() {
           [field]: value
         }
       }));
-
-      // Auto-fill address when postal code and house number are both filled
-      if (field === 'postalCode' || field === 'houseNumber') {
-        // Clear existing timeout
-        if (addressLookupTimeoutRef.current) {
-          clearTimeout(addressLookupTimeoutRef.current);
-        }
-
-        // Get current values - use the updated state, not the old formData
-        const updatedPostalCode = field === 'postalCode' ? value : formData.businessAddress.postalCode;
-        const updatedHouseNumber = field === 'houseNumber' ? value : formData.businessAddress.houseNumber;
-        
-        const currentPostalCode = updatedPostalCode.trim().toUpperCase().replace(/\s+/g, '');
-        const currentHouseNumber = updatedHouseNumber.trim();
-        
-        // Debounce: wait 1 second after user stops typing, then lookup
-        addressLookupTimeoutRef.current = setTimeout(() => {
-          // Use ref to get latest values after timeout
-          const finalPostalCode = formDataRef.current.businessAddress.postalCode.trim().toUpperCase().replace(/\s+/g, '');
-          const finalHouseNumber = formDataRef.current.businessAddress.houseNumber.trim();
-          
-          if (finalPostalCode && finalHouseNumber && finalPostalCode.length >= 6 && finalHouseNumber.length > 0) {
-            lookupAddress(finalPostalCode, finalHouseNumber);
-          }
-        }, 1000); // 1 second delay
-      }
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: value
       }));
     }
-  };
-
-  const lookupAddress = async (postalCode: string, houseNumber: string) => {
-    // Clean postal code: remove spaces, make uppercase
-    const cleanPostalCode = postalCode.trim().toUpperCase().replace(/\s+/g, '');
-    const cleanHouseNumber = houseNumber.trim();
-    
-    if (!cleanPostalCode || !cleanHouseNumber || cleanPostalCode.length < 6) {
-      return;
-    }
-
-    setAddressLookupLoading(true);
-    try {
-      const response = await fetch(`/api/address/lookup?postalCode=${encodeURIComponent(cleanPostalCode)}&houseNumber=${encodeURIComponent(cleanHouseNumber)}`);
-      const data = await response.json();
-      
-      console.log('Address lookup response:', data);
-      
-      if (data.success) {
-        // Always update with the API response values, even if they're empty strings
-        const newStreet = data.street !== undefined ? data.street : '';
-        const newCity = data.city !== undefined ? data.city : '';
-        
-        console.log('Updating form with:', { street: newStreet, city: newCity });
-        
-        setFormData(prev => {
-          const updated = {
-            ...prev,
-            businessAddress: {
-              ...prev.businessAddress,
-              street: newStreet,
-              city: newCity,
-              postalCode: data.postalCode || cleanPostalCode
-            }
-          };
-          console.log('Form data after update:', updated.businessAddress);
-          return updated;
-        });
-        
-        console.log('Address updated successfully:', { street: newStreet, city: newCity });
-        
-        // If we got partial data, make fields editable
-        if (!newStreet || !newCity) {
-          console.warn('Partial address data received. User can fill remaining fields manually.');
-        }
-      } else {
-        console.warn('Address lookup returned no results:', data.message || data.error);
-        // Don't clear existing values, just leave them as-is so user can edit manually
-        // Make fields editable if lookup failed
-        setFormData(prev => ({
-          ...prev,
-          businessAddress: {
-            ...prev.businessAddress,
-            // Keep existing values, don't clear them
-          }
-        }));
-      }
-    } catch (error) {
-      console.error('Address lookup error:', error);
-      // Don't clear fields on error - let user fill manually
-    } finally {
-      setAddressLookupLoading(false);
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (addressLookupTimeoutRef.current) {
-        clearTimeout(addressLookupTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Debug: Log when address fields change
-  useEffect(() => {
-    console.log('Address fields changed:', {
-      street: formData.businessAddress.street,
-      city: formData.businessAddress.city,
-      postalCode: formData.businessAddress.postalCode,
-      houseNumber: formData.businessAddress.houseNumber
-    });
-  }, [formData.businessAddress.street, formData.businessAddress.city, formData.businessAddress.postalCode, formData.businessAddress.houseNumber]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log('File selected:', file);
     if (file) {
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        setError('Alleen PDF, JPG en PNG bestanden zijn toegestaan');
-        return;
-      }
-      
-      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
-        setError('Bestand is te groot. Maximum grootte is 5MB');
+        setErrors(prev => ({
+          ...prev,
+          kvkDocument: "Bestand is te groot. Maximum grootte is 5MB."
+        }));
         return;
       }
-      
       setKvkDocument(file);
-      setError('');
+      setKvkDocumentPreview(URL.createObjectURL(file));
+      if (errors.kvkDocument) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.kvkDocument;
+          return newErrors;
+        });
+      }
     }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Common validations
+    if (!formData.email.trim()) {
+      newErrors.email = "E-mailadres is verplicht";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Ongeldig e-mailadres";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Wachtwoord is verplicht";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Wachtwoord moet minimaal 8 tekens lang zijn";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Wachtwoorden komen niet overeen";
+    }
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "Voornaam is verplicht";
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Achternaam is verplicht";
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Telefoonnummer is verplicht";
+    }
+
+    // Business-specific validations
+    if (accountType === 'business') {
+      if (!formData.companyName.trim()) {
+        newErrors.companyName = "Bedrijfsnaam is verplicht";
+      }
+
+      if (!formData.kvkNumber.trim()) {
+        newErrors.kvkNumber = "KVK-nummer is verplicht";
+      } else if (!/^\d{8}$/.test(formData.kvkNumber.replace(/\s/g, ''))) {
+        newErrors.kvkNumber = "KVK-nummer moet 8 cijfers bevatten";
+      }
+
+      if (!kvkDocument) {
+        newErrors.kvkDocument = "KVK-document is verplicht";
+      }
+
+      if (!formData.businessAddress.street.trim()) {
+        newErrors["businessAddress.street"] = "Straat is verplicht";
+      }
+
+      if (!formData.businessAddress.houseNumber.trim()) {
+        newErrors["businessAddress.houseNumber"] = "Huisnummer is verplicht";
+      }
+
+      if (!formData.businessAddress.postalCode.trim()) {
+        newErrors["businessAddress.postalCode"] = "Postcode is verplicht";
+      }
+
+      if (!formData.businessAddress.city.trim()) {
+        newErrors["businessAddress.city"] = "Stad is verplicht";
+      }
+
+      if (!formData.businessAddress.country.trim()) {
+        newErrors["businessAddress.country"] = "Land is verplicht";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError("Wachtwoorden komen niet overeen");
-      setLoading(false);
+    
+    if (!validateForm()) {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Wachtwoord moet minimaal 6 karakters lang zijn");
-      setLoading(false);
-      return;
-    }
-
-    if (accountType === 'business') {
-      if (!formData.companyName || !formData.kvkNumber) {
-        setError("Bedrijfsnaam en KvK nummer zijn verplicht");
-        setLoading(false);
-        return;
-      }
-      if (!kvkDocument) {
-        setError("KvK uittreksel is verplicht voor een bedrijfsaccount");
-        setLoading(false);
-        return;
-      }
-    }
+    setIsSubmitting(true);
+    setErrors({});
 
     try {
-      // Upload KvK document if business account and document provided
-      let kvkDocumentPath = '';
-      let kvkDocumentData = '';
-      console.log('Account type:', accountType, 'KvK document:', kvkDocument);
+      // Upload KVK document if business account
+      let kvkDocumentPath = null;
       if (accountType === 'business' && kvkDocument) {
-        setUploadingDocument(true);
-        const uploadFormData = new FormData();
-        uploadFormData.append('document', kvkDocument!);
-        uploadFormData.append('kvkNumber', formData.kvkNumber);
-        
-        const uploadResponse = await fetch('/api/auth/upload-kvk-document', {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', kvkDocument);
+        formDataUpload.append('type', 'kvk-document');
+
+        const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
-          body: uploadFormData,
+          body: formDataUpload,
         });
-        
+
         if (!uploadResponse.ok) {
-          const uploadError = await uploadResponse.json();
-          throw new Error(uploadError.error || 'Fout bij uploaden van KvK document');
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || 'Upload mislukt');
         }
-        
-        const uploadResult = await uploadResponse.json();
-        kvkDocumentPath = uploadResult.documentPath;
-        // If base64 data is returned (fallback mode), store it
-        if (uploadResult.documentData) {
-          kvkDocumentData = uploadResult.documentData;
-        }
-        setUploadingDocument(false);
+
+        const uploadData = await uploadResponse.json();
+        kvkDocumentPath = uploadData.path;
       }
 
       // Register user
@@ -340,630 +239,519 @@ export default function RegisterPage() {
           companyPhone: formData.companyPhone,
           businessAddress: formData.businessAddress,
           kvkDocumentPath,
-          kvkDocumentData
-        })
+        }),
+        ...(invitationId && { invitationId }),
+        ...(companyId && { companyId })
       };
-
+      
       console.log('Calling register with data:', registrationData);
       const result = await register(registrationData);
-      console.log('Register result:', result);
-      
+
       if (result.success) {
-        // Show professional success modal
-        setSuccessModalType(accountType === 'business' ? 'business' : 'personal');
         setShowSuccessModal(true);
-        setSuccess(""); // Clear old success message
-        
-        // Reset form
-        setFormData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          phone: "",
-          companyName: "",
-          kvkNumber: "",
-          vatNumber: "",
-          companyPhone: "",
-          businessAddress: {
-            country: "Nederland",
-            postalCode: "",
-            houseNumber: "",
-            street: "",
-            city: ""
-          }
-        });
-        setKvkDocument(null);
-        if (fileInputRef.current) {
-          fileInputRef.current!.value = '';
-        }
       } else {
-        setError(result.error || "Er is een fout opgetreden bij de registratie");
+        setErrors({ submit: result.error || "Registratie mislukt" });
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
-      setError(error.message || "Er is een fout opgetreden bij de registratie");
+      console.error("Registration error:", error);
+      setErrors({ submit: error.message || "Registratie mislukt" });
     } finally {
-      setLoading(false);
-      setUploadingDocument(false);
+      setIsSubmitting(false);
     }
   };
 
-  // Show loading state while mounting
   if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-white">
-        <div className="text-center">
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-white">
-      <div className="max-w-4xl mx-auto">
-        {/* Mobile Logo - Only visible on mobile */}
-        <div className="text-center mb-6 sm:hidden">
-          <Image 
-            src="/logo.svg" 
-            alt="Gastro-Elite Logo" 
-            width={64}
-            height={64}
-            className="mx-auto mb-4"
-            priority
-          />
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white relative overflow-hidden">
+      {/* Background Bubbles */}
+      <Bubble>{null}</Bubble>
+      
+      {/* Back Arrow */}
+      {showBackArrow && (
+        <button
+          onClick={() => router.back()}
+          className="fixed top-6 left-6 z-50 bg-white/80 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white transition-all"
+          aria-label="Go back"
+        >
+          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      <div className="relative z-10 container mx-auto px-4 py-12 max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            {t.register || "Registreren"}
+          </h1>
+          <p className="text-gray-600 text-lg">
+            Maak een account aan om te beginnen
+          </p>
         </div>
-        
-        <div className="bg-white border border-orange-300 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 relative">
-          {/* Sticky Back Arrow - Above the form */}
-          <button
-            onClick={handleBackClick}
-            className="absolute -top-4 -left-4 z-50 bg-white hover:bg-gray-50 border border-orange-300 rounded-full p-3 shadow-lg transition-all duration-300"
-            title="Terug"
-          >
-            <svg 
-              className="w-5 h-5 text-orange-600" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+
+        {/* Account Type Selection */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Selecteer accounttype
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                setAccountType('personal');
+                setErrors({});
+              }}
+              className={`p-6 rounded-xl border-2 transition-all ${
+                accountType === 'personal'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M15 19l-7-7 7-7" 
-              />
-            </svg>
-          </button>
-          <div className="text-center mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Account Aanmaken</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Maak uw Gastro-Elite account aan</p>
+              <div className="text-center">
+                <div className="text-3xl mb-2">👤</div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Persoonlijk Account
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Voor individuele gebruikers
+                </p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAccountType('business');
+                setErrors({});
+              }}
+              className={`p-6 rounded-xl border-2 transition-all ${
+                accountType === 'business'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-center">
+                <div className="text-3xl mb-2">🏢</div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Bedrijfsaccount
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Voor bedrijven en organisaties
+                </p>
+              </div>
+            </button>
           </div>
-        
-          {/* Account Type Selection */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => setAccountType('personal')}
-                className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
-                  accountType === 'personal'
-                    ? 'bg-orange-500 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Persoonlijk Account
-              </button>
-              <button
-                type="button"
-                onClick={() => setAccountType('business')}
-                className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
-                  accountType === 'business'
-                    ? 'bg-orange-500 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Bedrijfsaccount
-              </button>
-            </div>
-          </div>
+        </div>
 
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+          {/* Common Fields */}
+          <div className="space-y-4 mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              Persoonlijke gegevens
+            </h2>
 
-        {/* Success Message - Keep for backward compatibility */}
-        {success && !showSuccessModal && (
-          <div className="mb-4 p-4 bg-green-100 border border-green-400 rounded-lg text-green-800">
-            {success}
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-400 rounded-lg text-red-800">
-            {error}
-          </div>
-        )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Personal Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Voornaam *
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.firstName || "Voornaam"} *
                 </label>
                 <input
                   type="text"
+                  id="firstName"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                    errors.firstName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+                )}
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Achternaam *
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.lastName || "Achternaam"} *
                 </label>
                 <input
                   type="text"
+                  id="lastName"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                    errors.lastName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
+                {errors.lastName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                E-mailadres *
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.email || "E-mailadres"} *
               </label>
               <input
                 type="email"
+                id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                required
-                          className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
               />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Telefoonnummer *
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                {t.phone || "Telefoonnummer"} *
               </label>
               <input
                 type="tel"
+                id="phone"
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                required
-                          className="w-full max-w-sm mx-auto px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
               />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+              )}
             </div>
 
-            <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Wachtwoord *
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.password || "Wachtwoord"} *
                 </label>
-                <div className="relative max-w-sm mx-auto sm:max-w-none">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Bevestig Wachtwoord *
-                </label>
-                <div className="relative max-w-sm mx-auto sm:max-w-none">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  >
-                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Business Information */}
-            {accountType === 'business' && (
-              <>
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-6">Bedrijfsinformatie</h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Bedrijfsnaam *
-                      </label>
-                      <input
-                        type="text"
-                        name="companyName"
-                        value={formData.companyName}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        KvK Nummer *
-                      </label>
-                      <input
-                        type="text"
-                        name="kvkNumber"
-                        value={formData.kvkNumber}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        BTW Nummer
-                      </label>
-                      <input
-                        type="text"
-                        name="vatNumber"
-                        value={formData.vatNumber}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        <span>Zakelijk telefoonnummer</span>
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        name="companyPhone"
-                        value={formData.companyPhone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <h4 className="text-md font-medium text-gray-700 mb-4">Bedrijfsadres</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      {/* Land - First row, full width */}
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Land *
-                        </label>
-                        <input
-                          type="text"
-                          name="businessAddress.country"
-                          value={formData.businessAddress.country}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50"
-                          readOnly
-                        />
-                      </div>
-                      
-                      {/* Postcode and Huisnummer - Second row */}
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Postcode *
-                        </label>
-                        <input
-                          type="text"
-                          name="businessAddress.postalCode"
-                          value={formData.businessAddress.postalCode}
-                          onChange={handleInputChange}
-                          onBlur={(e) => {
-                            // Trigger lookup immediately when user leaves the field
-                            const postalCode = e.target.value.trim().toUpperCase().replace(/\s+/g, '');
-                            // Use ref to get latest state
-                            setTimeout(() => {
-                              const currentHouseNumber = formDataRef.current.businessAddress.houseNumber.trim();
-                              if (postalCode.length >= 6 && currentHouseNumber.length > 0) {
-                                // Clear any pending timeout
-                                if (addressLookupTimeoutRef.current) {
-                                  clearTimeout(addressLookupTimeoutRef.current);
-                                }
-                                lookupAddress(postalCode, currentHouseNumber);
-                              }
-                            }, 100);
-                          }}
-                          placeholder="1234AB"
-                          maxLength={7}
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                          style={{ textTransform: 'uppercase' }}
-                        />
-                        <p className="text-xs text-gray-500">Vul postcode in (bijv. 1234AB)</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Huisnummer *
-                        </label>
-                        <input
-                          type="text"
-                          name="businessAddress.houseNumber"
-                          value={formData.businessAddress.houseNumber}
-                          onChange={handleInputChange}
-                          onBlur={(e) => {
-                            // Trigger lookup immediately when user leaves the field
-                            const houseNumber = e.target.value.trim();
-                            // Use ref to get latest state
-                            setTimeout(() => {
-                              const currentPostalCode = formDataRef.current.businessAddress.postalCode.trim().toUpperCase().replace(/\s+/g, '');
-                              if (currentPostalCode.length >= 6 && houseNumber.length > 0) {
-                                // Clear any pending timeout
-                                if (addressLookupTimeoutRef.current) {
-                                  clearTimeout(addressLookupTimeoutRef.current);
-                                }
-                                lookupAddress(currentPostalCode, houseNumber);
-                              }
-                            }, 100);
-                          }}
-                          placeholder="12"
-                          className="w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        />
-                        <p className="text-xs text-gray-500">
-                          {addressLookupLoading ? (
-                            <span className="flex items-center gap-1">
-                              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                              </svg>
-                              Adres wordt opgezocht...
-                            </span>
-                          ) : (
-                            "Straat en plaats worden automatisch ingevuld"
-                          )}
-                        </p>
-                      </div>
-                      
-                      {/* Straat - Third row, full width */}
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          <span>Straat</span>
-                          <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            name="businessAddress.street"
-                            value={formData.businessAddress.street ?? ''}
-                            onChange={handleInputChange}
-                            required
-                            className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.street ? 'bg-gray-50' : 'bg-white'}`}
-                            readOnly={!!formData.businessAddress.street && !addressLookupLoading}
-                            placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.street ? "" : "Wordt automatisch ingevuld")}
-                            data-testid="street-input"
-                          />
-                          {/* Debug display */}
-                          {process.env.NODE_ENV === 'development' && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              Debug: {formData.businessAddress.street || '(empty)'}
-                            </div>
-                          )}
-                          {addressLookupLoading && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <svg className="animate-spin h-5 w-5 text-orange-500" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                              </svg>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Plaats - Fourth row, full width */}
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          <span>Plaats</span>
-                          <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            name="businessAddress.city"
-                            value={formData.businessAddress.city ?? ''}
-                            onChange={handleInputChange}
-                            required
-                            className={`w-full px-4 py-3 border border-orange-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${formData.businessAddress.city ? 'bg-gray-50' : 'bg-white'}`}
-                            readOnly={!!formData.businessAddress.city && !addressLookupLoading}
-                            placeholder={addressLookupLoading ? "Zoeken..." : (formData.businessAddress.city ? "" : "Wordt automatisch ingevuld")}
-                            data-testid="city-input"
-                          />
-                          {addressLookupLoading && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <svg className="animate-spin h-5 w-5 text-orange-500" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                              </svg>
-                            </div>
-                          )}
-                          {/* Debug display */}
-                          {process.env.NODE_ENV === 'development' && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              Debug: {formData.businessAddress.city || '(empty)'}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      KvK Uittreksel *
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleFileChange}
-                        required
-                        className="hidden"
-                        id="kvk-document-input"
-                      />
-                      <label
-                        htmlFor="kvk-document-input"
-                        className="cursor-pointer px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors text-sm font-medium"
-                      >
-                        {t.chooseFile}
-                      </label>
-                      <span className="text-sm text-gray-600">
-                        {kvkDocument ? kvkDocument.name : t.noFileSelected}
-                      </span>
-                    </div>
-                    {kvkDocument && (
-                      <p className="text-xs text-green-600 mt-2">
-                        ✓ {kvkDocument.name}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-2">
-                      Verplicht. Alleen PDF, JPG en PNG bestanden. Maximaal 5MB.
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="pt-6 flex justify-center">
-              <button
-                type="submit"
-                disabled={loading || uploadingDocument}
-                className="w-full max-w-sm bg-orange-500 text-white py-3 px-6 rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading || uploadingDocument ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {uploadingDocument ? 'Document uploaden...' : 'Account aanmaken...'}
-                  </span>
-                ) : (
-                  'Account Aanmaken'
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Professional Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scaleIn">
-            {/* Success Icon */}
-            <div className="flex flex-col items-center pt-8 pb-6 px-6">
-              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4 animate-bounce">
-                <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              
-              {/* Title */}
-              <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                {successModalType === 'business' ? 'Registratie Succesvol!' : 'Account Aangemaakt!'}
-              </h2>
-              
-              {/* Content */}
-              <div className="text-center space-y-4">
-                {successModalType === 'business' ? (
-                  <>
-                    <p className="text-gray-600 text-base leading-relaxed">
-                      Uw bedrijfsaccount is succesvol geregistreerd!
-                    </p>
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mt-4">
-                      <div className="flex items-start gap-3">
-                        <svg className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div className="text-left">
-                          <p className="font-semibold text-orange-900 mb-1">Volgende stappen:</p>
-                          <ul className="text-sm text-orange-800 space-y-1">
-                            <li>• Controleer uw e-mail voor verificatie</li>
-                            <li>• Uw account wordt binnen 24 uur beoordeeld</li>
-                            <li>• U ontvangt een e-mail zodra uw account is goedgekeurd</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-600 text-base leading-relaxed">
-                      Uw account is succesvol aangemaakt!
-                    </p>
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-4">
-                      <div className="flex items-start gap-3">
-                        <svg className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <div className="text-left">
-                          <p className="font-semibold text-blue-900 mb-1">Controleer uw e-mail</p>
-                          <p className="text-sm text-blue-800">
-                            We hebben een verificatielink gestuurd naar uw e-mailadres. Klik op de link om uw account te activeren.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
                 )}
               </div>
-            </div>
-            
-            {/* Action Button */}
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => {
-                  setShowSuccessModal(false);
-                  router.push('/login');
-                }}
-                className="w-full py-3 px-6 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-transform"
-              >
-                Naar Inloggen
-              </button>
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full mt-3 py-2 px-6 text-gray-600 hover:text-gray-800 transition-colors text-sm"
-              >
-                Sluiten
-              </button>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Bevestig wachtwoord *
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+
+          {/* Business Fields */}
+          {accountType === 'business' && (
+            <div className="space-y-4 mb-6 border-t pt-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                Bedrijfsgegevens
+              </h2>
+
+              <div>
+                <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Bedrijfsnaam *
+                </label>
+                <input
+                  type="text"
+                  id="companyName"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                    errors.companyName ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.companyName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="kvkNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                    KVK-nummer *
+                  </label>
+                  <input
+                    type="text"
+                    id="kvkNumber"
+                    name="kvkNumber"
+                    value={formData.kvkNumber}
+                    onChange={handleInputChange}
+                    placeholder="12345678"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                      errors.kvkNumber ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors.kvkNumber && (
+                    <p className="mt-1 text-sm text-red-600">{errors.kvkNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="vatNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                    BTW-nummer
+                  </label>
+                  <input
+                    type="text"
+                    id="vatNumber"
+                    name="vatNumber"
+                    value={formData.vatNumber}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="companyPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Bedrijfstelefoon
+                </label>
+                <input
+                  type="tel"
+                  id="companyPhone"
+                  name="companyPhone"
+                  value={formData.companyPhone}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Business Address */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Bedrijfsadres
+                </h3>
+
+                <div>
+                  <label htmlFor="businessAddress.street" className="block text-sm font-medium text-gray-700 mb-1">
+                    Straat *
+                  </label>
+                  <input
+                    type="text"
+                    id="businessAddress.street"
+                    name="businessAddress.street"
+                    value={formData.businessAddress.street}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                      errors["businessAddress.street"] ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors["businessAddress.street"] && (
+                    <p className="mt-1 text-sm text-red-600">{errors["businessAddress.street"]}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="businessAddress.houseNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                      Huisnummer *
+                    </label>
+                    <input
+                      type="text"
+                      id="businessAddress.houseNumber"
+                      name="businessAddress.houseNumber"
+                      value={formData.businessAddress.houseNumber}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                        errors["businessAddress.houseNumber"] ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors["businessAddress.houseNumber"] && (
+                      <p className="mt-1 text-sm text-red-600">{errors["businessAddress.houseNumber"]}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="businessAddress.postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+                      Postcode *
+                    </label>
+                    <input
+                      type="text"
+                      id="businessAddress.postalCode"
+                      name="businessAddress.postalCode"
+                      value={formData.businessAddress.postalCode}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                        errors["businessAddress.postalCode"] ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors["businessAddress.postalCode"] && (
+                      <p className="mt-1 text-sm text-red-600">{errors["businessAddress.postalCode"]}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="businessAddress.city" className="block text-sm font-medium text-gray-700 mb-1">
+                      Stad *
+                    </label>
+                    <input
+                      type="text"
+                      id="businessAddress.city"
+                      name="businessAddress.city"
+                      value={formData.businessAddress.city}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                        errors["businessAddress.city"] ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors["businessAddress.city"] && (
+                      <p className="mt-1 text-sm text-red-600">{errors["businessAddress.city"]}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="businessAddress.country" className="block text-sm font-medium text-gray-700 mb-1">
+                    Land *
+                  </label>
+                  <input
+                    type="text"
+                    id="businessAddress.country"
+                    name="businessAddress.country"
+                    value={formData.businessAddress.country}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                      errors["businessAddress.country"] ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {errors["businessAddress.country"] && (
+                    <p className="mt-1 text-sm text-red-600">{errors["businessAddress.country"]}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* KVK Document Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  KVK-document *
+                </label>
+                <div className="mt-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 transition-colors text-gray-600"
+                  >
+                    {kvkDocument ? kvkDocument.name : "Selecteer bestand"}
+                  </button>
+                  {kvkDocumentPreview && (
+                    <div className="mt-2">
+                      <img src={kvkDocumentPreview} alt="Preview" className="max-w-xs rounded-lg" />
+                    </div>
+                  )}
+                </div>
+                {errors.kvkDocument && (
+                  <p className="mt-1 text-sm text-red-600">{errors.kvkDocument}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Maximale bestandsgrootte: 5MB
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Submit Error */}
+          {errors.submit && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{errors.submit}</p>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3 px-6 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Registreren..." : (t.register || "Registreren")}
+          </button>
+        </form>
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Registratie succesvol!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {accountType === 'business' 
+                    ? "Uw bedrijfsaccount is aangemaakt en wacht op goedkeuring van een beheerder."
+                    : "Uw account is succesvol aangemaakt. U kunt nu inloggen."}
+                </p>
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    router.push('/login');
+                  }}
+                  className="w-full py-2 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                >
+                  Naar inloggen
+                </button>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full mt-3 py-2 px-6 text-gray-600 hover:text-gray-800 transition-colors text-sm"
+                >
+                  Sluiten
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-gray-500">Loading...</div></div>}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

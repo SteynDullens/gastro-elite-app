@@ -491,6 +491,8 @@ export async function POST(
             email,
             company.name,
             ownerName,
+            invitation?.id || '',
+            company.id,
             userLanguage
           );
 

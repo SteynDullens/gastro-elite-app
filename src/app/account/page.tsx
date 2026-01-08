@@ -104,6 +104,56 @@ export default function AccountPage() {
   const [businessError, setBusinessError] = useState("");
   const [businessSuccess, setBusinessSuccess] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
+  // Pending invitation notification
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [showInvitationNotification, setShowInvitationNotification] = useState(false);
+  
+  // Fetch pending invitations
+  const fetchPendingInvitations = useCallback(async () => {
+    if (!user || !(user as any).emailVerified) return;
+    
+    try {
+      const response = await fetch('/api/user/pending-invitations', {
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const invitations = data.invitations || [];
+        setPendingInvitations(invitations);
+        setShowInvitationNotification(invitations.length > 0);
+      }
+    } catch (error) {
+      console.error('Error fetching pending invitations:', error);
+    }
+  }, [user]);
+  
+  // Handle invitation accept/decline
+  const handleInvitationAction = async (invitationId: string, companyId: string, action: 'accept' | 'decline') => {
+    try {
+      const response = await fetch(`/api/employee-action?companyId=${companyId}&invitationId=${invitationId}&action=${action}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        // Refresh invitations
+        await fetchPendingInvitations();
+        // Refresh page to get updated user data
+        router.refresh();
+        // Close notification if all invitations are processed
+        const remaining = pendingInvitations.filter((inv: any) => inv.id !== invitationId);
+        if (remaining.length === 0) {
+          setShowInvitationNotification(false);
+        } else {
+          setPendingInvitations(remaining);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling invitation:', error);
+    }
+  };
 
   const fetchCompanyData = useCallback(async () => {
     // Get company ID (prefer ownedCompany.id for business owners)
@@ -759,6 +809,51 @@ export default function AccountPage() {
   // Business Account Layout - Two column with sidebar tabs
   if (isBusiness) {
   return (
+    <>
+      {/* Pending Invitation Notification Pop-up */}
+      {showInvitationNotification && pendingInvitations.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">
+                Uitnodiging ontvangen
+              </h3>
+              <button
+                onClick={() => setShowInvitationNotification(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">
+              {pendingInvitations.length === 1 
+                ? `Je bent uitgenodigd om lid te worden van ${pendingInvitations[0].companyName}.`
+                : `Je hebt ${pendingInvitations.length} uitnodigingen ontvangen.`}
+            </p>
+            <div className="space-y-3">
+              {pendingInvitations.map((inv: any) => (
+                <div key={inv.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <p className="font-semibold text-gray-900 mb-2">{inv.companyName}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleInvitationAction(inv.id, inv.companyId, 'accept')}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                    >
+                      {t.accept || 'Accepteren'}
+                    </button>
+                    <button
+                      onClick={() => handleInvitationAction(inv.id, inv.companyId, 'decline')}
+                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium transition-colors"
+                    >
+                      {t.decline || 'Afwijzen'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header Section */}
         <div className="text-center mb-8">
@@ -1410,6 +1505,7 @@ export default function AccountPage() {
         </div>
       )}
       </div>
+    </>
     );
   }
 

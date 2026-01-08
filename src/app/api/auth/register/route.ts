@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for invitation ID in registration data (from URL parameter)
+    const { invitationId, companyId } = registrationData;
+    
     // Check if user already exists
     console.log('🔍 Checking if user exists:', email);
     const existingUser = await safeDbOperation(async (prisma) => {
@@ -76,6 +79,7 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('✅ User does not exist, proceeding with registration');
+    console.log('📧 Registration invitation check:', { invitationId, companyId, email });
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -134,21 +138,47 @@ export async function POST(request: NextRequest) {
       user = result?.user;
       company = result?.company;
     } else {
-      // Create regular user
-      user = await safeDbOperation(async (prisma) => {
-        return await prisma.user.create({
-        data: {
-          firstName,
-          lastName,
-          email,
-          password: hashedPassword,
-          phone: phone || '',
-          isAdmin: false,
-          isBlocked: false,
-          emailVerificationToken: verificationToken,
-        }
+      // Create personal user
+      const result = await safeDbOperation(async (prisma) => {
+        return await prisma.$transaction(async (tx) => {
+          const newUser = await tx.user.create({
+            data: {
+              firstName,
+              lastName,
+              email,
+              password: hashedPassword,
+              phone: phone || '',
+              isAdmin: false,
+              isBlocked: false,
+              emailVerificationToken: verificationToken,
+            }
+          });
+          
+          // If registration came from an employee invitation, link the invitation to the user
+          if (invitationId && companyId) {
+            try {
+              await tx.employeeInvitation.updateMany({
+                where: {
+                  id: invitationId,
+                  email: email.toLowerCase().trim(),
+                  companyId: companyId,
+                  status: 'pending'
+                },
+                data: {
+                  invitedUserId: newUser.id
+                }
+              });
+              console.log('✅ Linked employee invitation to new user:', { invitationId, userId: newUser.id });
+            } catch (invError: any) {
+              console.warn('⚠️ Could not link invitation (may not exist):', invError.message);
+              // Don't fail registration if invitation linking fails
+            }
+          }
+          
+          return newUser;
+        });
       });
-      });
+      user = result;
     }
 
     if (!user) {

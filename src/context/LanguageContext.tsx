@@ -81,6 +81,9 @@ interface Translations {
   filter: string;
   allRecipes: string;
   database: string;
+  employeeInvitation: string;
+  accept: string;
+  decline: string;
   
   // Recipe form
   recipeName: string;
@@ -349,6 +352,7 @@ const translations: Record<string, Translations> = {
     startAddingRecipe: "Begin met het toevoegen van uw eerste recept!", addNewRecipe: "Nieuw Recept Toevoegen",
     filter: "Filter", allRecipes: "Alle recepten", database: "Database",
     gridView: "Rasterweergave", rowView: "Rijweergave", alphabeticalView: "Alfabetische weergave", switchView: "Weergave wijzigen",
+    employeeInvitation: "Uitnodiging ontvangen", accept: "Accepteren", decline: "Afwijzen",
     recipeName: "Recept Naam", recipeNameRequired: "Recept Naam *", imageUrl: "Afbeelding URL",
     batchSize: "Batch Grootte", servings: "Porties", ingredients: "Ingrediënten", instructions: "Instructies",
     addIngredient: "Toevoegen", quantity: "Hoeveelheid", ingredientName: "Naam ingrediënt",
@@ -458,6 +462,7 @@ const translations: Record<string, Translations> = {
     tryAdjustingSearch: "Try adjusting your search or filter criteria",
     gridView: "Grid View", rowView: "Row View", alphabeticalView: "Alphabetical View", switchView: "Switch View",
     filter: "Filter", allRecipes: "All Recipes", database: "Database",
+    employeeInvitation: "Invitation Received", accept: "Accept", decline: "Decline",
     startAddingRecipe: "Start by adding your first recipe!", addNewRecipe: "Add New Recipe",
     recipeName: "Recipe Name", recipeNameRequired: "Recipe Name *", imageUrl: "Image URL",
     batchSize: "Batch Size", servings: "Servings", ingredients: "Ingredients", instructions: "Instructions",
@@ -562,6 +567,7 @@ const translations: Record<string, Translations> = {
     tryAdjustingSearch: "Versuchen Sie, Ihre Such- oder Filterkriterien anzupassen",
     gridView: "Rasteransicht", rowView: "Zeilenansicht", alphabeticalView: "Alphabetische Ansicht", switchView: "Ansicht wechseln",
     filter: "Filter", allRecipes: "Alle Rezepte", database: "Datenbank",
+    employeeInvitation: "Einladung erhalten", accept: "Annehmen", decline: "Ablehnen",
     startAddingRecipe: "Fügen Sie Ihr erstes Rezept hinzu!", addNewRecipe: "Neues Rezept hinzufügen",
     recipeName: "Rezeptname", recipeNameRequired: "Rezeptname *", imageUrl: "Bild-URL",
     batchSize: "Chargengröße", servings: "Portionen", ingredients: "Zutaten", instructions: "Anleitung",
@@ -665,6 +671,7 @@ const translations: Record<string, Translations> = {
     tryAdjustingSearch: "Essayez d'ajuster vos critères de recherche ou de filtre",
     gridView: "Vue en grille", rowView: "Vue en ligne", alphabeticalView: "Vue alphabétique", switchView: "Changer de vue",
     filter: "Filtre", allRecipes: "Toutes les recettes", database: "Base de données",
+    employeeInvitation: "Invitation reçue", accept: "Accepter", decline: "Refuser",
     startAddingRecipe: "Commencez par ajouter votre première recette!", addNewRecipe: "Ajouter une nouvelle recette",
     recipeName: "Nom de la recette", recipeNameRequired: "Nom de la recette *", imageUrl: "URL de l'image",
     batchSize: "Taille du lot", servings: "Portions", ingredients: "Ingrédients", instructions: "Instructions",
@@ -768,6 +775,7 @@ const translations: Record<string, Translations> = {
     tryAdjustingSearch: "Intente ajustar sus criterios de búsqueda o filtro",
     gridView: "Vista de cuadrícula", rowView: "Vista de filas", alphabeticalView: "Vista alfabética", switchView: "Cambiar vista",
     filter: "Filtro", allRecipes: "Todas las recetas", database: "Base de datos",
+    employeeInvitation: "Invitación recibida", accept: "Aceptar", decline: "Rechazar",
     startAddingRecipe: "¡Comience agregando su primera receta!", addNewRecipe: "Añadir nueva receta",
     recipeName: "Nombre de la receta", recipeNameRequired: "Nombre de la receta *", imageUrl: "URL de la imagen",
     batchSize: "Tamaño del lote", servings: "Porciones", ingredients: "Ingredientes", instructions: "Instrucciones",
@@ -871,6 +879,7 @@ const translations: Record<string, Translations> = {
     tryAdjustingSearch: "Prova a modificare i criteri di ricerca o filtro",
     gridView: "Vista griglia", rowView: "Vista righe", alphabeticalView: "Vista alfabetica", switchView: "Cambia vista",
     filter: "Filtro", allRecipes: "Tutte le ricette", database: "Database",
+    employeeInvitation: "Invito ricevuto", accept: "Accetta", decline: "Rifiuta",
     startAddingRecipe: "Inizia aggiungendo la tua prima ricetta!", addNewRecipe: "Aggiungi nuova ricetta",
     recipeName: "Nome ricetta", recipeNameRequired: "Nome ricetta *", imageUrl: "URL immagine",
     batchSize: "Dimensione lotto", servings: "Porzioni", ingredients: "Ingredienti", instructions: "Istruzioni",
@@ -973,6 +982,7 @@ const translations: Record<string, Translations> = {
     allCategories: "Todas as categorias", noRecipesFound: "Nenhuma receita encontrada",
     gridView: "Vista em grade", rowView: "Vista em linhas", alphabeticalView: "Vista alfabética", switchView: "Mudar vista",
     filter: "Filtro", allRecipes: "Todas as receitas", database: "Base de dados",
+    employeeInvitation: "Convite recebido", accept: "Aceitar", decline: "Recusar",
     tryAdjustingSearch: "Tente ajustar seus critérios de pesquisa ou filtro",
     startAddingRecipe: "Comece adicionando sua primeira receita!", addNewRecipe: "Adicionar nova receita",
     recipeName: "Nome da receita", recipeNameRequired: "Nome da receita *", imageUrl: "URL da imagem",
@@ -1077,6 +1087,7 @@ const translations: Record<string, Translations> = {
     tryAdjustingSearch: "Provoni të rregulloni kriteret e kërkimit ose filtrit",
     gridView: "Pamje grilë", rowView: "Pamje rreshtash", alphabeticalView: "Pamje alfabetike", switchView: "Ndrysho pamjen",
     filter: "Filtër", allRecipes: "Të gjitha recetat", database: "Bazë e të dhënave",
+    employeeInvitation: "Ftesë e marrë", accept: "Prano", decline: "Refuzo",
     startAddingRecipe: "Filloni duke shtuar recetën tuaj të parë!", addNewRecipe: "Shto recetë të re",
     recipeName: "Emri i recetës", recipeNameRequired: "Emri i recetës *", imageUrl: "URL e imazhit",
     batchSize: "Madhësia e grupit", servings: "Porcione", ingredients: "Përbërësit", instructions: "Udhëzimet",
