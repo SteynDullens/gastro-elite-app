@@ -151,9 +151,13 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
 
       const result = await response.json();
       if (result.success) {
-        setMessage(`Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden.`);
+        if (result.emailSent) {
+          setMessage(`Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden.`);
+        } else {
+          setMessage(`Wachtwoord gereset voor ${userEmail}, maar email kon niet worden verzonden. ${result.emailError ? `Fout: ${result.emailError}` : 'Controleer de email configuratie.'}`);
+        }
         fetchUsers();
-        setTimeout(() => setMessage(""), 5000);
+        setTimeout(() => setMessage(""), 7000);
       } else {
         setMessage(`Fout: ${result.error}`);
         setTimeout(() => setMessage(""), 3000);

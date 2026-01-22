@@ -111,6 +111,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    let emailSent = false;
+    let emailError: string | null = null;
+
     const result = await safeDbOperation(async (prisma) => {
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -175,16 +178,9 @@ export async function PUT(request: NextRequest) {
             data: { password: hashedPassword }
           });
 
-          // Send email notification if requested
-          if (sendEmail && userEmail && firstName && lastName) {
-            try {
-              await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
-              console.log(`✅ Password reset email sent to ${userEmail}`);
-            } catch (emailError) {
-              console.error('Error sending password reset email:', emailError);
-              // Don't fail the request if email fails
-            }
-          }
+          // Store password for email sending after transaction
+          (result as any).passwordToUse = passwordToUse;
+          
           break;
 
         case 'change_role':
@@ -213,6 +209,27 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Send email notification for password reset (after transaction completes)
+    if (action === 'reset_password') {
+      const { sendEmail, userEmail, firstName, lastName } = data;
+      const passwordToUse = (result as any).passwordToUse;
+      
+      if (sendEmail && userEmail && firstName && lastName && passwordToUse) {
+        try {
+          console.log(`📧 Attempting to send password reset email to: ${userEmail}`);
+          await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
+          emailSent = true;
+          console.log(`✅ Password reset email sent successfully to ${userEmail}`);
+        } catch (emailErrorCaught: any) {
+          emailError = emailErrorCaught.message || 'Unknown email error';
+          console.error('❌ Error sending password reset email:', emailErrorCaught);
+          console.error('Error code:', emailErrorCaught.code);
+          console.error('Error response:', emailErrorCaught.response);
+          console.error('Full error:', JSON.stringify(emailErrorCaught, null, 2));
+        }
+      }
+    }
+
     // Log admin action
     await logError({
       level: 'info',
@@ -222,10 +239,17 @@ export async function PUT(request: NextRequest) {
       method: 'PUT'
     });
 
-    return NextResponse.json({
+    const responseData: any = {
       success: true,
       message: 'User updated successfully'
-    });
+    };
+    
+    if (action === 'reset_password') {
+      responseData.emailSent = emailSent;
+      responseData.emailError = emailError;
+    }
+
+    return NextResponse.json(responseData);
 
   } catch (error: any) {
     await logError({

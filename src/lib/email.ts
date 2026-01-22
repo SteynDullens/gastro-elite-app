@@ -115,12 +115,27 @@ export async function sendPasswordResetNotification(
       `
     };
 
-    await getTransporter().sendMail(mailOptions);
-    console.log('✅ Password reset notification email sent');
+    const info = await getTransporter().sendMail(mailOptions);
+    console.log('✅ Password reset notification email sent successfully');
+    console.log('Message ID:', info.messageId);
+    console.log('Response:', info.response);
+    console.log('Accepted:', info.accepted);
+    console.log('Rejected:', info.rejected);
+    
+    // Check if email was actually accepted
+    if (info.rejected && info.rejected.length > 0) {
+      console.error('❌ Email was rejected:', info.rejected);
+      throw new Error(`Email rejected: ${info.rejected.join(', ')}`);
+    }
+    
     return true;
-  } catch (error) {
-    console.error('Error sending password reset notification:', error);
-    return false;
+  } catch (error: any) {
+    console.error('❌ Error sending password reset notification:', error);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error response:', error.response);
+    console.error('Error command:', error.command);
+    throw error; // Re-throw so caller knows it failed
   }
 }
 
