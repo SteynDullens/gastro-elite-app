@@ -83,12 +83,28 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       const response = await fetch("/api/admin/users", {
         credentials: "include",
       });
-      const data = await response.json();
-      if (data.success) {
-        setUsers(data.users);
+      
+      if (!response.ok) {
+        console.error("Failed to fetch users - HTTP error:", response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error details:", errorData);
+        setMessage(`Fout bij ophalen gebruikers: ${errorData.error || response.statusText}`);
+        return;
       }
-    } catch (error) {
+      
+      const data = await response.json();
+      console.log("Users data received:", data);
+      
+      if (data.success) {
+        setUsers(data.users || []);
+        console.log(`✅ Loaded ${data.users?.length || 0} users`);
+      } else {
+        console.error("API returned success: false", data);
+        setMessage(`Fout: ${data.error || 'Onbekende fout'}`);
+      }
+    } catch (error: any) {
       console.error("Failed to fetch users:", error);
+      setMessage(`Netwerk fout: ${error.message || 'Kon gebruikers niet ophalen'}`);
     } finally {
       setLoading(false);
     }
@@ -117,10 +133,19 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       const response = await fetch("/api/admin/business-applications", {
         credentials: "include",
       });
+      
+      if (!response.ok) {
+        console.error("Failed to fetch business applications - HTTP error:", response.status);
+        return;
+      }
+      
       const data = await response.json();
-      setBusinessApplications(data);
-    } catch (error) {
+      console.log("Business applications data received:", data);
+      setBusinessApplications(Array.isArray(data) ? data : []);
+      console.log(`✅ Loaded ${Array.isArray(data) ? data.length : 0} business applications`);
+    } catch (error: any) {
       console.error("Failed to fetch business applications:", error);
+      setMessage(`Netwerk fout: ${error.message || 'Kon bedrijfsaanvragen niet ophalen'}`);
     } finally {
       setLoading(false);
     }
@@ -131,11 +156,22 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       const response = await fetch("/api/admin/stats", {
         credentials: "include",
       });
+      
+      if (!response.ok) {
+        console.error("Failed to fetch stats - HTTP error:", response.status);
+        return;
+      }
+      
       const data = await response.json();
+      console.log("Stats data received:", data);
+      
       if (data.success) {
         setStats(data.stats);
+        console.log("✅ Stats loaded:", data.stats);
+      } else {
+        console.error("Stats API returned success: false", data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch stats:", error);
     }
   };
@@ -652,9 +688,31 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       {/* Users Tab */}
       {activeTab === "users" && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold">User Management</h2>
+            <button
+              onClick={fetchUsers}
+              className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              disabled={loading}
+            >
+              {loading ? 'Laden...' : '🔄 Vernieuwen'}
+            </button>
           </div>
+          {loading && users.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-500">Gebruikers laden...</div>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-2">Geen gebruikers gevonden</div>
+              <button
+                onClick={fetchUsers}
+                className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+              >
+                Opnieuw Proberen
+              </button>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

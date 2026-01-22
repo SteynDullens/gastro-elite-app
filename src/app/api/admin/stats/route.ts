@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
     }
 
-    // Get statistics
+    // Get statistics (exclude soft deleted items)
     const [
       totalUsers,
       activeUsers,
@@ -36,18 +36,19 @@ export async function GET(request: NextRequest) {
       recentUsers,
       recentCompanies
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isBlocked: false } }),
-      prisma.user.count({ where: { isBlocked: true } }),
-      prisma.user.count({ where: { isAdmin: true } }),
-      prisma.user.count({ where: { emailVerified: true } }),
-      prisma.company.count(),
-      prisma.company.count({ where: { status: 'pending' } }),
-      prisma.company.count({ where: { status: 'approved' } }),
-      prisma.company.count({ where: { status: 'rejected' } }),
-      prisma.personalRecipe.count(),
-      prisma.companyRecipe.count(),
+      prisma.user.count({ where: { deletedAt: null } }),
+      prisma.user.count({ where: { isBlocked: false, deletedAt: null } }),
+      prisma.user.count({ where: { isBlocked: true, deletedAt: null } }),
+      prisma.user.count({ where: { isAdmin: true, deletedAt: null } }),
+      prisma.user.count({ where: { emailVerified: true, deletedAt: null } }),
+      prisma.company.count({ where: { deletedAt: null } }),
+      prisma.company.count({ where: { status: 'pending', deletedAt: null } }),
+      prisma.company.count({ where: { status: 'approved', deletedAt: null } }),
+      prisma.company.count({ where: { status: 'rejected', deletedAt: null } }),
+      prisma.personalRecipe.count({ where: { deletedAt: null } }),
+      prisma.companyRecipe.count({ where: { deletedAt: null } }),
       prisma.user.findMany({
+        where: { deletedAt: null },
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
         }
       }),
       prisma.company.findMany({
+        where: { deletedAt: null },
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
