@@ -28,6 +28,7 @@ interface User {
   isActive: boolean;
   emailVerified: boolean;
   companyName?: string;
+  companyStatus?: string | null; // pending, approved, rejected
   createdAt: string;
   updatedAt: string;
 }
@@ -326,11 +327,37 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      {(() => {
+                        // Determine status based on email verification and company approval
+                        let statusText = '';
+                        let statusClass = '';
+                        
+                        if (!user.emailVerified) {
+                          statusText = 'Email nog niet geverifieerd';
+                          statusClass = 'bg-yellow-100 text-yellow-800';
+                        } else if (user.account_type === 'business' && user.companyStatus === 'pending') {
+                          statusText = 'Wachten op goedkeuring';
+                          statusClass = 'bg-amber-100 text-amber-800';
+                        } else if (user.account_type === 'business' && user.companyStatus === 'rejected') {
+                          statusText = 'Afgewezen';
+                          statusClass = 'bg-red-100 text-red-800';
+                        } else if (user.account_type === 'business' && user.companyStatus === 'approved') {
+                          statusText = 'Goedgekeurd';
+                          statusClass = 'bg-green-100 text-green-800';
+                        } else if (!user.isActive) {
+                          statusText = 'Inactive';
+                          statusClass = 'bg-red-100 text-red-800';
+                        } else {
+                          statusText = 'Active';
+                          statusClass = 'bg-green-100 text-green-800';
+                        }
+                        
+                        return (
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClass}`}>
+                            {statusText}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.createdAt).toISOString().split('T')[0]}

@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
         include: {
           ownedCompany: {
             select: {
-              name: true
+              name: true,
+              status: true
             }
           }
         },
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
       isActive: !user.isBlocked,
       emailVerified: user.emailVerified,
       companyName: user.ownedCompany?.name || null,
+      companyStatus: user.ownedCompany?.status || null, // pending, approved, rejected
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString()
     }));
