@@ -119,10 +119,19 @@ export default function AccountPage() {
         cache: 'no-store'
       });
       if (response.ok) {
-        const data = await response.json();
-        const invitations = data.invitations || [];
-        setPendingInvitations(invitations);
-        setShowInvitationNotification(invitations.length > 0);
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            const invitations = data.invitations || [];
+            setPendingInvitations(invitations);
+            setShowInvitationNotification(invitations.length > 0);
+          } else {
+            console.warn('Non-JSON response from pending invitations API');
+          }
+        } catch (parseError) {
+          console.error('Failed to parse pending invitations response:', parseError);
+        }
       }
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
@@ -272,13 +281,33 @@ export default function AccountPage() {
         }),
       });
 
+      // Check if response is OK and has JSON content type
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
       let data;
-      try {
-        data = await response.json();
-        console.log('API Response:', data);
-      } catch (parseError) {
-        console.error('Failed to parse JSON response:', parseError);
-        setBusinessError("Server response kon niet worden gelezen. Probeer het opnieuw.");
+      if (isJson) {
+        try {
+          data = await response.json();
+          console.log('API Response:', data);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          // Try to get response text for debugging
+          const responseText = await response.text().catch(() => 'Could not read response');
+          console.error('Response text:', responseText.substring(0, 500));
+          setBusinessError(`Server response kon niet worden gelezen (status: ${response.status}). Probeer het opnieuw.`);
+          return;
+        }
+      } else {
+        // Response is not JSON - likely an HTML error page
+        const responseText = await response.text().catch(() => 'Could not read response');
+        console.error('Non-JSON response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType,
+          preview: responseText.substring(0, 200)
+        });
+        setBusinessError(`Server fout (${response.status}): ${response.statusText || 'Onbekende fout'}. Probeer het opnieuw.`);
         return;
       }
       
@@ -511,8 +540,18 @@ export default function AccountPage() {
         router.refresh();
         alert('Profiel succesvol bijgewerkt!');
       } else {
-        const errorData = await response.json();
-        alert(`Fout bij bijwerken: ${errorData.message || 'Onbekende fout'}`);
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            alert(`Fout bij bijwerken: ${errorData.message || 'Onbekende fout'}`);
+          } else {
+            alert(`Fout bij bijwerken: ${response.statusText || 'Server fout'}`);
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          alert(`Fout bij bijwerken: ${response.statusText || 'Onbekende fout'}`);
+        }
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -557,12 +596,19 @@ export default function AccountPage() {
         // For now, we'll simulate with a simple lookup
         const response = await fetch(`/api/postal-lookup?code=${postalCode}`);
         if (response.ok) {
-          const data = await response.json();
-          setEditFormData(prev => ({ 
-            ...prev, 
-            street: data.street || '',
-            city: data.city || ''
-          }));
+          try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              setEditFormData(prev => ({ 
+                ...prev, 
+                street: data.street || '',
+                city: data.city || ''
+              }));
+            }
+          } catch (parseError) {
+            console.error('Failed to parse postal lookup response:', parseError);
+          }
         }
       } catch (error) {
         console.log('Postal code lookup not available');

@@ -64,34 +64,55 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
       console.log('📡 Response status:', response.status, response.statusText);
       
       if (response.ok) {
-        const data = await response.json();
-        const recipeCount = data.recipes?.length || 0;
-        console.log(`✅ RecipeContext: Fetched ${recipeCount} recipes from server`);
-        console.log('📦 Response data:', {
-          recipeCount,
-          hasRecipes: !!data.recipes,
-          isArray: Array.isArray(data.recipes)
-        });
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        const isJson = contentType && contentType.includes('application/json');
         
-        if (recipeCount > 0) {
-          console.log('📋 Recipe names:', data.recipes.map((r: any) => ({ 
-            name: r.name, 
-            type: r.companyId ? 'company' : 'personal',
-            id: r.id,
-            userId: r.userId,
-            companyId: r.companyId
-          })));
+        if (isJson) {
+          try {
+            const data = await response.json();
+            const recipeCount = data.recipes?.length || 0;
+            console.log(`✅ RecipeContext: Fetched ${recipeCount} recipes from server`);
+            console.log('📦 Response data:', {
+              recipeCount,
+              hasRecipes: !!data.recipes,
+              isArray: Array.isArray(data.recipes)
+            });
+            
+            if (recipeCount > 0) {
+              console.log('📋 Recipe names:', data.recipes.map((r: any) => ({ 
+                name: r.name, 
+                type: r.companyId ? 'company' : 'personal',
+                id: r.id,
+                userId: r.userId,
+                companyId: r.companyId
+              })));
+            } else {
+              console.warn('⚠️ RecipeContext: No recipes returned from server');
+            }
+            
+            setRecipes(data.recipes || []);
+          } catch (parseError) {
+            console.error('❌ RecipeContext: Failed to parse JSON response:', parseError);
+            const responseText = await response.text().catch(() => 'Could not read response');
+            console.error('Response text:', responseText.substring(0, 500));
+            setRecipes(initialRecipes);
+          }
         } else {
-          console.warn('⚠️ RecipeContext: No recipes returned from server');
+          const responseText = await response.text().catch(() => 'Could not read response');
+          console.error('❌ RecipeContext: Non-JSON response received:', {
+            status: response.status,
+            statusText: response.statusText,
+            preview: responseText.substring(0, 200)
+          });
+          setRecipes(initialRecipes);
         }
-        
-        setRecipes(data.recipes || []);
       } else {
-        const errorText = await response.text();
+        const errorText = await response.text().catch(() => 'Could not read response');
         console.error('❌ RecipeContext: Failed to fetch recipes:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorText
+          error: errorText.substring(0, 500)
         });
         setRecipes(initialRecipes);
       }

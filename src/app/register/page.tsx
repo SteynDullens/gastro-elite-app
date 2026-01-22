@@ -207,21 +207,53 @@ function RegisterPageContent() {
       let kvkDocumentPath = null;
       if (accountType === 'business' && kvkDocument) {
         const formDataUpload = new FormData();
-        formDataUpload.append('file', kvkDocument);
-        formDataUpload.append('type', 'kvk-document');
+        formDataUpload.append('document', kvkDocument);
+        formDataUpload.append('kvkNumber', formData.kvkNumber);
 
-        const uploadResponse = await fetch('/api/upload', {
+        const uploadResponse = await fetch('/api/auth/upload-kvk-document', {
           method: 'POST',
           body: formDataUpload,
         });
 
         if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || 'Upload mislukt');
+          // Check if response is JSON before parsing
+          const contentType = uploadResponse.headers.get('content-type');
+          const isJson = contentType && contentType.includes('application/json');
+          
+          if (isJson) {
+            try {
+              const errorData = await uploadResponse.json();
+              throw new Error(errorData.error || 'Upload mislukt');
+            } catch (parseError) {
+              console.error('Failed to parse upload error response:', parseError);
+              throw new Error(`Upload mislukt (status: ${uploadResponse.status})`);
+            }
+          } else {
+            const responseText = await uploadResponse.text().catch(() => 'Could not read response');
+            console.error('Non-JSON upload error response:', {
+              status: uploadResponse.status,
+              statusText: uploadResponse.statusText,
+              preview: responseText.substring(0, 200)
+            });
+            throw new Error(`Upload mislukt (${uploadResponse.status}): ${uploadResponse.statusText || 'Onbekende fout'}`);
+          }
         }
 
-        const uploadData = await uploadResponse.json();
-        kvkDocumentPath = uploadData.path;
+        // Parse upload success response
+        const contentType = uploadResponse.headers.get('content-type');
+        const isJson = contentType && contentType.includes('application/json');
+        
+        if (isJson) {
+          try {
+            const uploadData = await uploadResponse.json();
+            kvkDocumentPath = uploadData.documentPath || uploadData.path;
+          } catch (parseError) {
+            console.error('Failed to parse upload success response:', parseError);
+            throw new Error('Upload succesvol maar response kon niet worden gelezen');
+          }
+        } else {
+          throw new Error('Upload response is geen geldige JSON');
+        }
       }
 
       // Register user

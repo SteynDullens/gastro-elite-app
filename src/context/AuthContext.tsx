@@ -82,10 +82,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearTimeout(timeoutId);
 
           if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.user) {
-              setUser(data.user);
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            const isJson = contentType && contentType.includes('application/json');
+            
+            if (isJson) {
+              try {
+                const data = await response.json();
+                if (data.success && data.user) {
+                  setUser(data.user);
+                } else {
+                  setUser(null);
+                }
+              } catch (parseError) {
+                console.error('Failed to parse refresh user JSON response:', parseError);
+                setUser(null);
+              }
             } else {
+              console.warn('Non-JSON response from /api/auth/me');
               setUser(null);
             }
           } else {
@@ -110,7 +124,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      let data;
+      if (isJson) {
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse login JSON response:', parseError);
+          const responseText = await response.text().catch(() => 'Could not read response');
+          console.error('Response text:', responseText.substring(0, 500));
+          setUser(null);
+          setLoading(false);
+          return { success: false, error: `Server response kon niet worden gelezen (status: ${response.status})` };
+        }
+      } else {
+        const responseText = await response.text().catch(() => 'Could not read response');
+        console.error('Non-JSON login response:', {
+          status: response.status,
+          statusText: response.statusText,
+          preview: responseText.substring(0, 200)
+        });
+        setUser(null);
+        setLoading(false);
+        return { success: false, error: `Server fout (${response.status}): ${response.statusText || 'Onbekende fout'}` };
+      }
 
       if (response.ok) {
         setUser(data.user);
@@ -119,12 +159,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         setLoading(false);
-        return { success: false, error: data.error };
+        return { success: false, error: data.error || data.message || 'Login mislukt' };
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login network error:', error);
       setUser(null);
       setLoading(false);
-      return { success: false, error: 'Network error' };
+      return { success: false, error: error.message || 'Network error' };
     }
   };
 
@@ -142,8 +183,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       console.log('Registration response status:', response.status);
-      const data = await response.json();
-      console.log('Registration response data:', data);
+      
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      let data;
+      if (isJson) {
+        try {
+          data = await response.json();
+          console.log('Registration response data:', data);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          // Try to get response text for debugging
+          const responseText = await response.text().catch(() => 'Could not read response');
+          console.error('Response text:', responseText.substring(0, 500));
+          return { 
+            success: false, 
+            error: `Server response kon niet worden gelezen (status: ${response.status}). Probeer het opnieuw.` 
+          };
+        }
+      } else {
+        // Response is not JSON - likely an HTML error page
+        const responseText = await response.text().catch(() => 'Could not read response');
+        console.error('Non-JSON response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType,
+          preview: responseText.substring(0, 200)
+        });
+        return { 
+          success: false, 
+          error: `Server fout (${response.status}): ${response.statusText || 'Onbekende fout'}. Probeer het opnieuw.` 
+        };
+      }
 
       if (response.ok) {
         // Check if email verification is required based on server response
@@ -155,11 +228,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true, message: data.message };
       } else {
         console.error('Registration failed:', data.error);
-        return { success: false, error: data.error };
+        return { success: false, error: data.error || data.message || 'Registratie mislukt' };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration network error:', error);
-      return { success: false, error: 'Network error' };
+      return { success: false, error: error.message || 'Network error' };
     }
   };
 
