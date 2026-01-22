@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
 
     const users = await safeDbOperation(async (prisma) => {
       return await prisma.user.findMany({
+        where: {
+          deletedAt: null // Exclude soft deleted users
+        },
         include: {
           ownedCompany: {
             select: {

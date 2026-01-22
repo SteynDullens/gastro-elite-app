@@ -65,11 +65,13 @@ interface Stats {
 
 export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps = {}) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'business' | 'logs' | 'backup'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'business' | 'logs' | 'backup' | 'recovery'>(initialTab);
   const [users, setUsers] = useState<User[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [businessApplications, setBusinessApplications] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [deletedItems, setDeletedItems] = useState<any>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [businessFilter, setBusinessFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
@@ -163,6 +165,63 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       setTimeout(() => setMessage(""), 5000);
     } catch (error: any) {
       setMessage(`❌ Fout bij backup: ${error.message || 'Onbekende fout'}`);
+      setTimeout(() => setMessage(""), 5000);
+    }
+  };
+
+  const fetchDeletedItems = async () => {
+    try {
+      const response = await fetch('/api/admin/recover-data', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDeletedItems(data.deletedItems);
+      }
+    } catch (error) {
+      console.error('Failed to fetch deleted items:', error);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const response = await fetch('/api/admin/audit-logs?limit=100', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAuditLogs(data.logs);
+      }
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error);
+    }
+  };
+
+  const handleRecover = async (entityType: string, entityId: string) => {
+    if (!confirm(`Weet je zeker dat je deze ${entityType} wilt herstellen?`)) {
+      return;
+    }
+
+    try {
+      setMessage(`🔄 Herstellen van ${entityType}...`);
+      const response = await fetch('/api/admin/recover-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ entityType, entityId })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setMessage(`✅ ${entityType} succesvol hersteld!`);
+        fetchDeletedItems();
+        setTimeout(() => setMessage(""), 3000);
+      } else {
+        setMessage(`❌ Herstel mislukt: ${result.error || 'Onbekende fout'}`);
+        setTimeout(() => setMessage(""), 5000);
+      }
+    } catch (error: any) {
+      setMessage(`❌ Fout bij herstellen: ${error.message || 'Onbekende fout'}`);
       setTimeout(() => setMessage(""), 5000);
     }
   };
@@ -291,6 +350,9 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
   useEffect(() => {
     if (activeTab === 'dashboard') {
       fetchStats();
+    } else if (activeTab === 'recovery') {
+      fetchDeletedItems();
+      fetchAuditLogs();
     }
   }, [activeTab]);
 
@@ -445,6 +507,16 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
             }`}
           >
             💾 Backup & Export
+          </button>
+          <button
+            onClick={() => setActiveTab("recovery")}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "recovery"
+                ? "text-orange-600 border-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            ♻️ Recovery & Audit
           </button>
         </nav>
       </div>
@@ -1169,6 +1241,205 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
               Alle gebruikersdata wordt automatisch beschermd. Recepturen worden nooit permanent verwijderd zonder backup.
               Bij fouten in de app kunnen gegevens altijd worden teruggehaald via backups.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Recovery & Audit Tab */}
+      {activeTab === "recovery" && (
+        <div className="space-y-6">
+          {/* Deleted Items Recovery */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">♻️ Verwijderde Items Herstellen</h2>
+            <p className="text-gray-600 mb-6">
+              Herstel verwijderde gebruikers, bedrijven of recepturen. Alle verwijderingen zijn soft deletes en kunnen worden teruggezet.
+            </p>
+
+            {deletedItems ? (
+              <div className="space-y-6">
+                {/* Deleted Users */}
+                {deletedItems.users && deletedItems.users.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">👥 Verwijderde Gebruikers ({deletedItems.users.length})</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Naam</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Email</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Verwijderd Op</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Acties</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {deletedItems.users.map((u: any) => (
+                            <tr key={u.id}>
+                              <td className="px-4 py-3 text-sm">{u.firstName} {u.lastName}</td>
+                              <td className="px-4 py-3 text-sm">{u.email}</td>
+                              <td className="px-4 py-3 text-sm">{new Date(u.deletedAt).toLocaleString('nl-NL')}</td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={() => handleRecover('User', u.id)}
+                                  className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                                >
+                                  Herstellen
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Deleted Companies */}
+                {deletedItems.companies && deletedItems.companies.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">🏢 Verwijderde Bedrijven ({deletedItems.companies.length})</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Bedrijfsnaam</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">KvK</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Eigenaar</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Verwijderd Op</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Acties</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {deletedItems.companies.map((c: any) => (
+                            <tr key={c.id}>
+                              <td className="px-4 py-3 text-sm">{c.name}</td>
+                              <td className="px-4 py-3 text-sm">{c.kvkNumber}</td>
+                              <td className="px-4 py-3 text-sm">{c.owner.email}</td>
+                              <td className="px-4 py-3 text-sm">{new Date(c.deletedAt).toLocaleString('nl-NL')}</td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={() => handleRecover('Company', c.id)}
+                                  className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                                >
+                                  Herstellen
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Deleted Recipes */}
+                {(deletedItems.personalRecipes?.length > 0 || deletedItems.companyRecipes?.length > 0) && (
+                  <div>
+                    <h3 className="font-semibold mb-3">
+                      📝 Verwijderde Recepturen (
+                      {(deletedItems.personalRecipes?.length || 0) + (deletedItems.companyRecipes?.length || 0)}
+                      )
+                    </h3>
+                    {deletedItems.personalRecipes && deletedItems.personalRecipes.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Persoonlijke Recepturen</h4>
+                        <div className="space-y-2">
+                          {deletedItems.personalRecipes.map((r: any) => (
+                            <div key={r.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                              <div>
+                                <span className="font-medium">{r.name}</span>
+                                <span className="text-xs text-gray-500 ml-2">- {r.user.email}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRecover('PersonalRecipe', r.id)}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                              >
+                                Herstellen
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {deletedItems.companyRecipes && deletedItems.companyRecipes.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Bedrijfsrecepturen</h4>
+                        <div className="space-y-2">
+                          {deletedItems.companyRecipes.map((r: any) => (
+                            <div key={r.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                              <div>
+                                <span className="font-medium">{r.name}</span>
+                                <span className="text-xs text-gray-500 ml-2">- {r.company.name}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRecover('CompanyRecipe', r.id)}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                              >
+                                Herstellen
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(!deletedItems.users || deletedItems.users.length === 0) &&
+                 (!deletedItems.companies || deletedItems.companies.length === 0) &&
+                 (!deletedItems.personalRecipes || deletedItems.personalRecipes.length === 0) &&
+                 (!deletedItems.companyRecipes || deletedItems.companyRecipes.length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    Geen verwijderde items gevonden. Alle data is actief.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Laden...</div>
+            )}
+          </div>
+
+          {/* Audit Logs */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">📋 Audit Logs</h2>
+            <p className="text-gray-600 mb-6">
+              Overzicht van alle belangrijke acties in het systeem voor traceability.
+            </p>
+
+            {auditLogs.length > 0 ? (
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Actie</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Gebruiker</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tijd</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {auditLogs.map((log: any) => (
+                      <tr key={log.id}>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                            log.action === 'soft_delete' ? 'bg-red-100 text-red-800' :
+                            log.action === 'recover' ? 'bg-green-100 text-green-800' :
+                            log.action === 'create' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">{log.entityType}</td>
+                        <td className="px-4 py-3 text-sm">{log.userEmail || 'System'}</td>
+                        <td className="px-4 py-3 text-sm">{new Date(log.createdAt).toLocaleString('nl-NL')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Geen audit logs gevonden.</div>
+            )}
           </div>
         </div>
       )}

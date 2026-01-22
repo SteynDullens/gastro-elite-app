@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { sendAccountDeletionNotification } from '@/lib/email';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -82,9 +83,53 @@ export async function DELETE(request: NextRequest) {
       const firstName = user.firstName;
       const lastName = user.lastName;
 
-      // Delete the user
-      await prisma.user.delete({
-        where: { id: userId }
+      // Soft delete: Mark as deleted instead of actually deleting
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: decodedToken.id
+        }
+      });
+
+      // Soft delete personal recipes
+      if (user.personalRecipes.length > 0) {
+        await prisma.personalRecipe.updateMany({
+          where: { userId: user.id, deletedAt: null },
+          data: {
+            deletedAt: new Date(),
+            deletedBy: decodedToken.id
+          }
+        });
+      }
+
+      // Soft delete owned company
+      if (user.ownedCompany) {
+        await prisma.company.update({
+          where: { id: user.ownedCompany.id },
+          data: {
+            deletedAt: new Date(),
+            deletedBy: decodedToken.id
+          }
+        });
+      }
+
+      // Log audit event
+      await logAuditEvent({
+        action: 'soft_delete',
+        entityType: 'User',
+        entityId: user.id,
+        userId: decodedToken.id,
+        userEmail: decodedToken.email,
+        details: {
+          deletedUser: userEmail,
+          deletedUserName: `${firstName} ${lastName}`,
+          personalRecipesCount: user.personalRecipes.length,
+          companyRecipesCount: user.companyRecipesCreated.length,
+          ownedCompany: user.ownedCompany?.name
+        },
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined
       });
 
       // Send email notification
@@ -96,7 +141,7 @@ export async function DELETE(request: NextRequest) {
         // Don't fail the request if email fails
       }
 
-      return { success: true, deletedUser: { email: userEmail, id: user.id } };
+      return { success: true, deletedUser: { email: userEmail, id: user.id }, softDelete: true };
     });
 
     return NextResponse.json(result);

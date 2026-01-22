@@ -31,6 +31,8 @@ model User {
   emailVerificationToken String?
   emailVerified          Boolean              @default(false)
   emailVerifiedAt        DateTime?
+  deletedAt              DateTime?            // Soft delete
+  deletedBy              String?              // Who deleted (user ID)
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 }
@@ -56,6 +58,8 @@ model Company {
   memberships     CompanyMembership[]
   invitations     EmployeeInvitation[]
   companyRecipes  CompanyRecipe[]
+  deletedAt       DateTime?            // Soft delete
+  deletedBy       String?              // Who deleted (user ID)
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 }
@@ -110,11 +114,14 @@ model PersonalRecipe {
   categories   Category[]           @relation("PersonalRecipeCategories")
   ingredients  PersonalIngredient[]
   instructions String?
+  deletedAt    DateTime?            // Soft delete
+  deletedBy    String?              // Who deleted (user ID)
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
 
   @@index([userId, name])
   @@index([userId])
+  @@index([deletedAt])
 }
 
 // Company recipes - completely isolated from personal recipes
@@ -131,12 +138,15 @@ model CompanyRecipe {
   categories   Category[]          @relation("CompanyRecipeCategories")
   ingredients  CompanyIngredient[]
   instructions String?
+  deletedAt    DateTime?           // Soft delete
+  deletedBy    String?             // Who deleted (user ID)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
   @@index([companyId, name])
   @@index([companyId])
   @@index([creatorId])
+  @@index([deletedAt])
 }
 
 // Ingredients for personal recipes
@@ -171,4 +181,24 @@ enum Unit {
   ml
   personen
   portie
+}
+
+// Audit log for tracking all important actions
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // create, update, delete, restore, etc.
+  entityType  String   // User, Company, PersonalRecipe, CompanyRecipe, etc.
+  entityId    String
+  userId      String?  // Who performed the action
+  userEmail   String?
+  details     String?  @db.Text // JSON string with action details
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([userId])
+  @@index([createdAt])
 }
