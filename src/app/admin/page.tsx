@@ -6,11 +6,11 @@ import AdminPanel from "@/components/AdminPanel";
 
 function AdminPageContent() {
   const searchParams = useSearchParams();
-  const tab = searchParams.get('tab') || 'users';
+  const tab = searchParams.get('tab') || 'dashboard';
   
   return (
     <div className="space-y-6">
-      <AdminPanel initialTab={tab as 'users' | 'business' | 'logs'} />
+      <AdminPanel initialTab={tab as 'dashboard' | 'users' | 'business' | 'logs' | 'backup' | 'recovery'} />
     </div>
   );
 }
