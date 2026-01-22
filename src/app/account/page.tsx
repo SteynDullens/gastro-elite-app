@@ -1015,6 +1015,45 @@ export default function AccountPage() {
                 <span className="text-sm font-medium">{t.employees}</span>
               </button>
 
+              {/* Export Data */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/admin/export-user-data', {
+                        credentials: 'include'
+                      });
+                      
+                      if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `mijn-data-${new Date().toISOString().split('T')[0]}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        alert('✅ Je data is succesvol geëxporteerd!');
+                      } else {
+                        alert('❌ Fout bij exporteren van data');
+                      }
+                    } catch (error) {
+                      alert('❌ Fout bij exporteren van data');
+                    }
+                  }}
+                  className="w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 bg-blue-50 text-blue-700 hover:bg-blue-100 mb-3"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="mr-3 flex-shrink-0">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                  </svg>
+                  <span className="text-sm font-medium">📥 Exporteer Mijn Data</span>
+                </button>
+                <p className="text-xs text-gray-500 px-4 mb-4">
+                  Download al je recepturen en gegevens als backup
+                </p>
+              </div>
+
               {/* Logout Tab */}
               <button
                 onClick={logout}
