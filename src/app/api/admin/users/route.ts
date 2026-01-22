@@ -137,12 +137,39 @@ export async function PUT(request: NextRequest) {
           break;
 
         case 'reset_password':
-          const { newPassword, sendEmail, userEmail, firstName, lastName } = data;
-          if (!newPassword || newPassword.length < 6) {
-            throw new Error('New password must be at least 6 characters long');
+          const { newPassword, generatePassword, sendEmail, userEmail, firstName, lastName } = data;
+          
+          // Generate password if requested, otherwise use provided password
+          let passwordToUse: string;
+          if (generatePassword) {
+            // Generate a secure random password: 12 characters with mix of uppercase, lowercase, numbers
+            const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            const allChars = uppercase + lowercase + numbers;
+            
+            let generatedPassword = '';
+            // Ensure at least one of each type
+            generatedPassword += uppercase[Math.floor(Math.random() * uppercase.length)];
+            generatedPassword += lowercase[Math.floor(Math.random() * lowercase.length)];
+            generatedPassword += numbers[Math.floor(Math.random() * numbers.length)];
+            
+            // Fill the rest randomly
+            for (let i = 3; i < 12; i++) {
+              generatedPassword += allChars[Math.floor(Math.random() * allChars.length)];
+            }
+            
+            // Shuffle the password
+            passwordToUse = generatedPassword.split('').sort(() => Math.random() - 0.5).join('');
+          } else {
+            if (!newPassword || newPassword.length < 6) {
+              throw new Error('New password must be at least 6 characters long');
+            }
+            passwordToUse = newPassword;
           }
+          
           const bcrypt = require('bcryptjs');
-          const hashedPassword = await bcrypt.hash(newPassword, 12);
+          const hashedPassword = await bcrypt.hash(passwordToUse, 12);
           await prisma.user.update({
             where: { id: userId },
             data: { password: hashedPassword }
@@ -151,7 +178,7 @@ export async function PUT(request: NextRequest) {
           // Send email notification if requested
           if (sendEmail && userEmail && firstName && lastName) {
             try {
-              await sendPasswordResetNotification(userEmail, firstName, lastName, newPassword);
+              await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
               console.log(`✅ Password reset email sent to ${userEmail}`);
             } catch (emailError) {
               console.error('Error sending password reset email:', emailError);

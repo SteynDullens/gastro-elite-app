@@ -124,43 +124,43 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
   };
 
   const resetPassword = async (userId: string | number, userEmail: string, firstName: string, lastName: string) => {
-    const newPassword = prompt("Voer een nieuw wachtwoord in (minimaal 6 karakters):");
-    if (newPassword && newPassword.length >= 6) {
-      try {
-        const response = await fetch("/api/admin/users", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ 
-            userId, 
-            action: "reset_password", 
-            data: { 
-              newPassword,
-              sendEmail: true,
-              userEmail,
-              firstName,
-              lastName
-            } 
-          }),
-        });
+    // Confirm action
+    if (!confirm(`Weet je zeker dat je het wachtwoord wilt resetten voor ${userEmail}? Er wordt automatisch een nieuw wachtwoord gegenereerd en per email verzonden.`)) {
+      return;
+    }
 
-        const result = await response.json();
-        if (result.success) {
-          setMessage(`Wachtwoord gereset voor ${userEmail}. Email notificatie verzonden.`);
-          fetchUsers();
-          setTimeout(() => setMessage(""), 5000);
-        } else {
-          setMessage(`Fout: ${result.error}`);
-          setTimeout(() => setMessage(""), 3000);
-        }
-      } catch (error) {
-        setMessage("Netwerk fout bij resetten van wachtwoord");
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ 
+          userId, 
+          action: "reset_password", 
+          data: { 
+            generatePassword: true, // Signal to generate password automatically
+            sendEmail: true,
+            userEmail,
+            firstName,
+            lastName
+          } 
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setMessage(`Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden.`);
+        fetchUsers();
+        setTimeout(() => setMessage(""), 5000);
+      } else {
+        setMessage(`Fout: ${result.error}`);
         setTimeout(() => setMessage(""), 3000);
       }
-    } else if (newPassword) {
-      alert("Wachtwoord moet minimaal 6 karakters lang zijn");
+    } catch (error) {
+      setMessage("Netwerk fout bij resetten van wachtwoord");
+      setTimeout(() => setMessage(""), 3000);
     }
   };
 
