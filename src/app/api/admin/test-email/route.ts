@@ -25,30 +25,32 @@ export async function POST(request: NextRequest) {
     
     // Send a test password reset email
     const testPassword = 'Test123!Password';
-    try {
-      await sendPasswordResetNotification(
-        email,
-        firstName || 'Test',
-        lastName || 'User',
-        testPassword
-      );
-      
+    const emailResult = await sendPasswordResetNotification(
+      email,
+      firstName || 'Test',
+      lastName || 'User',
+      testPassword
+    );
+    
+    if (emailResult.success) {
       return NextResponse.json({
         success: true,
         message: `Test email sent to ${email}`,
-        note: 'Check your inbox and spam folder. The test password is: Test123!Password'
+        note: `Check your inbox and spam folder. The test password is: Test123!Password\n\nEmail Message ID: ${emailResult.messageId}\nAccepted by SMTP: ${emailResult.accepted?.join(', ')}\nSMTP Response: ${emailResult.response}`,
+        emailMessageId: emailResult.messageId,
+        emailAccepted: emailResult.accepted,
+        emailResponse: emailResult.response
       });
-    } catch (error: any) {
-      console.error('❌ Test email failed:', error);
+    } else {
       return NextResponse.json({
         success: false,
-        error: error.message || 'Failed to send test email',
-        code: error.code,
+        error: emailResult.error || 'Failed to send test email',
+        code: emailResult.code,
+        emailRejected: emailResult.rejected,
         details: {
-          message: error.message,
-          code: error.code,
-          response: error.response,
-          command: error.command
+          error: emailResult.error,
+          code: emailResult.code,
+          rejected: emailResult.rejected
         }
       }, { status: 500 });
     }
