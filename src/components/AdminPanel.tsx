@@ -37,12 +37,39 @@ interface AdminPanelProps {
   initialTab?: 'users' | 'business' | 'logs';
 }
 
-export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {}) {
+interface Stats {
+  users: {
+    total: number;
+    active: number;
+    blocked: number;
+    admins: number;
+    verified: number;
+    unverified: number;
+  };
+  companies: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+  recipes: {
+    personal: number;
+    company: number;
+    total: number;
+  };
+  recent: {
+    users: any[];
+    companies: any[];
+  };
+}
+
+export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps = {}) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'business' | 'logs'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'business' | 'logs' | 'backup'>(initialTab);
   const [users, setUsers] = useState<User[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [businessApplications, setBusinessApplications] = useState<any[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [businessFilter, setBusinessFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
@@ -94,6 +121,49 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
       console.error("Failed to fetch business applications:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch("/api/admin/stats", {
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
+  };
+
+  const handleBackup = async (type: 'all' | 'recipes' | 'users' | 'companies') => {
+    try {
+      setMessage(`📦 Backup maken: ${type}...`);
+      const response = await fetch(`/api/admin/backup?type=${type}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup-${type}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setMessage(`✅ Backup succesvol gedownload: ${type}`);
+      } else {
+        const error = await response.json();
+        setMessage(`❌ Backup mislukt: ${error.error || 'Onbekende fout'}`);
+      }
+      setTimeout(() => setMessage(""), 5000);
+    } catch (error: any) {
+      setMessage(`❌ Fout bij backup: ${error.message || 'Onbekende fout'}`);
+      setTimeout(() => setMessage(""), 5000);
     }
   };
 
@@ -214,13 +284,20 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
       fetchUsers();
       fetchErrorLogs();
       fetchBusinessApplications();
+      fetchStats();
     }
   }, [user]);
 
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      fetchStats();
+    }
+  }, [activeTab]);
+
   // Update tab when initialTab prop changes
   useEffect(() => {
-    if (initialTab && ['users', 'business', 'logs'].includes(initialTab)) {
-      setActiveTab(initialTab);
+    if (initialTab && ['dashboard', 'users', 'business', 'logs', 'backup'].includes(initialTab)) {
+      setActiveTab(initialTab as any);
     }
   }, [initialTab]);
 
@@ -317,49 +394,188 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
       )}
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 bg-white">
         <nav className="flex space-x-8">
           <button
-            onClick={() => setActiveTab("users")}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "users"
-                ? "text-orange-600"
+            onClick={() => setActiveTab("dashboard")}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "dashboard"
+                ? "text-orange-600 border-orange-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
-            style={{
-              borderBottomColor: activeTab === "users" ? '#FF8C00' : 'transparent'
-            }}
           >
-            Users ({users.length})
+            📊 Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "users"
+                ? "text-orange-600 border-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            👥 Users ({users.length})
           </button>
           <button
             onClick={() => setActiveTab("business")}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === "business"
-                ? "text-orange-600"
+                ? "text-orange-600 border-orange-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
-            style={{
-              borderBottomColor: activeTab === "business" ? '#FF8C00' : 'transparent'
-            }}
           >
-            Business Applications ({businessApplications.filter(app => app.status === 'pending').length})
+            🏢 Business ({businessApplications.filter(app => app.status === 'pending').length} pending)
           </button>
           <button
             onClick={() => setActiveTab("logs")}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === "logs"
-                ? "text-orange-600"
+                ? "text-orange-600 border-orange-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
-            style={{
-              borderBottomColor: activeTab === "logs" ? '#FF8C00' : 'transparent'
-            }}
           >
-            Error Logs ({errorLogs.length})
+            📋 Logs ({errorLogs.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("backup")}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "backup"
+                ? "text-orange-600 border-orange-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            💾 Backup & Export
           </button>
         </nav>
       </div>
+
+      {/* Dashboard Tab */}
+      {activeTab === "dashboard" && (
+        <div className="space-y-6">
+          {stats ? (
+            <>
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Users</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{stats.users.total}</p>
+                    </div>
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <span className="text-2xl">👥</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-4 text-xs text-gray-500">
+                    <span>Active: {stats.users.active}</span>
+                    <span>Blocked: {stats.users.blocked}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Companies</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{stats.companies.total}</p>
+                    </div>
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <span className="text-2xl">🏢</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-4 text-xs text-gray-500">
+                    <span>Approved: {stats.companies.approved}</span>
+                    <span>Pending: {stats.companies.pending}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Recipes</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{stats.recipes.total}</p>
+                    </div>
+                    <div className="p-3 bg-orange-100 rounded-full">
+                      <span className="text-2xl">📝</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-4 text-xs text-gray-500">
+                    <span>Personal: {stats.recipes.personal}</span>
+                    <span>Company: {stats.recipes.company}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Email Verified</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{stats.users.verified}</p>
+                    </div>
+                    <div className="p-3 bg-purple-100 rounded-full">
+                      <span className="text-2xl">✓</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">
+                    <span>Unverified: {stats.users.unverified}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold mb-4">Recent Users</h3>
+                  <div className="space-y-3">
+                    {stats.recent.users.map((u: any) => (
+                      <div key={u.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div>
+                          <p className="font-medium text-gray-900">{u.firstName} {u.lastName}</p>
+                          <p className="text-sm text-gray-500">{u.email}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</p>
+                          {u.emailVerified ? (
+                            <span className="text-xs text-green-600">✓ Verified</span>
+                          ) : (
+                            <span className="text-xs text-yellow-600">⚠ Unverified</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold mb-4">Recent Companies</h3>
+                  <div className="space-y-3">
+                    {stats.recent.companies.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div>
+                          <p className="font-medium text-gray-900">{c.name}</p>
+                          <p className="text-sm text-gray-500">{c.owner.firstName} {c.owner.lastName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</p>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            c.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            c.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {c.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading statistics...</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Users Tab */}
       {activeTab === "users" && (
@@ -876,7 +1092,84 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
 
       {loading && (
         <div className="text-center py-8">
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">Loading...          </div>
+        </div>
+      )}
+
+      {/* Backup & Export Tab */}
+      {activeTab === "backup" && (
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">💾 Backup & Export</h2>
+            <p className="text-gray-600 mb-6">
+              Maak backups van alle data of export specifieke datasets. Backups worden gedownload als JSON bestanden.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">📦 Complete Backup</h3>
+                <p className="text-sm text-gray-600 mb-4">Backup van alle gebruikers, bedrijven en recepturen</p>
+                <button
+                  onClick={() => handleBackup('all')}
+                  className="w-full px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                >
+                  Download Complete Backup
+                </button>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">📝 Recepturen Backup</h3>
+                <p className="text-sm text-gray-600 mb-4">Backup van alle persoonlijke en bedrijfsrecepturen</p>
+                <button
+                  onClick={() => handleBackup('recipes')}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                >
+                  Download Recepturen Backup
+                </button>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">👥 Gebruikers Backup</h3>
+                <p className="text-sm text-gray-600 mb-4">Backup van alle gebruikersgegevens</p>
+                <button
+                  onClick={() => handleBackup('users')}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Download Gebruikers Backup
+                </button>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-semibold mb-2">🏢 Bedrijven Backup</h3>
+                <p className="text-sm text-gray-600 mb-4">Backup van alle bedrijfsgegevens</p>
+                <button
+                  onClick={() => handleBackup('companies')}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                >
+                  Download Bedrijven Backup
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h3 className="font-semibold mb-4">⚠️ Belangrijke Informatie</h3>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li>• Backups bevatten alle data inclusief recepturen, ingrediënten en categorieën</li>
+                <li>• Backups worden gedownload als JSON bestanden die je lokaal kunt bewaren</li>
+                <li>• Gebruik backups regelmatig om dataverlies te voorkomen</li>
+                <li>• Backups kunnen gebruikt worden voor data recovery bij fouten</li>
+                <li>• Wachtwoorden worden NIET meegenomen in backups voor veiligheid</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h3 className="font-semibold text-yellow-800 mb-2">🔒 Data Bescherming</h3>
+            <p className="text-sm text-yellow-700">
+              Alle gebruikersdata wordt automatisch beschermd. Recepturen worden nooit permanent verwijderd zonder backup.
+              Bij fouten in de app kunnen gegevens altijd worden teruggehaald via backups.
+            </p>
+          </div>
         </div>
       )}
     </div>
