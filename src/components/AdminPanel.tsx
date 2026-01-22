@@ -267,6 +267,41 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
           >
             📧 Check Email Config
           </button>
+          <button
+            onClick={async () => {
+              const testEmail = prompt('Voer een email adres in om een test email naar te sturen:');
+              if (!testEmail) return;
+              
+              try {
+                setMessage('📧 Test email verzenden...');
+                const response = await fetch('/api/admin/test-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    email: testEmail,
+                    firstName: 'Test',
+                    lastName: 'User'
+                  })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                  setMessage(`✅ Test email verzonden naar ${testEmail}!\n\n${result.note || ''}\n\nControleer je inbox en spam folder.`);
+                } else {
+                  setMessage(`❌ Test email mislukt:\n\n${result.error || 'Onbekende fout'}\n\n${result.details ? JSON.stringify(result.details, null, 2) : ''}`);
+                }
+                setTimeout(() => setMessage(""), 10000);
+              } catch (error: any) {
+                setMessage(`❌ Fout bij verzenden test email: ${error.message || 'Onbekende fout'}`);
+                setTimeout(() => setMessage(""), 5000);
+              }
+            }}
+            className="px-3 py-1 text-xs bg-blue-200 text-blue-700 rounded hover:bg-blue-300"
+            title="Stuur een test email"
+          >
+            🧪 Test Email
+          </button>
           <div className="text-sm text-gray-500">
             Welcome, {user.firstName} {user.lastName}
           </div>
