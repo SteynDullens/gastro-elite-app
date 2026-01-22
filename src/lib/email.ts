@@ -65,10 +65,11 @@ export interface PersonalRegistrationData {
 export interface EmailSendResult {
   success: boolean;
   messageId?: string;
-  accepted?: string[];
-  rejected?: string[];
+  accepted?: (string | any)[];
+  rejected?: (string | any)[];
   response?: string;
   error?: string;
+  code?: string;
 }
 
 export async function sendPasswordResetNotification(
@@ -143,10 +144,11 @@ export async function sendPasswordResetNotification(
     // Check if email was actually accepted
     if (info.rejected && info.rejected.length > 0) {
       console.error('❌ Email was rejected:', info.rejected);
+      const rejectedStrings = info.rejected.map((r: any) => typeof r === 'string' ? r : r.address || String(r));
       return {
         success: false,
-        rejected: info.rejected,
-        error: `Email rejected: ${info.rejected.join(', ')}`
+        rejected: rejectedStrings,
+        error: `Email rejected: ${rejectedStrings.join(', ')}`
       };
     }
     
@@ -159,11 +161,13 @@ export async function sendPasswordResetNotification(
     }
     
     console.log('✅ Password reset notification email sent successfully to:', info.accepted);
+    const acceptedStrings = info.accepted ? info.accepted.map((a: any) => typeof a === 'string' ? a : a.address || String(a)) : [];
+    const rejectedStrings = info.rejected ? info.rejected.map((r: any) => typeof r === 'string' ? r : r.address || String(r)) : [];
     return {
       success: true,
       messageId: info.messageId,
-      accepted: info.accepted,
-      rejected: info.rejected,
+      accepted: acceptedStrings,
+      rejected: rejectedStrings,
       response: info.response
     };
   } catch (error: any) {
