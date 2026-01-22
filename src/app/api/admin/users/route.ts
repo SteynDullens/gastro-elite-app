@@ -223,13 +223,19 @@ export async function PUT(request: NextRequest) {
           console.log(`  SMTP_PASS: ${process.env.SMTP_PASS ? 'SET (' + process.env.SMTP_PASS.length + ' chars)' : 'NOT SET'}`);
           
           const emailResult = await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
-          emailSent = emailResult;
+          emailSent = emailResult.success;
           
-          if (emailResult) {
+          if (emailResult.success) {
             console.log(`✅ Password reset email sent successfully to ${userEmail}`);
+            console.log(`  Message ID: ${emailResult.messageId}`);
+            console.log(`  Accepted: ${JSON.stringify(emailResult.accepted)}`);
+            console.log(`  Response: ${emailResult.response}`);
           } else {
-            emailError = 'Email function returned false';
-            console.error(`❌ Password reset email function returned false for ${userEmail}`);
+            emailError = emailResult.error || 'Email function returned false';
+            console.error(`❌ Password reset email failed for ${userEmail}:`, emailError);
+            if (emailResult.rejected && emailResult.rejected.length > 0) {
+              emailError += ` (Rejected: ${emailResult.rejected.join(', ')})`;
+            }
           }
         } catch (emailErrorCaught: any) {
           emailError = emailErrorCaught.message || 'Unknown email error';
@@ -276,6 +282,13 @@ export async function PUT(request: NextRequest) {
     if (action === 'reset_password') {
       responseData.emailSent = emailSent;
       responseData.emailError = emailError;
+      // Include more details for debugging
+      if (!emailSent && emailError) {
+        responseData.emailDetails = {
+          error: emailError,
+          suggestion: 'Check Vercel logs for detailed SMTP server response. Also check spam folder if email was accepted by server.'
+        };
+      }
     }
 
     return NextResponse.json(responseData);

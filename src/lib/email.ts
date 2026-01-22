@@ -62,12 +62,21 @@ export interface PersonalRegistrationData {
 }
 
 // Send password reset notification
+export interface EmailSendResult {
+  success: boolean;
+  messageId?: string;
+  accepted?: string[];
+  rejected?: string[];
+  response?: string;
+  error?: string;
+}
+
 export async function sendPasswordResetNotification(
   email: string,
   firstName: string,
   lastName: string,
   newPassword: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   try {
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
@@ -134,23 +143,41 @@ export async function sendPasswordResetNotification(
     // Check if email was actually accepted
     if (info.rejected && info.rejected.length > 0) {
       console.error('❌ Email was rejected:', info.rejected);
-      throw new Error(`Email rejected: ${info.rejected.join(', ')}`);
+      return {
+        success: false,
+        rejected: info.rejected,
+        error: `Email rejected: ${info.rejected.join(', ')}`
+      };
     }
     
     if (!info.accepted || info.accepted.length === 0) {
       console.error('❌ Email was not accepted by server');
-      throw new Error('Email was not accepted by SMTP server');
+      return {
+        success: false,
+        error: 'Email was not accepted by SMTP server'
+      };
     }
     
     console.log('✅ Password reset notification email sent successfully to:', info.accepted);
-    return true;
+    return {
+      success: true,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+      response: info.response
+    };
   } catch (error: any) {
     console.error('❌ Error sending password reset notification:', error);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
     console.error('Error response:', error.response);
     console.error('Error command:', error.command);
-    throw error; // Re-throw so caller knows it failed
+    return {
+      success: false,
+      error: error.message || 'Unknown error occurred',
+      code: error.code,
+      response: error.response
+    };
   }
 }
 

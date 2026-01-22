@@ -154,13 +154,25 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
       
       if (result.success) {
         if (result.emailSent) {
-          setMessage(`✅ Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden naar ${userEmail}. Controleer ook je spam folder als je de email niet ziet.`);
+          let message = `✅ Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden naar ${userEmail}.`;
+          if (result.emailDetails) {
+            message += `\n\n⚠️ Let op: ${result.emailDetails.suggestion}`;
+          } else {
+            message += `\n\n💡 Tip: Controleer ook je spam folder als je de email niet ziet.`;
+          }
+          setMessage(message);
         } else {
           const errorMsg = result.emailError || 'Onbekende email fout';
-          setMessage(`⚠️ Wachtwoord gereset voor ${userEmail}, maar email kon niet worden verzonden. Fout: ${errorMsg}. Controleer de Vercel logs voor meer details.`);
+          let message = `⚠️ Wachtwoord gereset voor ${userEmail}, maar email kon niet worden verzonden.\n\nFout: ${errorMsg}`;
+          if (result.emailDetails) {
+            message += `\n\n${result.emailDetails.suggestion}`;
+          } else {
+            message += `\n\nControleer de Vercel logs voor meer details.`;
+          }
+          setMessage(message);
         }
         fetchUsers();
-        setTimeout(() => setMessage(""), 10000);
+        setTimeout(() => setMessage(""), 12000);
       } else {
         setMessage(`❌ Fout: ${result.error || 'Onbekende fout'}`);
         setTimeout(() => setMessage(""), 5000);
