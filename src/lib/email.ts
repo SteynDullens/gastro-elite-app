@@ -115,12 +115,21 @@ export async function sendPasswordResetNotification(
       `
     };
 
+    console.log('📧 Email configuration:');
+    console.log('  From:', emailConfig.auth.user);
+    console.log('  To:', email);
+    console.log('  Host:', emailConfig.host);
+    console.log('  Port:', emailConfig.port);
+    
     const info = await getTransporter().sendMail(mailOptions);
-    console.log('✅ Password reset notification email sent successfully');
-    console.log('Message ID:', info.messageId);
-    console.log('Response:', info.response);
-    console.log('Accepted:', info.accepted);
-    console.log('Rejected:', info.rejected);
+    
+    console.log('📧 Email send result:');
+    console.log('  Message ID:', info.messageId);
+    console.log('  Response:', info.response);
+    console.log('  Accepted:', JSON.stringify(info.accepted));
+    console.log('  Rejected:', JSON.stringify(info.rejected));
+    console.log('  Pending:', JSON.stringify(info.pending));
+    console.log('  Envelope:', JSON.stringify(info.envelope));
     
     // Check if email was actually accepted
     if (info.rejected && info.rejected.length > 0) {
@@ -128,6 +137,12 @@ export async function sendPasswordResetNotification(
       throw new Error(`Email rejected: ${info.rejected.join(', ')}`);
     }
     
+    if (!info.accepted || info.accepted.length === 0) {
+      console.error('❌ Email was not accepted by server');
+      throw new Error('Email was not accepted by SMTP server');
+    }
+    
+    console.log('✅ Password reset notification email sent successfully to:', info.accepted);
     return true;
   } catch (error: any) {
     console.error('❌ Error sending password reset notification:', error);

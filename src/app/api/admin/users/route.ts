@@ -217,16 +217,45 @@ export async function PUT(request: NextRequest) {
       if (sendEmail && userEmail && firstName && lastName && passwordToUse) {
         try {
           console.log(`📧 Attempting to send password reset email to: ${userEmail}`);
-          await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
-          emailSent = true;
-          console.log(`✅ Password reset email sent successfully to ${userEmail}`);
+          console.log(`📧 Email environment check:`);
+          console.log(`  SMTP_HOST: ${process.env.SMTP_HOST || 'NOT SET'}`);
+          console.log(`  SMTP_USER: ${process.env.SMTP_USER || 'NOT SET'}`);
+          console.log(`  SMTP_PASS: ${process.env.SMTP_PASS ? 'SET (' + process.env.SMTP_PASS.length + ' chars)' : 'NOT SET'}`);
+          
+          const emailResult = await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
+          emailSent = emailResult;
+          
+          if (emailResult) {
+            console.log(`✅ Password reset email sent successfully to ${userEmail}`);
+          } else {
+            emailError = 'Email function returned false';
+            console.error(`❌ Password reset email function returned false for ${userEmail}`);
+          }
         } catch (emailErrorCaught: any) {
           emailError = emailErrorCaught.message || 'Unknown email error';
           console.error('❌ Error sending password reset email:', emailErrorCaught);
+          console.error('Error name:', emailErrorCaught.name);
           console.error('Error code:', emailErrorCaught.code);
+          console.error('Error command:', emailErrorCaught.command);
           console.error('Error response:', emailErrorCaught.response);
-          console.error('Full error:', JSON.stringify(emailErrorCaught, null, 2));
+          console.error('Error responseCode:', emailErrorCaught.responseCode);
+          console.error('Error stack:', emailErrorCaught.stack);
+          
+          // Try to stringify the error for more details
+          try {
+            console.error('Full error object:', JSON.stringify(emailErrorCaught, Object.getOwnPropertyNames(emailErrorCaught), 2));
+          } catch (e) {
+            console.error('Could not stringify error:', e);
+          }
         }
+      } else {
+        console.log(`⚠️ Email not sent - missing data:`, {
+          sendEmail,
+          userEmail,
+          firstName,
+          lastName,
+          passwordToUse: !!passwordToUse
+        });
       }
     }
 
