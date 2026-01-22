@@ -14,7 +14,7 @@ interface NavItem {
 
 export default function DesktopSidebar() {
   const { t } = useLanguage();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const pathname = usePathname();
   
   const navItems: NavItem[] = [
@@ -37,7 +37,13 @@ export default function DesktopSidebar() {
       href: "/account",
       label: t.account || "Account",
       iconPath: "/account-icon.png"
-    }
+    },
+    // Admin tab - only visible for admins
+    ...(isAdmin ? [{
+      href: "/admin",
+      label: "Admin",
+      iconPath: "/account-icon.png" // Using account icon for now, can be replaced with admin icon
+    }] : [])
   ];
 
   return (

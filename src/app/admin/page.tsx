@@ -1,10 +1,32 @@
+"use client";
+
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import AdminPanel from "@/components/AdminPanel";
+
+function AdminPageContent() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'users';
+  
+  return (
+    <div className="space-y-6">
+      <AdminPanel initialTab={tab as 'users' | 'business' | 'logs'} />
+    </div>
+  );
+}
 
 export default function AdminPage() {
   return (
-    <div className="space-y-6">
-      <AdminPanel />
-    </div>
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-500">Laden...</p>
+        </div>
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   );
 }
 

@@ -256,7 +256,7 @@ function renderSuccessPage(companyName: string, status: string): string {
     <h1>Aanvraag ${statusText}</h1>
     <p>De bedrijfsaccount aanvraag van <span class="company">${companyName}</span> is succesvol ${statusText}.</p>
     <p>De aanvrager heeft een e-mail ontvangen met deze beslissing.</p>
-    <a href="${getAppUrl()}/admin/business-applications" class="btn">Naar Admin Panel</a>
+    <a href="${getAppUrl()}/admin?tab=business" class="btn">Naar Admin Panel</a>
   </div>
 </body>
 </html>`;
@@ -284,7 +284,7 @@ function renderErrorPage(message: string): string {
     <div class="icon">!</div>
     <h1>Er is een fout opgetreden</h1>
     <p>${message}</p>
-    <a href="${getAppUrl()}/admin/business-applications" class="btn">Naar Admin Panel</a>
+    <a href="${getAppUrl()}/admin?tab=business" class="btn">Naar Admin Panel</a>
   </div>
 </body>
 </html>`;
@@ -314,7 +314,7 @@ function renderAlreadyProcessedPage(companyName: string, status: string): string
     <div class="icon">ℹ</div>
     <h1>Reeds verwerkt</h1>
     <p>De aanvraag van <span class="company">${companyName}</span> is al eerder ${statusText}.</p>
-    <a href="${getAppUrl()}/admin/business-applications" class="btn">Naar Admin Panel</a>
+    <a href="${getAppUrl()}/admin?tab=business" class="btn">Naar Admin Panel</a>
   </div>
 </body>
 </html>`;

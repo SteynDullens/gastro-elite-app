@@ -19,7 +19,7 @@ interface ErrorLog {
 }
 
 interface User {
-  id: number;
+  id: string | number;
   email: string;
   firstName: string;
   lastName: string;
@@ -32,14 +32,20 @@ interface User {
   updatedAt: string;
 }
 
-export default function AdminPanel() {
+interface AdminPanelProps {
+  initialTab?: 'users' | 'business' | 'logs';
+}
+
+export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {}) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState<'users' | 'business' | 'logs'>(initialTab);
   const [users, setUsers] = useState<User[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [businessApplications, setBusinessApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [businessFilter, setBusinessFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -90,7 +96,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleUserAction = async (userId: number, action: string, data?: any) => {
+  const handleUserAction = async (userId: string | number, action: string, data?: any) => {
     try {
       const response = await fetch("/api/admin/users", {
         method: "PUT",
@@ -116,12 +122,70 @@ export default function AdminPanel() {
     }
   };
 
-  const resetPassword = (userId: number) => {
-    const newPassword = prompt("Enter new password (min 6 characters):");
+  const resetPassword = async (userId: string | number, userEmail: string, firstName: string, lastName: string) => {
+    const newPassword = prompt("Voer een nieuw wachtwoord in (minimaal 6 karakters):");
     if (newPassword && newPassword.length >= 6) {
-      handleUserAction(userId, "reset_password", { newPassword });
+      try {
+        const response = await fetch("/api/admin/users", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ 
+            userId, 
+            action: "reset_password", 
+            data: { 
+              newPassword,
+              sendEmail: true,
+              userEmail,
+              firstName,
+              lastName
+            } 
+          }),
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          setMessage(`Wachtwoord gereset voor ${userEmail}. Email notificatie verzonden.`);
+          fetchUsers();
+          setTimeout(() => setMessage(""), 5000);
+        } else {
+          setMessage(`Fout: ${result.error}`);
+          setTimeout(() => setMessage(""), 3000);
+        }
+      } catch (error) {
+        setMessage("Netwerk fout bij resetten van wachtwoord");
+        setTimeout(() => setMessage(""), 3000);
+      }
     } else if (newPassword) {
-      alert("Password must be at least 6 characters long");
+      alert("Wachtwoord moet minimaal 6 karakters lang zijn");
+    }
+  };
+
+  const deleteUser = async (userId: string | number, userEmail: string) => {
+    if (!confirm(`Weet je zeker dat je het account van ${userEmail} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/admin/delete-user?id=${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setMessage(`Account ${userEmail} succesvol verwijderd`);
+        fetchUsers();
+        setTimeout(() => setMessage(""), 3000);
+      } else {
+        setMessage(`Fout: ${result.error}`);
+        setTimeout(() => setMessage(""), 3000);
+      }
+    } catch (error) {
+      setMessage("Netwerk fout bij verwijderen");
+      setTimeout(() => setMessage(""), 3000);
     }
   };
 
@@ -132,6 +196,13 @@ export default function AdminPanel() {
       fetchBusinessApplications();
     }
   }, [user]);
+
+  // Update tab when initialTab prop changes
+  useEffect(() => {
+    if (initialTab && ['users', 'business', 'logs'].includes(initialTab)) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   if (!user?.isAdmin) {
     return (
@@ -276,13 +347,13 @@ export default function AdminPanel() {
                         {user.isActive ? 'Deactivate' : 'Activate'}
                       </button>
                       <button
-                        onClick={() => resetPassword(user.id)}
+                        onClick={() => resetPassword(user.id, user.email, user.firstName, user.lastName)}
                         className="px-3 py-1 rounded text-xs text-white"
                         style={{ backgroundColor: '#FF8C00' }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
                       >
-                        Reset Password
+                        Reset Wachtwoord
                       </button>
                       <select
                         value={user.account_type}
@@ -293,6 +364,12 @@ export default function AdminPanel() {
                         <option value="business">Business</option>
                         <option value="admin">Admin</option>
                       </select>
+                      <button
+                        onClick={() => deleteUser(user.id, user.email)}
+                        className="px-3 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
+                      >
+                        Verwijder
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -309,59 +386,218 @@ export default function AdminPanel() {
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold">Business Applications</h2>
             </div>
+            
+            {/* Filter Buttons */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setBusinessFilter('pending')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    businessFilter === 'pending' 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                  }`}
+                >
+                  Pending ({businessApplications.filter(a => a.status === 'pending').length})
+                </button>
+                <button
+                  onClick={() => setBusinessFilter('approved')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    businessFilter === 'approved' 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-green-100 text-green-800 hover:bg-green-200'
+                  }`}
+                >
+                  Approved ({businessApplications.filter(a => a.status === 'approved').length})
+                </button>
+                <button
+                  onClick={() => setBusinessFilter('rejected')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    businessFilter === 'rejected' 
+                      ? 'bg-red-500 text-white' 
+                      : 'bg-red-100 text-red-800 hover:bg-red-200'
+                  }`}
+                >
+                  Rejected ({businessApplications.filter(a => a.status === 'rejected').length})
+                </button>
+                <button
+                  onClick={() => setBusinessFilter('all')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    businessFilter === 'all' 
+                      ? 'bg-gray-700 text-white' 
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  All ({businessApplications.length})
+                </button>
+              </div>
+            </div>
+
             <div className="p-6">
               {businessApplications.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No business applications found
+                  Geen bedrijfsaanvragen gevonden
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {businessApplications.map((app) => (
-                    <div key={app.id} className="border border-gray-200 rounded-lg p-4">
+                  {businessApplications
+                    .filter(app => businessFilter === 'all' ? true : app.status === businessFilter)
+                    .map((app) => (
+                    <div key={app.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h3 className="text-lg font-semibold">{app.company_name}</h3>
-                          <p className="text-sm text-gray-600">
-                            Owner: {app.ownerFirstName} ({app.ownerEmail})
+                          <h3 className="text-xl font-bold text-gray-900">{app.company_name}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Eigenaar: {app.ownerFirstName} {app.ownerLastName} ({app.ownerEmail})
                           </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {app.status.toUpperCase()}
-                        </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {app.status.toUpperCase()}
+                          </span>
+                          {/* Email verification status */}
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            app.email_verified 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {app.email_verified ? '✓ Email Geverifieerd' : '⏳ Email Niet Geverifieerd'}
+                          </span>
+                        </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4 bg-gray-50 rounded-lg p-4">
                         <div>
-                          <strong>KvK Number:</strong> {app.kvk_number}
-                        </div>
-                        <div>
-                          <strong>VAT Number:</strong> {app.vat_number || 'N/A'}
-                        </div>
-                        <div className="col-span-2">
-                          <strong>Address:</strong> {app.address}
+                          <strong className="text-gray-600">KvK Nummer:</strong>
+                          <span className="ml-2">{app.kvk_number}</span>
                         </div>
                         <div>
-                          <strong>Contact:</strong> {app.contact_name}
+                          <strong className="text-gray-600">BTW Nummer:</strong>
+                          <span className="ml-2">{app.vat_number || 'N/A'}</span>
+                        </div>
+                        <div className="md:col-span-2">
+                          <strong className="text-gray-600">Adres:</strong>
+                          <span className="ml-2">{app.address || 'N/A'}</span>
                         </div>
                         <div>
-                          <strong>Phone:</strong> {app.contact_phone}
+                          <strong className="text-gray-600">Contact Email:</strong>
+                          <span className="ml-2">{app.contact_email}</span>
                         </div>
-                        <div className="col-span-2">
-                          <strong>Email:</strong> {app.contact_email}
+                        <div>
+                          <strong className="text-gray-600">Telefoon:</strong>
+                          <span className="ml-2">{app.contact_phone || app.company_phone || 'N/A'}</span>
                         </div>
-                        <div className="col-span-2">
-                          <strong>Applied:</strong> {new Date(app.createdAt).toISOString().split('T')[0]}
+                        <div className="md:col-span-2">
+                          <strong className="text-gray-600">Aangemeld op:</strong>
+                          <span className="ml-2">{new Date(app.createdAt).toLocaleString('nl-NL')}</span>
                         </div>
+                        {app.email_verified_at && (
+                          <div className="md:col-span-2">
+                            <strong className="text-gray-600">Email geverifieerd op:</strong>
+                            <span className="ml-2">{new Date(app.email_verified_at).toLocaleString('nl-NL')}</span>
+                          </div>
+                        )}
+                        {app.approved_at && (
+                          <div className="md:col-span-2">
+                            <strong className="text-gray-600">
+                              {app.status === 'approved' ? 'Goedgekeurd' : 'Afgewezen'} op:
+                            </strong>
+                            <span className="ml-2">{new Date(app.approved_at).toLocaleString('nl-NL')}</span>
+                            {app.approved_by && <span className="ml-2 text-gray-500">door {app.approved_by}</span>}
+                          </div>
+                        )}
+                        {app.rejection_reason && (
+                          <div className="md:col-span-2 mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
+                            <strong>Afwijzingsreden:</strong> {app.rejection_reason}
+                          </div>
+                        )}
                       </div>
 
+                      {/* KVK Document Viewer */}
+                      {(app.kvk_document_path || app.kvk_document_data) && (
+                        <div className="mb-4">
+                          <strong className="text-gray-700 block mb-2">KvK Document:</strong>
+                          <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                            {(app.kvk_document_data && app.kvk_document_data.startsWith('data:')) ? (
+                              <div className="space-y-2">
+                                {app.kvk_document_data.includes('pdf') ? (
+                                  <iframe 
+                                    src={app.kvk_document_data} 
+                                    className="w-full border border-gray-300 rounded"
+                                    style={{ height: '500px' }}
+                                    title="KvK Document"
+                                  />
+                                ) : (
+                                  <img 
+                                    src={app.kvk_document_data} 
+                                    alt="KvK Document" 
+                                    className="max-w-full h-auto border border-gray-300 rounded mx-auto"
+                                    style={{ maxHeight: '500px' }}
+                                  />
+                                )}
+                                <div className="text-center">
+                                  <a 
+                                    href={app.kvk_document_data} 
+                                    download={`kvk-${app.kvk_number}.${app.kvk_document_data.includes('pdf') ? 'pdf' : app.kvk_document_data.includes('png') ? 'png' : 'jpg'}`}
+                                    className="text-blue-600 hover:underline text-sm inline-block"
+                                  >
+                                    📥 Download Document
+                                  </a>
+                                </div>
+                              </div>
+                            ) : app.kvk_document_path ? (
+                              <div className="space-y-2">
+                                <div className="text-center mb-2">
+                                  <a 
+                                    href={app.kvk_document_path} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline text-sm inline-block"
+                                  >
+                                    🔗 Bekijk KvK Document in nieuw tabblad ↗
+                                  </a>
+                                </div>
+                                {app.kvk_document_path.includes('.pdf') || app.kvk_document_path.includes('blob') ? (
+                                  <iframe 
+                                    src={app.kvk_document_path} 
+                                    className="w-full border border-gray-300 rounded"
+                                    style={{ height: '500px' }}
+                                    title="KvK Document"
+                                  />
+                                ) : (
+                                  <div className="text-center">
+                                    <img 
+                                      src={app.kvk_document_path} 
+                                      alt="KvK Document" 
+                                      className="max-w-full h-auto border border-gray-300 rounded mx-auto"
+                                      style={{ maxHeight: '500px' }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Warning if email not verified */}
+                      {app.status === 'pending' && !app.email_verified && (
+                        <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg p-3 text-amber-800 text-sm">
+                          ⚠️ Kan niet goedkeuren: de eigenaar moet eerst zijn e-mailadres verifiëren.
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
                       {app.status === 'pending' && (
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 justify-end pt-2 border-t">
                           <button
                             onClick={async () => {
+                              setProcessingId(app.id);
+                              setMessage("");
                               try {
                                 const response = await fetch('/api/admin/business-applications', {
                                   method: 'POST',
@@ -370,40 +606,84 @@ export default function AdminPanel() {
                                   body: JSON.stringify({ companyId: app.id, status: 'approved' })
                                 });
                                 if (response.ok) {
-                                  setMessage('Application approved successfully');
+                                  setMessage(`Aanvraag van ${app.company_name} goedgekeurd. Email notificatie verzonden naar ${app.ownerEmail}.`);
                                   fetchBusinessApplications();
+                                  setTimeout(() => setMessage(""), 5000);
+                                } else {
+                                  const errorData = await response.json();
+                                  setMessage(`Fout: ${errorData.message || 'Kon aanvraag niet goedkeuren'}`);
+                                  setTimeout(() => setMessage(""), 5000);
                                 }
                               } catch (error) {
-                                setMessage('Error approving application');
+                                setMessage('Netwerk fout bij goedkeuren');
+                                setTimeout(() => setMessage(""), 5000);
+                              } finally {
+                                setProcessingId(null);
                               }
                             }}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                            disabled={processingId === app.id || !app.email_verified}
+                            className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center ${
+                              (processingId === app.id || !app.email_verified) 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-green-500 text-white hover:bg-green-600'
+                            }`}
+                            title={!app.email_verified ? 'Email moet eerst geverifieerd worden' : ''}
                           >
-                            Approve
+                            {processingId === app.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Verwerken...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Goedkeuren
+                              </>
+                            )}
                           </button>
                           <button
                             onClick={async () => {
-                              const reason = prompt('Reason for rejection:');
-                              if (reason) {
+                              const reason = prompt('Reden voor afwijzing (optioneel):');
+                              if (reason !== null) {
+                                setProcessingId(app.id);
+                                setMessage("");
                                 try {
                                   const response = await fetch('/api/admin/business-applications', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     credentials: 'include',
-                                    body: JSON.stringify({ companyId: app.id, status: 'rejected', rejectionReason: reason })
+                                    body: JSON.stringify({ companyId: app.id, status: 'rejected', rejectionReason: reason || undefined })
                                   });
                                   if (response.ok) {
-                                    setMessage('Application rejected successfully');
+                                    setMessage(`Aanvraag van ${app.company_name} afgewezen. Email notificatie verzonden naar ${app.ownerEmail}.`);
                                     fetchBusinessApplications();
+                                    setTimeout(() => setMessage(""), 5000);
+                                  } else {
+                                    const errorData = await response.json();
+                                    setMessage(`Fout: ${errorData.message || 'Kon aanvraag niet afwijzen'}`);
+                                    setTimeout(() => setMessage(""), 5000);
                                   }
                                 } catch (error) {
-                                  setMessage('Error rejecting application');
+                                  setMessage('Netwerk fout bij afwijzen');
+                                  setTimeout(() => setMessage(""), 5000);
+                                } finally {
+                                  setProcessingId(null);
                                 }
                               }
                             }}
-                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            disabled={processingId === app.id}
+                            className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center ${
+                              processingId === app.id 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-red-500 text-white hover:bg-red-600'
+                            }`}
                           >
-                            Reject
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Afwijzen
                           </button>
                         </div>
                       )}

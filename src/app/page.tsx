@@ -220,7 +220,7 @@ export default function Home() {
               )}
               
                 <Link 
-                  href="/admin/business-applications"
+                  href="/admin?tab=business"
                   className="block text-center py-3 text-sm text-orange-500 hover:text-orange-600 font-medium border-t border-gray-100 mt-4"
                 >
                   {t.viewAllApplications} →

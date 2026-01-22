@@ -17,22 +17,22 @@ export async function GET(request: NextRequest) {
 
     const applications = await safeDbOperation(async (prisma) => {
       return await prisma.company.findMany({
-      include: {
-        owner: {
-          select: {
-            firstName: true,
-            lastName: true,
+        include: {
+          owner: {
+            select: {
+              firstName: true,
+              lastName: true,
               email: true,
               phone: true,
               emailVerified: true,
               emailVerifiedAt: true
+            }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      });
     });
 
     if (!applications) {
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
       contact_phone: app.owner.phone || '',
       contact_email: app.owner.email,
       kvk_document_path: app.kvkDocumentPath || '',
+      kvk_document_data: app.kvkDocumentData || '', // Include base64 data if available
       status: app.status,
       rejection_reason: app.rejectionReason || '',
       approved_at: app.approvedAt?.toISOString() || null,

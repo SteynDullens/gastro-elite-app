@@ -196,7 +196,7 @@ export default function AdminNotifications() {
           {/* Footer */}
           <div className="border-t border-gray-100 p-3 bg-gray-50">
             <Link
-              href="/admin/business-applications"
+              href="/admin?tab=business"
               className="block text-center text-sm text-orange-600 hover:text-orange-700 font-medium"
               onClick={() => setShowPopup(false)}
             >

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { sendAccountDeletionNotification } from '@/lib/email';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -76,12 +77,26 @@ export async function DELETE(request: NextRequest) {
         });
       }
 
+      // Store user info for email notification before deletion
+      const userEmail = user.email;
+      const firstName = user.firstName;
+      const lastName = user.lastName;
+
       // Delete the user
       await prisma.user.delete({
         where: { id: userId }
       });
 
-      return { success: true, deletedUser: { email: user.email, id: user.id } };
+      // Send email notification
+      try {
+        await sendAccountDeletionNotification(userEmail, firstName, lastName);
+        console.log(`✅ Account deletion email sent to ${userEmail}`);
+      } catch (emailError) {
+        console.error('Error sending account deletion email:', emailError);
+        // Don't fail the request if email fails
+      }
+
+      return { success: true, deletedUser: { email: userEmail, id: user.id } };
     });
 
     return NextResponse.json(result);

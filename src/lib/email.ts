@@ -61,6 +61,125 @@ export interface PersonalRegistrationData {
   phone?: string;
 }
 
+// Send password reset notification
+export async function sendPasswordResetNotification(
+  email: string,
+  firstName: string,
+  lastName: string,
+  newPassword: string
+): Promise<boolean> {
+  try {
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    
+    console.log('📧 Sending password reset notification to:', email);
+    
+    const mailOptions = {
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: email,
+      subject: 'Je wachtwoord is gereset - Gastro-Elite',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B35 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0;">Gastro-Elite</h1>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-top: 0;">Wachtwoord Gereset</h2>
+            
+            <p>Beste ${firstName} ${lastName},</p>
+            
+            <p>Je wachtwoord is succesvol gereset door een administrator.</p>
+            
+            <div style="background: white; border: 2px solid #FF8C00; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <p style="margin: 0; font-weight: bold; color: #333;">Je nieuwe wachtwoord:</p>
+              <p style="margin: 10px 0 0 0; font-size: 18px; font-family: monospace; color: #FF8C00;">${newPassword}</p>
+            </div>
+            
+            <p><strong>Belangrijk:</strong> Wijzig dit wachtwoord na je eerste login voor je eigen veiligheid.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${appUrl}/login" 
+                 style="background-color: #FF8C00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Inloggen
+              </a>
+            </div>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+              Als je deze wijziging niet hebt aangevraagd, neem dan direct contact met ons op.
+            </p>
+            
+            <p>Met vriendelijke groet,<br>Het Gastro-Elite Team</p>
+          </div>
+        </div>
+      `
+    };
+
+    await getTransporter().sendMail(mailOptions);
+    console.log('✅ Password reset notification email sent');
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset notification:', error);
+    return false;
+  }
+}
+
+// Send account deletion notification
+export async function sendAccountDeletionNotification(
+  email: string,
+  firstName: string,
+  lastName: string
+): Promise<boolean> {
+  try {
+    const emailConfig = getEmailConfig();
+    
+    console.log('📧 Sending account deletion notification to:', email);
+    
+    const mailOptions = {
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: email,
+      subject: 'Je account is verwijderd - Gastro-Elite',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B35 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0;">Gastro-Elite</h1>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-top: 0;">Account Verwijderd</h2>
+            
+            <p>Beste ${firstName} ${lastName},</p>
+            
+            <p>Je Gastro-Elite account (<strong>${email}</strong>) is verwijderd door een administrator.</p>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404;">
+                <strong>Let op:</strong> Alle gegevens die aan dit account waren gekoppeld zijn permanent verwijderd, inclusief:
+              </p>
+              <ul style="margin: 10px 0 0 20px; color: #856404;">
+                <li>Persoonlijke recepten</li>
+                <li>Bedrijfsgegevens (indien van toepassing)</li>
+                <li>Account instellingen</li>
+              </ul>
+            </div>
+            
+            <p>Als je denkt dat dit een fout is, neem dan direct contact met ons op via <a href="mailto:${getAdminEmail()}">${getAdminEmail()}</a>.</p>
+            
+            <p>Met vriendelijke groet,<br>Het Gastro-Elite Team</p>
+          </div>
+        </div>
+      `
+    };
+
+    await getTransporter().sendMail(mailOptions);
+    console.log('✅ Account deletion notification email sent');
+    return true;
+  } catch (error) {
+    console.error('Error sending account deletion notification:', error);
+    return false;
+  }
+}
+
 // Generate action token for email buttons
 // Overloaded: for employee invitations (with invitationId) or business approvals (without invitationId)
 function generateActionToken(companyId: string, invitationIdOrAction: string, action?: string): string {
@@ -127,7 +246,7 @@ export async function sendBusinessRegistrationNotification(
 
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
-    const adminPanelUrl = `${appUrl}/admin/business-applications`;
+    const adminPanelUrl = `${appUrl}/admin?tab=business`;
     
     // Generate action tokens if companyId is provided
     let actionButtons = '';

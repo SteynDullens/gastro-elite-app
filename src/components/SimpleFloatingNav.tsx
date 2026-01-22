@@ -70,11 +70,15 @@ export default function SimpleFloatingNav() {
   const [isScrollingUp, setIsScrollingUp] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   
+  const { isAdmin } = useAuth();
+  
   const navItems: NavItem[] = [
     { href: "/", iconPath: "/homepage-icon.png", label: t.home },
     { href: "/recipes", iconPath: "/recipes-icon.png", label: t.recipes },
     { href: "/add", iconPath: "/add-icon.png", label: t.add },
     { href: "/account", iconPath: "/account-icon.png", label: t.account },
+    // Admin tab - only visible for admins
+    ...(isAdmin ? [{ href: "/admin", iconPath: "/account-icon.png", label: "Admin" }] : []),
   ];
 
   // Mobile scroll behavior - fade out sidebar on any downward movement
