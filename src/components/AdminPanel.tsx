@@ -150,17 +150,20 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
       });
 
       const result = await response.json();
+      console.log('Password reset response:', result);
+      
       if (result.success) {
         if (result.emailSent) {
-          setMessage(`Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden.`);
+          setMessage(`✅ Wachtwoord gereset voor ${userEmail}. Een nieuw wachtwoord is gegenereerd en per email verzonden naar ${userEmail}. Controleer ook je spam folder als je de email niet ziet.`);
         } else {
-          setMessage(`Wachtwoord gereset voor ${userEmail}, maar email kon niet worden verzonden. ${result.emailError ? `Fout: ${result.emailError}` : 'Controleer de email configuratie.'}`);
+          const errorMsg = result.emailError || 'Onbekende email fout';
+          setMessage(`⚠️ Wachtwoord gereset voor ${userEmail}, maar email kon niet worden verzonden. Fout: ${errorMsg}. Controleer de Vercel logs voor meer details.`);
         }
         fetchUsers();
-        setTimeout(() => setMessage(""), 7000);
+        setTimeout(() => setMessage(""), 10000);
       } else {
-        setMessage(`Fout: ${result.error}`);
-        setTimeout(() => setMessage(""), 3000);
+        setMessage(`❌ Fout: ${result.error || 'Onbekende fout'}`);
+        setTimeout(() => setMessage(""), 5000);
       }
     } catch (error) {
       setMessage("Netwerk fout bij resetten van wachtwoord");
@@ -222,8 +225,39 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Admin Panel</h1>
-        <div className="text-sm text-gray-500">
-          Welcome, {user.firstName} {user.lastName}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/admin/check-email-config', {
+                  credentials: 'include'
+                });
+                const result = await response.json();
+                if (result.success) {
+                  const configInfo = `Email Configuratie:\n\n` +
+                    `SMTP Host: ${result.config.SMTP_HOST}\n` +
+                    `SMTP Port: ${result.config.SMTP_PORT}\n` +
+                    `SMTP User: ${result.config.SMTP_USER}\n` +
+                    `SMTP Pass: ${result.config.SMTP_PASS}\n` +
+                    `Admin Email: ${result.config.ADMIN_EMAIL}\n` +
+                    `App URL: ${result.config.APP_URL}\n\n` +
+                    (result.warnings.length > 0 ? `Waarschuwingen:\n${result.warnings.join('\n')}` : 'Geen waarschuwingen');
+                  alert(configInfo);
+                } else {
+                  alert(`Fout bij ophalen configuratie: ${result.error}`);
+                }
+              } catch (error) {
+                alert('Fout bij ophalen email configuratie');
+              }
+            }}
+            className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            title="Check email configuratie"
+          >
+            📧 Check Email Config
+          </button>
+          <div className="text-sm text-gray-500">
+            Welcome, {user.firstName} {user.lastName}
+          </div>
         </div>
       </div>
 
