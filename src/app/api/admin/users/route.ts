@@ -113,6 +113,7 @@ export async function PUT(request: NextRequest) {
 
     let emailSent = false;
     let emailError: string | null = null;
+    let passwordToUse: string | null = null;
 
     const result = await safeDbOperation(async (prisma) => {
       const user = await prisma.user.findUnique({
@@ -140,10 +141,10 @@ export async function PUT(request: NextRequest) {
           break;
 
         case 'reset_password':
-          const { newPassword, generatePassword, sendEmail, userEmail, firstName, lastName } = data;
+          const { newPassword, generatePassword } = data;
           
           // Generate password if requested, otherwise use provided password
-          let passwordToUse: string;
+          let generatedPasswordToUse: string;
           if (generatePassword) {
             // Generate a secure random password: 12 characters with mix of uppercase, lowercase, numbers
             const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -163,23 +164,23 @@ export async function PUT(request: NextRequest) {
             }
             
             // Shuffle the password
-            passwordToUse = generatedPassword.split('').sort(() => Math.random() - 0.5).join('');
+            generatedPasswordToUse = generatedPassword.split('').sort(() => Math.random() - 0.5).join('');
           } else {
             if (!newPassword || newPassword.length < 6) {
               throw new Error('New password must be at least 6 characters long');
             }
-            passwordToUse = newPassword;
+            generatedPasswordToUse = newPassword;
           }
           
+          // Store password outside transaction for email sending
+          passwordToUse = generatedPasswordToUse;
+          
           const bcrypt = require('bcryptjs');
-          const hashedPassword = await bcrypt.hash(passwordToUse, 12);
+          const hashedPassword = await bcrypt.hash(generatedPasswordToUse, 12);
           await prisma.user.update({
             where: { id: userId },
             data: { password: hashedPassword }
           });
-
-          // Store password for email sending after transaction
-          (result as any).passwordToUse = passwordToUse;
           
           break;
 
@@ -210,9 +211,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Send email notification for password reset (after transaction completes)
-    if (action === 'reset_password') {
+    if (action === 'reset_password' && result) {
       const { sendEmail, userEmail, firstName, lastName } = data;
-      const passwordToUse = (result as any).passwordToUse;
       
       if (sendEmail && userEmail && firstName && lastName && passwordToUse) {
         try {
