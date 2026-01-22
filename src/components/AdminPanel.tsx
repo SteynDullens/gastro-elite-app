@@ -253,13 +253,13 @@ export default function AdminPanel({ initialTab = 'users' }: AdminPanelProps = {
                     `SMTP Pass: ${result.config.SMTP_PASS}\n` +
                     `Admin Email: ${result.config.ADMIN_EMAIL}\n` +
                     `App URL: ${result.config.APP_URL}\n\n` +
-                    (result.warnings.length > 0 ? `Waarschuwingen:\n${result.warnings.join('\n')}` : 'Geen waarschuwingen');
+                    (result.warnings.length > 0 ? `⚠️ Waarschuwingen:\n${result.warnings.join('\n')}` : '✅ Geen waarschuwingen - alle configuratie is ingesteld');
                   alert(configInfo);
                 } else {
-                  alert(`Fout bij ophalen configuratie: ${result.error}`);
+                  alert(`❌ Fout bij ophalen configuratie: ${result.error}`);
                 }
-              } catch (error) {
-                alert('Fout bij ophalen email configuratie');
+              } catch (error: any) {
+                alert(`❌ Fout bij ophalen email configuratie: ${error.message || 'Onbekende fout'}`);
               }
             }}
             className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"

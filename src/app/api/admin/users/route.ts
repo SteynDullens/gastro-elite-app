@@ -211,6 +211,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Send email notification for password reset (after transaction completes)
+    let emailResultDetails: any = null;
     if (action === 'reset_password' && result) {
       const { sendEmail, userEmail, firstName, lastName } = data;
       
@@ -224,6 +225,7 @@ export async function PUT(request: NextRequest) {
           
           const emailResult = await sendPasswordResetNotification(userEmail, firstName, lastName, passwordToUse);
           emailSent = emailResult.success;
+          emailResultDetails = emailResult; // Store for response
           
           if (emailResult.success) {
             console.log(`✅ Password reset email sent successfully to ${userEmail}`);
@@ -282,12 +284,20 @@ export async function PUT(request: NextRequest) {
     if (action === 'reset_password') {
       responseData.emailSent = emailSent;
       responseData.emailError = emailError;
-      // Include more details for debugging
-      if (!emailSent && emailError) {
-        responseData.emailDetails = {
-          error: emailError,
-          suggestion: 'Check Vercel logs for detailed SMTP server response. Also check spam folder if email was accepted by server.'
-        };
+      
+      // Include detailed email result information
+      if (emailResultDetails) {
+        if (emailResultDetails.success) {
+          responseData.emailMessageId = emailResultDetails.messageId;
+          responseData.emailAccepted = emailResultDetails.accepted;
+          responseData.emailResponse = emailResultDetails.response;
+        } else {
+          responseData.emailRejected = emailResultDetails.rejected;
+          responseData.emailDetails = {
+            error: emailError,
+            suggestion: 'Check Vercel logs for detailed SMTP server response. Also check spam folder if email was accepted by server.'
+          };
+        }
       }
     }
 
