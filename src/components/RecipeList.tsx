@@ -245,7 +245,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
   // Group recipes alphabetically for alphabetical view
   const groupedByLetter = filteredRecipes.reduce((acc: Record<string, Recipe[]>, recipe) => {
-    const firstLetter = recipe.name.charAt(0).toUpperCase();
+    const nm = (recipe.name ?? "").trim();
+    const firstLetter = nm ? nm.charAt(0).toUpperCase() : "#";
     if (!acc[firstLetter]) {
       acc[firstLetter] = [];
     }
@@ -426,12 +427,13 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       // Grid View - Current view (fallback)
       return (
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
-          <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
+          <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
             {recipe.image ? (
               <Image
                 src={recipe.image}
-                alt={recipe.name}
+                alt={recipe.name ?? ""}
                 fill
+                sizes="(max-width: 1024px) 50vw, 25vw"
                 unoptimized
                 className="object-cover"
                 onError={(e) => {
@@ -816,7 +818,11 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     </div>
                     {/* Recipes for this letter */}
                     {groupedByLetter[letter]
-                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .sort((a, b) =>
+                        (a.name ?? "").localeCompare(b.name ?? "", undefined, {
+                          sensitivity: "base",
+                        })
+                      )
                       .map((recipe, idx) => (
                         <div key={recipe.id}>
                           <RecipeCard recipe={recipe} variant="alphabetical" />
