@@ -707,7 +707,14 @@ function RegisterPageContent() {
                   </button>
                   {kvkDocumentPreview && (
                     <div className="mt-2">
-                      <img src={kvkDocumentPreview} alt="Preview" className="max-w-xs rounded-lg" />
+                      <Image
+                        src={kvkDocumentPreview}
+                        alt="Preview"
+                        width={320}
+                        height={240}
+                        className="max-w-xs h-auto w-auto rounded-lg"
+                        unoptimized
+                      />
                     </div>
                   )}
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 
 interface ErrorLog {
@@ -998,11 +999,14 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                                     title="KvK Document"
                                   />
                                 ) : (
-                                  <img 
-                                    src={app.kvk_document_data} 
-                                    alt="KvK Document" 
+                                  <Image
+                                    src={app.kvk_document_data}
+                                    alt="KvK Document"
+                                    width={800}
+                                    height={500}
                                     className="max-w-full h-auto border border-gray-300 rounded mx-auto"
-                                    style={{ maxHeight: '500px' }}
+                                    style={{ maxHeight: "500px", width: "auto", height: "auto" }}
+                                    unoptimized
                                   />
                                 )}
                                 <div className="text-center">
@@ -1036,11 +1040,14 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                                   />
                                 ) : (
                                   <div className="text-center">
-                                    <img 
-                                      src={app.kvk_document_path} 
-                                      alt="KvK Document" 
+                                    <Image
+                                      src={app.kvk_document_path}
+                                      alt="KvK Document"
+                                      width={800}
+                                      height={500}
                                       className="max-w-full h-auto border border-gray-300 rounded mx-auto"
-                                      style={{ maxHeight: '500px' }}
+                                      style={{ maxHeight: "500px", width: "auto", height: "auto" }}
+                                      unoptimized
                                     />
                                   </div>
                                 )}

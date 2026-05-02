@@ -7,6 +7,7 @@ import { useRecipes } from "@/context/RecipeContext";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/Toast";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface Ingredient {
   id: string;
@@ -279,13 +280,13 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             {/* Image */}
             <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
               {recipe.image ? (
-                <img
+                <Image
                   src={recipe.image}
                   alt={recipe.name ?? ""}
                   width={96}
                   height={96}
                   className="h-full w-full object-cover"
-                  loading="lazy"
+                  unoptimized
                   referrerPolicy="no-referrer"
                 />
               ) : (
@@ -429,11 +430,13 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
           <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
             {recipe.image ? (
-              <img
+              <Image
                 src={recipe.image}
                 alt={recipe.name ?? ""}
-                className="absolute inset-0 h-full w-full object-cover"
-                loading="lazy"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 480px"
+                unoptimized
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   const wrapper = e.currentTarget.parentElement;
