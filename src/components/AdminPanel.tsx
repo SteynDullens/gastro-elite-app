@@ -394,7 +394,10 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
 
   // Update tab when initialTab prop changes
   useEffect(() => {
-    if (initialTab && ['dashboard', 'users', 'business', 'logs', 'backup'].includes(initialTab)) {
+    if (
+      initialTab &&
+      ["dashboard", "users", "business", "logs", "backup", "recovery"].includes(initialTab)
+    ) {
       setActiveTab(initialTab as any);
     }
   }, [initialTab]);
@@ -659,7 +662,11 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                       <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                         <div>
                           <p className="font-medium text-gray-900">{c.name}</p>
-                          <p className="text-sm text-gray-500">{c.owner.firstName} {c.owner.lastName}</p>
+                          <p className="text-sm text-gray-500">
+                            {c.owner
+                              ? `${c.owner.firstName ?? ""} ${c.owner.lastName ?? ""}`
+                              : "—"}
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString()}</p>
@@ -1372,7 +1379,7 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                             <tr key={c.id}>
                               <td className="px-4 py-3 text-sm">{c.name}</td>
                               <td className="px-4 py-3 text-sm">{c.kvkNumber}</td>
-                              <td className="px-4 py-3 text-sm">{c.owner.email}</td>
+                              <td className="px-4 py-3 text-sm">{c.owner?.email ?? "—"}</td>
                               <td className="px-4 py-3 text-sm">{new Date(c.deletedAt).toLocaleString('nl-NL')}</td>
                               <td className="px-4 py-3">
                                 <button

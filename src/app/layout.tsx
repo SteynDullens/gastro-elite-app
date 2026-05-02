@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
+/** Fresh HTML on every request so CDN/browser never serves an old shell pointing at deleted chunk files after deploy. */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

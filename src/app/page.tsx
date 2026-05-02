@@ -200,7 +200,9 @@ export default function Home() {
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{app.name}</div>
                       <div className="text-sm text-gray-600">
-                        {app.owner.firstName} {app.owner.lastName} • {app.owner.email}
+                        {app.owner
+                          ? `${app.owner.firstName ?? ""} ${app.owner.lastName ?? ""} • ${app.owner.email ?? ""}`
+                          : "—"}
                       </div>
                         <div className="text-xs text-gray-500 mt-1">
                         KvK: {app.kvkNumber} • {new Date(app.createdAt).toLocaleDateString('nl-NL')}
