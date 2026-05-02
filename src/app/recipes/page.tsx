@@ -96,10 +96,14 @@ export default function RecipesPage() {
             <div className="text-gray-500">{t.loading}</div>
           </div>
         ) : (
-          <RecipeList recipes={(recipes || []).map(recipe => ({
-            ...recipe,
-            categories: recipe.categories.map((cat: any) => typeof cat === 'string' ? cat : cat.name)
-          }))} />
+          <RecipeList
+            recipes={(recipes || []).map((recipe) => ({
+              ...recipe,
+              categories: (recipe.categories ?? []).map((cat: any) =>
+                typeof cat === "string" ? cat : cat?.name ?? ""
+              ),
+            }))}
+          />
         )}
       </div>
     </div>

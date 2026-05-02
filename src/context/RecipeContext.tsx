@@ -91,7 +91,15 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
               console.warn('⚠️ RecipeContext: No recipes returned from server');
             }
             
-            setRecipes(data.recipes || []);
+            const raw = data.recipes || [];
+            setRecipes(
+              raw.map((r: any) => ({
+                ...r,
+                name: r?.name ?? "",
+                ingredients: Array.isArray(r?.ingredients) ? r.ingredients : [],
+                categories: Array.isArray(r?.categories) ? r.categories : [],
+              }))
+            );
           } catch (parseError) {
             console.error('❌ RecipeContext: Failed to parse JSON response:', parseError);
             const responseText = await response.text().catch(() => 'Could not read response');
@@ -127,12 +135,11 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
 
   // Fetch recipes when auth is ready and user is loaded
   useEffect(() => {
-    // Wait for auth to finish loading
     if (authLoading) {
       console.log('⏳ RecipeContext: Waiting for auth to finish loading...');
       return;
     }
-    
+
     const currentUserId = user?.id || null;
     
     // Always fetch on mount or when user changes

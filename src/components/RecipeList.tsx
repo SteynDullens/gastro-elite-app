@@ -213,11 +213,18 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const isPersonalUser = !isCompanyOwner && !isEmployee;
 
   const filteredRecipes = recipes.filter((recipe) => {
-    const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         recipe.ingredients.some(ing => ing.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const recipeCategories = recipe.categories.map((cat: any) => 
-      typeof cat === 'string' ? cat : (cat?.name || cat)
+    const ingredients = recipe.ingredients ?? [];
+    const categories = recipe.categories ?? [];
+    const nameSafe = recipe.name ?? "";
+
+    const matchesSearch =
+      nameSafe.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ingredients.some((ing) =>
+        (ing?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+    const recipeCategories = categories.map((cat: any) =>
+      typeof cat === "string" ? cat : cat?.name || cat
     );
     const matchesCategory = !selectedCategory || recipeCategories.includes(selectedCategory);
     
@@ -261,7 +268,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const RecipeCard = ({ recipe, variant = "grid" }: { recipe: Recipe; variant?: "grid" | "row" | "alphabetical" }) => {
     const isRow = variant === "row";
     const isAlphabetical = variant === "alphabetical";
-    
+    const cardCategories = recipe.categories ?? [];
+    const cardIngredients = recipe.ingredients ?? [];
+
     if (isRow) {
       // Row View - Professional Gronda-style
       return (
@@ -305,9 +314,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     ) : null}
                   </div>
                   
-                  {recipe.categories.length > 0 && (
+                  {cardCategories.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {recipe.categories.slice(0, 3).map((category) => (
+                      {cardCategories.slice(0, 3).map((category) => (
                         <span
                           key={typeof category === 'string' ? category : (category as any).id}
                           className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
@@ -315,15 +324,15 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                           {translateCategory(typeof category === 'string' ? category : (category as any).name)}
                         </span>
                       ))}
-                      {recipe.categories.length > 3 && (
-                        <span className="px-2 py-0.5 text-gray-500 text-xs">+{recipe.categories.length - 3}</span>
+                      {cardCategories.length > 3 && (
+                        <span className="px-2 py-0.5 text-gray-500 text-xs">+{cardCategories.length - 3}</span>
                       )}
                     </div>
                   )}
                   
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    {recipe.ingredients.length > 0 && (
-                      <span>{recipe.ingredients.length} {recipe.ingredients.length === 1 ? 'ingredient' : 'ingredients'}</span>
+                    {cardIngredients.length > 0 && (
+                      <span>{cardIngredients.length} {cardIngredients.length === 1 ? 'ingredient' : 'ingredients'}</span>
                     )}
                     {(recipe.batchSize || recipe.servings) && (
                       <span>•</span>
@@ -458,9 +467,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             
             <h3 className="font-bold text-lg mb-3 text-center text-gray-800">{recipe.name}</h3>
             
-            {recipe.categories.length > 0 && (
+            {cardCategories.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                {recipe.categories.map((category) => (
+                {cardCategories.map((category) => (
                   <span
                     key={typeof category === 'string' ? category : (category as any).id}
                     className="px-3 py-1 bg-orange-200 text-orange-800 text-xs rounded-full font-medium shadow-sm"
