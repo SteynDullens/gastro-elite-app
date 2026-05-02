@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { clearSessionUnlock } from "@/lib/app-pin";
 
 interface User {
   id: string;
@@ -245,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      clearSessionUnlock();
       setUser(null);
     }
   };

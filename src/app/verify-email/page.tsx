@@ -58,7 +58,7 @@ function VerifyEmailContent() {
   }, [searchParams]);
 
   const handleLogin = () => {
-    router.push('/login');
+    router.push('/login?verified=true&setupPin=1');
   };
 
   const handleHome = () => {

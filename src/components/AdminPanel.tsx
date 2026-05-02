@@ -34,7 +34,7 @@ interface User {
 }
 
 interface AdminPanelProps {
-  initialTab?: 'users' | 'business' | 'logs';
+  initialTab?: 'dashboard' | 'users' | 'business' | 'logs' | 'backup' | 'recovery';
 }
 
 interface Stats {
@@ -834,6 +834,7 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 

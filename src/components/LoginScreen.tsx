@@ -1,23 +1,25 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAppLock } from "@/context/AppLockContext";
 
 interface LoginScreenProps {
   enableBackButton?: boolean;
 }
 
-export default function LoginScreen({ enableBackButton = true }: LoginScreenProps) {
+function LoginScreenInner({ enableBackButton = true }: LoginScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
+  const { afterPasswordLogin } = useAppLock();
   const { t } = useLanguage();
   const [showBackArrow, setShowBackArrow] = useState(enableBackButton);
   const [mounted, setMounted] = useState(false);
-  const [logoAnimated, setLogoAnimated] = useState(false);
   const [showFormFields, setShowFormFields] = useState(false); // Hidden initially
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -26,12 +28,10 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
 
   useEffect(() => {
     setMounted(true);
-    // Trigger logo animation after mount
-    const logoTimer = setTimeout(() => setLogoAnimated(true), 100);
 
     if (!enableBackButton) {
       setShowBackArrow(false);
-      return () => clearTimeout(logoTimer);
+      return;
     }
 
     const handleScroll = () => {
@@ -43,7 +43,6 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
     handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => {
-      clearTimeout(logoTimer);
       window.removeEventListener('scroll', handleScroll);
     };
   }, [enableBackButton]);
@@ -78,7 +77,15 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
       const result = await login(formData.email, formData.password);
 
       if (result.success) {
-        router.push('/');
+        afterPasswordLogin();
+        try {
+          if (searchParams.get("setupPin") === "1") {
+            sessionStorage.setItem("gastro_prompt_pin_setup", "1");
+          }
+        } catch {
+          /* ignore */
+        }
+        router.push("/");
         return;
       }
 
@@ -112,7 +119,7 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
       {enableBackButton && showBackArrow && (
             <button
               onClick={handleBackClick}
-          className="fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-2 shadow-md transition-all duration-300"
+          className="fixed top-4 left-4 z-50 bg-white hover:bg-gray-50 border border-gray-300 rounded-full p-2 shadow-md transition-all duration-300 hover:scale-105 active:scale-95"
               title="Terug"
             >
               <svg
@@ -131,7 +138,7 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
             </button>
           )}
 
-      {/* Logo Section - With slow entrance animation (1.5s) - 1.5x bigger */}
+      {/* Logo — CSS keyframe reveal (globals.css) */}
       <div className="flex-shrink-0 pt-8 pb-4 md:pt-10 md:pb-6">
         <div className="flex justify-center">
               <Image
@@ -140,26 +147,21 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
             width={420}
             height={420}
                 priority
-            className={`w-72 h-72 md:w-96 md:h-96 object-contain transition-all ease-out ${
-              logoAnimated ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-90 blur-md'
-            }`}
+            className="login-logo-enter w-72 h-72 md:w-96 md:h-96 object-contain"
             style={{ 
               minWidth: '270px', 
               minHeight: '270px',
-              transitionDuration: '1500ms'
             }}
               />
             </div>
-        {/* Tagline */}
-        <p className="text-center text-gray-600 text-sm md:text-base mt-2 px-6 max-w-sm mx-auto">
+        <p className="login-tagline-enter text-center text-gray-600 text-sm md:text-base mt-3 px-6 max-w-sm mx-auto">
           {t.tagline}
         </p>
       </div>
 
-      {/* Login Card - Centered (no animation) */}
       <div className="flex-1 flex items-start md:items-center justify-center px-4 pb-8">
         <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+          <div className="login-card-enter bg-white rounded-2xl shadow-xl p-6 md:p-8">
             {/* Show only button initially */}
             {!showFormFields ? (
               <div className="space-y-6">
@@ -312,5 +314,20 @@ export default function LoginScreen({ enableBackButton = true }: LoginScreenProp
         }
       `}</style>
     </div>
+  );
+}
+
+export default function LoginScreen(props: LoginScreenProps) {
+  const { t } = useLanguage();
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center text-gray-500">{t.loading}</div>
+        </div>
+      }
+    >
+      <LoginScreenInner {...props} />
+    </Suspense>
   );
 }

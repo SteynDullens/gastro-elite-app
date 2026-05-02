@@ -47,10 +47,10 @@ export default function DesktopSidebar() {
   ];
 
   return (
-    <div className="desktop-sidebar">
+    <div className="desktop-sidebar animate-desktop-sidebar">
       <div className="sidebar-content">
         {/* Logo */}
-        <div className="sidebar-logo">
+        <div className="sidebar-logo sidebar-logo-animated">
           <Image src="/logo.svg" alt="Gastro-Elite Logo" width={100} height={100} priority />
         </div>
         

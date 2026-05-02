@@ -5,6 +5,7 @@ import AdminNotifications from "@/components/AdminNotifications";
 import { RecipeProvider } from "@/context/RecipeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { AppLockProvider } from "@/context/AppLockContext";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 
@@ -59,6 +60,7 @@ export default function RootLayout({
         <div className="min-h-screen" style={{ backgroundColor: '#A0A0A0' }}>
           <AuthProvider>
             <LanguageProvider>
+              <AppLockProvider>
               <RecipeProvider>
                 {/* Admin Notifications Bell */}
                 <AdminNotifications />
@@ -69,7 +71,7 @@ export default function RootLayout({
                   
                   {/* Main content area */}
                   <main className="main-content flex-1">
-                    <div className="max-w-7xl mx-auto p-4 lg:p-8">
+                    <div className="max-w-7xl mx-auto p-4 lg:p-8 animate-app-enter">
                       {children}
                     </div>
                   </main>
@@ -78,6 +80,7 @@ export default function RootLayout({
                 {/* Mobile Navigation */}
                 <SimpleFloatingNav />
               </RecipeProvider>
+              </AppLockProvider>
             </LanguageProvider>
           </AuthProvider>
         </div>

@@ -273,6 +273,21 @@ interface Translations {
   examplePostalCode: string;
   exampleStreet: string;
   exampleCity: string;
+  // App PIN (device lock)
+  pinUnlockTitle: string;
+  pinUnlockSubtitle: string;
+  pinSetupQuestion: string;
+  pinSetupDescription: string;
+  pinEnterNew: string;
+  pinConfirmLabel: string;
+  pinMismatch: string;
+  pinWrong: string;
+  pinSkip: string;
+  pinSetButton: string;
+  pinDigitsHint: string;
+  pinLogoutLink: string;
+  pinContinueButton: string;
+  pinSubmitUnlock: string;
 }
 
 // All available languages with their native names and flags
@@ -429,6 +444,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Geen openstaande bedrijfsaanvragen",
     enterEmployeeEmail: "Voer medewerker e-mailadres in", exampleEmail: "uw@email.nl",
     examplePhone: "+31 6 12345678", examplePostalCode: "1234 AB", exampleStreet: "Straatnaam 123", exampleCity: "Stad",
+    pinUnlockTitle: "App vergrendeling",
+    pinUnlockSubtitle: "Voer uw pincode in om verder te gaan.",
+    pinSetupQuestion: "Wilt u een pincode instellen?",
+    pinSetupDescription:
+      "Op dit apparaat volstaat bij een volgende keer openen van de app uw pincode (u blijft ingelogd). Overslaan kan altijd.",
+    pinEnterNew: "Kies een pincode (4–6 cijfers)",
+    pinConfirmLabel: "Bevestig uw pincode",
+    pinMismatch: "De pincodes komen niet overeen.",
+    pinWrong: "Onjuiste pincode. Probeer het opnieuw.",
+    pinSkip: "Nu overslaan",
+    pinSetButton: "Pincode opslaan",
+    pinDigitsHint: "Gebruik 4 tot 6 cijfers.",
+    pinLogoutLink: "Uitloggen en ander account gebruiken",
+    pinContinueButton: "Volgende",
+    pinSubmitUnlock: "Ontgrendelen",
   },
   en: {
     // Navigation
@@ -540,6 +570,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "No pending business applications",
     enterEmployeeEmail: "Enter employee email address", exampleEmail: "you@email.com",
     examplePhone: "+1 234 567 8900", examplePostalCode: "12345", exampleStreet: "Street Name 123", exampleCity: "City",
+    pinUnlockTitle: "App lock",
+    pinUnlockSubtitle: "Enter your PIN to continue.",
+    pinSetupQuestion: "Would you like to set a PIN?",
+    pinSetupDescription:
+      "Next time you open the app on this device, your PIN is enough (you stay signed in). You can skip and set a PIN later.",
+    pinEnterNew: "Choose a PIN (4–6 digits)",
+    pinConfirmLabel: "Confirm your PIN",
+    pinMismatch: "PINs do not match.",
+    pinWrong: "Incorrect PIN. Try again.",
+    pinSkip: "Skip for now",
+    pinSetButton: "Save PIN",
+    pinDigitsHint: "Use 4 to 6 digits.",
+    pinLogoutLink: "Log out and use another account",
+    pinContinueButton: "Continue",
+    pinSubmitUnlock: "Unlock",
   },
   de: {
     home: "Startseite", recipes: "Rezepte", add: "Hinzufügen", account: "Konto", admin: "Admin",
@@ -644,6 +689,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Keine ausstehenden Geschäftsanträge",
     enterEmployeeEmail: "Mitarbeiter-E-Mail eingeben", exampleEmail: "ihre@email.de",
     examplePhone: "+49 123 456789", examplePostalCode: "12345", exampleStreet: "Straßenname 123", exampleCity: "Stadt",
+    pinUnlockTitle: "App-Sperre",
+    pinUnlockSubtitle: "Geben Sie Ihre PIN ein, um fortzufahren.",
+    pinSetupQuestion: "Möchten Sie eine PIN festlegen?",
+    pinSetupDescription:
+      "Beim nächsten Öffnen der App auf diesem Gerät genügt Ihre PIN (Sie bleiben angemeldet). Überspringen ist möglich.",
+    pinEnterNew: "PIN wählen (4–6 Ziffern)",
+    pinConfirmLabel: "PIN bestätigen",
+    pinMismatch: "PINs stimmen nicht überein.",
+    pinWrong: "Falsche PIN. Bitte erneut versuchen.",
+    pinSkip: "Jetzt überspringen",
+    pinSetButton: "PIN speichern",
+    pinDigitsHint: "4 bis 6 Ziffern verwenden.",
+    pinLogoutLink: "Abmelden und anderes Konto verwenden",
+    pinContinueButton: "Weiter",
+    pinSubmitUnlock: "Entsperren",
   },
   fr: {
     home: "Accueil", recipes: "Recettes", add: "Ajouter", account: "Compte", admin: "Admin",
@@ -748,6 +808,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Aucune demande d'entreprise en attente",
     enterEmployeeEmail: "Entrez l'e-mail de l'employé", exampleEmail: "vous@email.fr",
     examplePhone: "+33 6 12 34 56 78", examplePostalCode: "75000", exampleStreet: "Rue Exemple 123", exampleCity: "Ville",
+    pinUnlockTitle: "Verrouillage de l’app",
+    pinUnlockSubtitle: "Entrez votre code PIN pour continuer.",
+    pinSetupQuestion: "Souhaitez-vous définir un code PIN ?",
+    pinSetupDescription:
+      "La prochaine fois sur cet appareil, votre PIN suffit (vous restez connecté). Vous pouvez ignorer pour l’instant.",
+    pinEnterNew: "Choisissez un code PIN (4 à 6 chiffres)",
+    pinConfirmLabel: "Confirmez votre code PIN",
+    pinMismatch: "Les codes PIN ne correspondent pas.",
+    pinWrong: "Code PIN incorrect. Réessayez.",
+    pinSkip: "Passer pour l’instant",
+    pinSetButton: "Enregistrer le PIN",
+    pinDigitsHint: "Utilisez 4 à 6 chiffres.",
+    pinLogoutLink: "Se déconnecter et utiliser un autre compte",
+    pinContinueButton: "Suivant",
+    pinSubmitUnlock: "Déverrouiller",
   },
   es: {
     home: "Inicio", recipes: "Recetas", add: "Añadir", account: "Cuenta", admin: "Admin",
@@ -852,6 +927,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Sin solicitudes de empresa pendientes",
     enterEmployeeEmail: "Ingrese el correo del empleado", exampleEmail: "tu@email.es",
     examplePhone: "+34 612 345 678", examplePostalCode: "28001", exampleStreet: "Calle Ejemplo 123", exampleCity: "Ciudad",
+    pinUnlockTitle: "Bloqueo de la app",
+    pinUnlockSubtitle: "Introduce tu PIN para continuar.",
+    pinSetupQuestion: "¿Quieres configurar un PIN?",
+    pinSetupDescription:
+      "La próxima vez que abras la app en este dispositivo bastará el PIN (sigues conectado). Puedes omitirlo.",
+    pinEnterNew: "Elige un PIN (4–6 dígitos)",
+    pinConfirmLabel: "Confirma tu PIN",
+    pinMismatch: "Los PIN no coinciden.",
+    pinWrong: "PIN incorrecto. Inténtalo de nuevo.",
+    pinSkip: "Omitir por ahora",
+    pinSetButton: "Guardar PIN",
+    pinDigitsHint: "Usa de 4 a 6 dígitos.",
+    pinLogoutLink: "Cerrar sesión y usar otra cuenta",
+    pinContinueButton: "Siguiente",
+    pinSubmitUnlock: "Desbloquear",
   },
   it: {
     home: "Home", recipes: "Ricette", add: "Aggiungi", account: "Account", admin: "Admin",
@@ -956,6 +1046,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Nessuna richiesta aziendale in sospeso",
     enterEmployeeEmail: "Inserisci l'email del dipendente", exampleEmail: "tu@email.it",
     examplePhone: "+39 333 123 4567", examplePostalCode: "00100", exampleStreet: "Via Esempio 123", exampleCity: "Città",
+    pinUnlockTitle: "Blocco app",
+    pinUnlockSubtitle: "Inserisci il PIN per continuare.",
+    pinSetupQuestion: "Vuoi impostare un PIN?",
+    pinSetupDescription:
+      "La prossima volta che apri l’app su questo dispositivo basta il PIN (resti connesso). Puoi saltare.",
+    pinEnterNew: "Scegli un PIN (4–6 cifre)",
+    pinConfirmLabel: "Conferma il PIN",
+    pinMismatch: "I PIN non coincidono.",
+    pinWrong: "PIN errato. Riprova.",
+    pinSkip: "Salta per ora",
+    pinSetButton: "Salva PIN",
+    pinDigitsHint: "Usa da 4 a 6 cifre.",
+    pinLogoutLink: "Esci e usa un altro account",
+    pinContinueButton: "Avanti",
+    pinSubmitUnlock: "Sblocca",
   },
   pt: {
     home: "Início", recipes: "Receitas", add: "Adicionar", account: "Conta", admin: "Admin",
@@ -1060,6 +1165,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Sem solicitações de empresa pendentes",
     enterEmployeeEmail: "Digite o e-mail do funcionário", exampleEmail: "voce@email.pt",
     examplePhone: "+351 912 345 678", examplePostalCode: "1000-001", exampleStreet: "Rua Exemplo 123", exampleCity: "Cidade",
+    pinUnlockTitle: "Bloqueio da app",
+    pinUnlockSubtitle: "Introduza o PIN para continuar.",
+    pinSetupQuestion: "Quer definir um PIN?",
+    pinSetupDescription:
+      "Da próxima vez neste dispositivo basta o PIN (continua ligado). Pode ignorar por agora.",
+    pinEnterNew: "Escolha um PIN (4–6 dígitos)",
+    pinConfirmLabel: "Confirme o PIN",
+    pinMismatch: "Os PINs não coincidem.",
+    pinWrong: "PIN incorreto. Tente novamente.",
+    pinSkip: "Saltar por agora",
+    pinSetButton: "Guardar PIN",
+    pinDigitsHint: "Use 4 a 6 dígitos.",
+    pinLogoutLink: "Terminar sessão e usar outra conta",
+    pinContinueButton: "Seguinte",
+    pinSubmitUnlock: "Desbloquear",
   },
   sq: {
     home: "Ballina", recipes: "Recetat", add: "Shto", account: "Llogaria", admin: "Admin",
@@ -1164,6 +1284,21 @@ const translations: Record<string, Translations> = {
     noPendingApplications: "Asnjë aplikim biznesi në pritje",
     enterEmployeeEmail: "Vendosni emailin e punonjësit", exampleEmail: "ti@email.al",
     examplePhone: "+355 69 123 4567", examplePostalCode: "1001", exampleStreet: "Rruga Shembull 123", exampleCity: "Qyteti",
+    pinUnlockTitle: "Kyçja e aplikacionit",
+    pinUnlockSubtitle: "Shkruani PIN-in për të vazhduar.",
+    pinSetupQuestion: "Dëshironi të vendosni një PIN?",
+    pinSetupDescription:
+      "Herën tjetër që hapni aplikacionin në këtë pajisje mjafton PIN-i (mbani sesionin). Mund ta anashkaloni.",
+    pinEnterNew: "Zgjidhni një PIN (4–6 shifra)",
+    pinConfirmLabel: "Konfirmoni PIN-in",
+    pinMismatch: "PIN-et nuk përputhen.",
+    pinWrong: "PIN i gabuar. Provoni përsëri.",
+    pinSkip: "Anashkalo tani",
+    pinSetButton: "Ruaj PIN-in",
+    pinDigitsHint: "Përdorni 4 deri në 6 shifra.",
+    pinLogoutLink: "Dil dhe përdor një llogari tjetër",
+    pinContinueButton: "Vazhdo",
+    pinSubmitUnlock: "Zhblloko",
   },
 };
 

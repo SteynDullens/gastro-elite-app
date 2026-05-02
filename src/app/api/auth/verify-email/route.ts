@@ -46,12 +46,12 @@ export async function GET(request: NextRequest) {
     const isBusinessAccount = !!user.ownedCompany;
     const businessStatus = user.ownedCompany?.status || null;
 
-    // Redirect based on account type
+    // Redirect based on account type (PIN setup prompt only when user can log in)
     if (isBusinessAccount && businessStatus === 'pending') {
       return NextResponse.redirect(new URL('/login?verified=true&businessPending=true', request.url));
     }
-    
-    return NextResponse.redirect(new URL('/login?verified=true', request.url));
+
+    return NextResponse.redirect(new URL('/login?verified=true&setupPin=1', request.url));
 
   } catch (error: any) {
     console.error('Email verification error:', error);
