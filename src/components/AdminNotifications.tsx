@@ -49,7 +49,8 @@ export default function AdminNotifications() {
       });
       if (response.ok) {
         const data = await response.json();
-        const pending = data.filter((app: any) => app.status === "pending");
+        const list = Array.isArray(data) ? data : [];
+        const pending = list.filter((app: any) => app.status === "pending");
         setPendingApplications(pending);
       }
     } catch (error) {

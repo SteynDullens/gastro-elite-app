@@ -6,7 +6,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useRecipes } from "@/context/RecipeContext";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/Toast";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 interface Ingredient {
@@ -280,13 +279,14 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             {/* Image */}
             <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
               {recipe.image ? (
-                <Image
+                <img
                   src={recipe.image}
-                  alt={recipe.name}
+                  alt={recipe.name ?? ""}
                   width={96}
                   height={96}
-                  className="w-full h-full object-cover"
-                  unoptimized
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -429,18 +429,17 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
           <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
             {recipe.image ? (
-              <Image
+              <img
                 src={recipe.image}
                 alt={recipe.name ?? ""}
-                fill
-                sizes="(max-width: 1024px) 50vw, 25vw"
-                unoptimized
-                className="object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+                referrerPolicy="no-referrer"
                 onError={(e) => {
                   const wrapper = e.currentTarget.parentElement;
                   if (wrapper) {
-                    (wrapper as HTMLElement).style.display = 'none';
-                    wrapper.nextElementSibling?.classList.remove('hidden');
+                    (wrapper as HTMLElement).style.display = "none";
+                    wrapper.nextElementSibling?.classList.remove("hidden");
                   }
                 }}
               />
