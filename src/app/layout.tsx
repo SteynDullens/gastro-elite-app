@@ -41,17 +41,16 @@ export default function RootLayout({
             <script
               dangerouslySetInnerHTML={{
                 __html: `
-                  if ('serviceWorker' in navigator) {
-                    window.addEventListener('load', function() {
-                      navigator.serviceWorker.register('/service-worker.js')
-                        .then(function(registration) {
-                          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                        })
-                        .catch(function(err) {
-                          console.log('ServiceWorker registration failed: ', err);
-                        });
-                    });
-                  }
+                  (function() {
+                    if (!('serviceWorker' in navigator)) return;
+                    navigator.serviceWorker.getRegistrations().then(function(regs) {
+                      return Promise.all(regs.map(function(r) { return r.unregister(); }));
+                    }).then(function() {
+                      if (navigator.serviceWorker.controller) {
+                        console.log('Gastro-Elite: removed legacy service worker(s) to avoid stale JS after deploy.');
+                      }
+                    }).catch(function() {});
+                  })();
                 `,
               }}
             />

@@ -34,8 +34,7 @@ export default function Toast({ message, type, duration = 3000, onClose }: Toast
 
   return (
     <div
-      className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center gap-3 animate-slide-in`}
-      style={{ animation: "slideIn 0.3s ease-out" }}
+      className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg z-50 flex items-center gap-3 animate-toast-slide-in`}
     >
       <span className="text-xl font-bold">{icon}</span>
       <span className="font-medium">{message}</span>
@@ -65,21 +64,6 @@ export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
           onClose={() => removeToast(toast.id)}
         />
       ))}
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slideIn 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
 }

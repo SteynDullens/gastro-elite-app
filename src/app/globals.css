@@ -233,6 +233,21 @@ button:active, a:active {
   }
 }
 
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-toast-slide-in {
+  animation: toast-slide-in 0.3s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-app-enter,
   .desktop-sidebar.animate-desktop-sidebar,
@@ -268,6 +283,10 @@ button:active, a:active {
   .sidebar-nav .nav-link:hover,
   .sidebar-nav .nav-link.active {
     transform: none !important;
+  }
+
+  .animate-toast-slide-in {
+    animation: none !important;
   }
 }
 
