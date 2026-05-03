@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { clearSessionUnlock } from "@/lib/app-pin";
 
 interface User {
@@ -69,50 +69,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-      const refreshUser = async () => {
-        try {
-          // Add timeout to prevent hanging forever
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-          
-          const response = await fetch('/api/auth/me', {
-            credentials: 'include',
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
+  const refreshUser = useCallback(async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-          if (response.ok) {
-            // Check if response is JSON before parsing
-            const contentType = response.headers.get('content-type');
-            const isJson = contentType && contentType.includes('application/json');
-            
-            if (isJson) {
-              try {
-                const data = await response.json();
-                if (data.success && data.user) {
-                  setUser(data.user);
-                } else {
-                  setUser(null);
-                }
-              } catch (parseError) {
-                console.error('Failed to parse refresh user JSON response:', parseError);
-                setUser(null);
-              }
+      const response = await fetch("/api/auth/me", {
+        credentials: "include",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        const isJson = contentType && contentType.includes("application/json");
+
+        if (isJson) {
+          try {
+            const data = await response.json();
+            if (data.success && data.user) {
+              setUser(data.user);
             } else {
-              console.warn('Non-JSON response from /api/auth/me');
               setUser(null);
             }
-          } else {
+          } catch (parseError) {
+            console.error("Failed to parse refresh user JSON response:", parseError);
             setUser(null);
           }
-        } catch (error) {
-          console.error('Failed to refresh user:', error);
+        } else {
+          console.warn("Non-JSON response from /api/auth/me");
           setUser(null);
-        } finally {
-          setLoading(false);
         }
-      };
+      } else {
+        setUser(null);
+      }
+    } catch (error: unknown) {
+      const name = error instanceof Error ? error.name : "";
+      if (name === "AbortError") {
+        console.warn("/api/auth/me aborted (timeout); keeping current session state");
+        return;
+      }
+      console.error("Failed to refresh user:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
@@ -253,7 +256,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshUser();
-  }, []);
+  }, [refreshUser]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        refreshUser();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refreshUser]);
 
   const value: AuthContextType = {
     user,

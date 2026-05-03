@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { safeDbOperation } from '@/lib/prisma';
-import { getCachedData, setCachedData } from '@/lib/performance';
+
+/** Do not cache /api/auth/me: serverless + 5m cache caused stale isAdmin and false "Access Denied" in AdminPanel. */
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,42 +28,29 @@ export async function GET(request: NextRequest) {
 
     console.log('👤 /api/auth/me - Token valid, user ID:', decoded.id);
 
-    // Check cache first
-    const cacheKey = `user-${decoded.id}`;
-    let user = getCachedData(cacheKey);
-    
-    if (!user) {
-      console.log('👤 /api/auth/me - Fetching user from database...');
-      // Find user using Prisma with graceful error handling
-      user = await safeDbOperation(async (prisma) => {
-        return await prisma.user.findUnique({
-          where: { id: decoded.id },
-          include: {
-            ownedCompany: true,
-            company: true,
-            companyMemberships: {
-              include: {
-                company: {
-                  select: {
-                    id: true,
-                    name: true
-                  }
-                }
-              }
-            }
-          }
-        });
+    console.log('👤 /api/auth/me - Fetching user from database...');
+    const user = await safeDbOperation(async (prisma) => {
+      return await prisma.user.findUnique({
+        where: { id: decoded.id },
+        include: {
+          ownedCompany: true,
+          company: true,
+          companyMemberships: {
+            include: {
+              company: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       });
-      
-      // Cache the user data
-      if (user) {
-        setCachedData(cacheKey, user);
-        console.log('👤 /api/auth/me - User found and cached');
-      } else {
-        console.log('👤 /api/auth/me - User not found in database');
-      }
-    } else {
-      console.log('👤 /api/auth/me - User loaded from cache');
+    });
+
+    if (!user) {
+      console.log('👤 /api/auth/me - User not found in database');
     }
 
     if (!user || (user as any).isBlocked) {
