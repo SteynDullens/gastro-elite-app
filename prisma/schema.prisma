@@ -183,6 +183,21 @@ enum Unit {
   portie
 }
 
+// Automated daily full JSON backup (stored on Vercel Blob); metadata for admin UI
+model DailyBackup {
+  id         String   @id @default(cuid())
+  dateKey    String   @unique // YYYY-MM-DD (Europe/Amsterdam)
+  label      String // e.g. "Back-up 03-05-2026"
+  blobUrl    String
+  pathname   String
+  sizeBytes  Int
+  backupType String   @default("all")
+  createdAt  DateTime @default(now())
+
+  @@index([dateKey])
+  @@index([createdAt])
+}
+
 // Audit log for tracking all important actions
 model AuditLog {
   id          String   @id @default(cuid())

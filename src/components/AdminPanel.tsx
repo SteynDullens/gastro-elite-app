@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 
@@ -36,6 +36,22 @@ interface User {
 
 interface AdminPanelProps {
   initialTab?: 'dashboard' | 'users' | 'business' | 'logs' | 'backup' | 'recovery';
+}
+
+interface DailyBackupRow {
+  id: string;
+  dateKey: string;
+  label: string;
+  blobUrl: string;
+  sizeBytes: number;
+  backupType: string;
+  createdAt: string;
+}
+
+function formatBackupBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 interface Stats {
@@ -77,6 +93,11 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
   const [message, setMessage] = useState("");
   const [businessFilter, setBusinessFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [dailyBackups, setDailyBackups] = useState<DailyBackupRow[]>([]);
+  const [dailyBackupsTotalBytes, setDailyBackupsTotalBytes] = useState(0);
+  const [backupMonthFilter, setBackupMonthFilter] = useState("");
+  const [loadingDailyBackups, setLoadingDailyBackups] = useState(false);
+  const [runningDailyBackup, setRunningDailyBackup] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -203,6 +224,55 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
     } catch (error: any) {
       setMessage(`❌ Fout bij backup: ${error.message || 'Onbekende fout'}`);
       setTimeout(() => setMessage(""), 5000);
+    }
+  };
+
+  const fetchDailyBackups = useCallback(async () => {
+    setLoadingDailyBackups(true);
+    try {
+      const q = backupMonthFilter
+        ? `?month=${encodeURIComponent(backupMonthFilter)}`
+        : "";
+      const res = await fetch(`/api/admin/daily-backups${q}`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.backups)) {
+        setDailyBackups(data.backups);
+        setDailyBackupsTotalBytes(typeof data.totalBytes === "number" ? data.totalBytes : 0);
+      } else {
+        setDailyBackups([]);
+        setDailyBackupsTotalBytes(0);
+      }
+    } catch {
+      setDailyBackups([]);
+      setDailyBackupsTotalBytes(0);
+    } finally {
+      setLoadingDailyBackups(false);
+    }
+  }, [backupMonthFilter]);
+
+  const triggerDailyBackupNow = async () => {
+    setRunningDailyBackup(true);
+    try {
+      setMessage("📦 Automatische back-up wordt gemaakt…");
+      const res = await fetch("/api/admin/daily-backups/trigger", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setMessage(`✅ ${data.label} opgeslagen (${formatBackupBytes(data.sizeBytes)})`);
+        await fetchDailyBackups();
+      } else {
+        setMessage(`❌ ${data.error || "Back-up mislukt"}`);
+      }
+      setTimeout(() => setMessage(""), 8000);
+    } catch (e: any) {
+      setMessage(`❌ ${e?.message || "Netwerkfout"}`);
+      setTimeout(() => setMessage(""), 8000);
+    } finally {
+      setRunningDailyBackup(false);
     }
   };
 
@@ -390,8 +460,10 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
     } else if (activeTab === 'recovery') {
       fetchDeletedItems();
       fetchAuditLogs();
+    } else if (activeTab === 'backup' && user?.isAdmin) {
+      fetchDailyBackups();
     }
-  }, [activeTab]);
+  }, [activeTab, user?.isAdmin, fetchDailyBackups]);
 
   // Update tab when initialTab prop changes
   useEffect(() => {
@@ -1249,6 +1321,105 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
             <p className="text-gray-600 mb-6">
               Maak backups van alle data of export specifieke datasets. Backups worden gedownload als JSON bestanden.
             </p>
+
+            <div className="border border-blue-100 bg-blue-50/60 rounded-lg p-5 mb-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Automatische dagelijkse back-up</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Iedere dag wordt een volledige back-up (label zoals <strong>Back-up DD-MM-YYYY</strong>) opgeslagen in
+                    cloud-opslag. Op productie: stel in Vercel <code className="text-xs bg-white px-1 rounded">BLOB_READ_WRITE_TOKEN</code>,{" "}
+                    <code className="text-xs bg-white px-1 rounded">CRON_SECRET</code> en een cron op{" "}
+                    <code className="text-xs bg-white px-1 rounded">/api/cron/daily-backup</code>.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={triggerDailyBackupNow}
+                  disabled={runningDailyBackup}
+                  className="shrink-0 px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {runningDailyBackup ? "Bezig…" : "Nu dagelijkse back-up draaien"}
+                </button>
+              </div>
+              <div className="flex flex-wrap items-end gap-4 text-sm">
+                <label className="flex flex-col gap-1">
+                  <span className="text-gray-600">Filter op maand</span>
+                  <input
+                    type="month"
+                    value={backupMonthFilter}
+                    onChange={(e) => setBackupMonthFilter(e.target.value)}
+                    className="border border-gray-300 rounded px-2 py-1.5 bg-white"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setBackupMonthFilter("")}
+                  className="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Alle maanden
+                </button>
+                <div className="text-gray-700">
+                  <span className="text-gray-500">Totale grootte (huidige lijst): </span>
+                  <strong>{formatBackupBytes(dailyBackupsTotalBytes)}</strong>
+                  <span className="text-gray-500 block text-xs mt-0.5">
+                    Het maximale volume hangt af van je Vercel Blob-plan; de database bewaart alleen metadata en URL’s.
+                  </span>
+                </div>
+              </div>
+              <div className="overflow-x-auto border border-gray-200 rounded-lg bg-white">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50 text-left text-gray-600">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Datum</th>
+                      <th className="px-3 py-2 font-medium">Label</th>
+                      <th className="px-3 py-2 font-medium">Grootte</th>
+                      <th className="px-3 py-2 font-medium">Download</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadingDailyBackups ? (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-6 text-center text-gray-500">
+                          Laden…
+                        </td>
+                      </tr>
+                    ) : dailyBackups.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-6 text-center text-gray-500">
+                          Nog geen automatische back-ups. Controleer cloud-opslag en cron, of gebruik de knop hierboven.
+                        </td>
+                      </tr>
+                    ) : (
+                      dailyBackups.map((row) => {
+                        const [y, m, d] = row.dateKey.split("-");
+                        const displayDate =
+                          y && m && d ? `${d}-${m}-${y}` : row.dateKey;
+                        return (
+                          <tr key={row.id} className="border-t border-gray-100">
+                            <td className="px-3 py-2 whitespace-nowrap">{displayDate}</td>
+                            <td className="px-3 py-2">{row.label}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {formatBackupBytes(row.sizeBytes)}
+                            </td>
+                            <td className="px-3 py-2">
+                              <a
+                                href={row.blobUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                              >
+                                JSON openen
+                              </a>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="border border-gray-200 rounded-lg p-4">

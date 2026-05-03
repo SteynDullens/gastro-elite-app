@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:network": "next dev --hostname 0.0.0.0",
-    "build": "prisma generate && npm run ensure-table && npm run ensure-recipe-tables && next build",
+    "build": "prisma generate && npm run ensure-table && npm run ensure-recipe-tables && npm run ensure-daily-backup && next build",
     "start": "next start",
     "lint": "eslint",
     "init-db": "tsx src/lib/init-db.ts",
@@ -13,7 +13,8 @@
     "migrate:baseline": "node scripts/baseline-existing-migrations.js || true",
     "migrate:deploy:safe": "npm run migrate:baseline || true; prisma migrate deploy || node scripts/check-and-create-table.js || true",
     "ensure-table": "node scripts/ensure-employee-invitation-table.js || true",
-    "ensure-recipe-tables": "node scripts/ensure-recipe-tables.js || true"
+    "ensure-recipe-tables": "node scripts/ensure-recipe-tables.js || true",
+    "ensure-daily-backup": "node scripts/ensure-daily-backup-table.js || true"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
