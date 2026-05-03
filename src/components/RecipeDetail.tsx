@@ -2,6 +2,7 @@
 
 import { useLanguage } from "@/context/LanguageContext";
 import Image from "next/image";
+import Link from "next/link";
 
 interface Ingredient {
   id: string;
@@ -34,7 +35,7 @@ export default function RecipeDetail({ recipe }: RecipeDetailProps) {
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">{recipe.name}</h1>
         
-        <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
+        <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center">
           {recipe.image ? (
             <Image
               src={recipe.image}
@@ -119,14 +120,13 @@ export default function RecipeDetail({ recipe }: RecipeDetailProps) {
 
       {/* Actions */}
       <div className="flex gap-4 justify-center">
-        <button 
-          className="px-6 py-2 text-white rounded-md hover:bg-opacity-90"
-          style={{ backgroundColor: '#FF8C00' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#cc7000'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FF8C00'}
+        <Link
+          href={`/recipes/${recipe.id}/edit`}
+          className="px-6 py-2 text-white rounded-md hover:bg-opacity-90 inline-block text-center"
+          style={{ backgroundColor: "#FF8C00" }}
         >
           {t.editRecipe}
-        </button>
+        </Link>
         <button 
           className="px-6 py-2 text-white rounded-md hover:bg-opacity-90"
           style={{ backgroundColor: '#FF8C00' }}
