@@ -430,17 +430,66 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
         credentials: "include",
       });
 
-      const result = await response.json();
-      if (result.success) {
-        setMessage(`Account ${userEmail} succesvol verwijderd`);
+      const result = await response.json().catch(() => null);
+      if (result?.success) {
+        setMessage(`Account ${userEmail} succesvol verwijderd (archief).`);
         fetchUsers();
         setTimeout(() => setMessage(""), 3000);
       } else {
-        setMessage(`Fout: ${result.error}`);
-        setTimeout(() => setMessage(""), 3000);
+        setMessage(`Fout: ${result?.error || response.statusText || "Onbekend"}`);
+        setTimeout(() => setMessage(""), 5000);
       }
     } catch (error) {
       setMessage("Netwerk fout bij verwijderen");
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
+  const resendVerificationEmail = async (
+    userId: string | number,
+    userEmail: string,
+    firstName: string,
+    lastName: string
+  ) => {
+    if (
+      !confirm(
+        `Weet je zeker dat je de verificatie-e-mail opnieuw wilt verzenden naar ${userEmail}? Er wordt een nieuwe verificatielink gegenereerd en per e-mail verzonden.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          userId,
+          action: "resend_verification",
+          data: { userEmail, firstName, lastName },
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        if (result.emailSent) {
+          setMessage(
+            `Verificatie-e-mail verzonden naar ${userEmail}. Controleer eventueel de spamfolder.`
+          );
+        } else {
+          setMessage(
+            `Waarschuwing: ${result.emailError || "E-mail werd mogelijk niet verzonden. Controleer SMTP-logboeken."}`
+          );
+        }
+        fetchUsers();
+        setTimeout(() => setMessage(""), 10000);
+      } else {
+        setMessage(`Fout: ${result.error || "Onbekende fout"}`);
+        setTimeout(() => setMessage(""), 5000);
+      }
+    } catch {
+      setMessage("Netwerk fout bij verzenden verificatie-e-mail");
       setTimeout(() => setMessage(""), 3000);
     }
   };
@@ -839,14 +888,29 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {(() => {
-                        // Determine status based on email verification and company approval
                         let statusText = '';
                         let statusClass = '';
-                        
+
                         if (!user.emailVerified) {
-                          statusText = 'Email nog niet geverifieerd';
-                          statusClass = 'bg-yellow-100 text-yellow-800';
-                        } else if (user.account_type === 'business' && user.companyStatus === 'pending') {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                resendVerificationEmail(
+                                  user.id,
+                                  user.email,
+                                  user.firstName,
+                                  user.lastName
+                                )
+                              }
+                              className="px-3 py-1.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-900 border border-yellow-300 hover:bg-yellow-200 transition-colors"
+                              title="Stuur verificatie-e-mail opnieuw"
+                            >
+                              E-mail nog niet geverifieerd — opnieuw verzenden
+                            </button>
+                          );
+                        }
+                        if (user.account_type === 'business' && user.companyStatus === 'pending') {
                           statusText = 'Wachten op goedkeuring';
                           statusClass = 'bg-amber-100 text-amber-800';
                         } else if (user.account_type === 'business' && user.companyStatus === 'rejected') {
@@ -862,7 +926,7 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                           statusText = 'Active';
                           statusClass = 'bg-green-100 text-green-800';
                         }
-                        
+
                         return (
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClass}`}>
                             {statusText}

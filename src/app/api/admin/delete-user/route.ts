@@ -25,7 +25,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     const result = await safeDbOperation(async (prisma) => {
-      // Check if user exists and get related data
       const user = await prisma.user.findUnique({
         where: { id: userId },
         include: {
@@ -40,15 +39,17 @@ export async function DELETE(request: NextRequest) {
         throw new Error('User not found');
       }
 
-      // Delete related data first
-      // Delete personal recipes (cascade should handle this, but being explicit)
-      if (user.personalRecipes.length > 0) {
-        await prisma.personalRecipe.deleteMany({
-          where: { userId: user.id }
-        });
+      if (user.deletedAt) {
+        throw new Error('Gebruiker is al verwijderd');
       }
 
-      // Update company recipes: remove creator reference (company still owns them)
+      if (user.id === decodedToken.id) {
+        throw new Error('Je kunt je eigen admin-account niet verwijderen');
+      }
+
+      const ownedCompanyId = user.ownedCompany?.id;
+
+      // Los company recipes van deze maker
       if (user.companyRecipesCreated.length > 0) {
         await prisma.companyRecipe.updateMany({
           where: { creatorId: user.id },
@@ -56,57 +57,62 @@ export async function DELETE(request: NextRequest) {
         });
       }
 
-      // Remove company memberships
+      // Eigen memberships weg
       if (user.companyMemberships.length > 0) {
         await prisma.companyMembership.deleteMany({
           where: { userId: user.id }
         });
       }
 
-      // Delete owned company if exists
-      if (user.ownedCompany) {
-        await prisma.company.delete({
-          where: { id: user.ownedCompany.id }
+      // Bedrijf van deze eigenaar: alle koppelingen losmaken vóór soft-delete
+      if (ownedCompanyId) {
+        await prisma.user.updateMany({
+          where: { companyId: ownedCompanyId },
+          data: { companyId: null }
+        });
+        await prisma.companyMembership.deleteMany({
+          where: { companyId: ownedCompanyId }
+        });
+        await prisma.employeeInvitation.deleteMany({
+          where: { companyId: ownedCompanyId }
         });
       }
 
-      // Remove from company employees if applicable
-      if (user.companyId) {
+      // Als employee bij ander bedrijf: companyId op user legen
+      if (user.companyId && user.companyId !== ownedCompanyId) {
         await prisma.user.update({
           where: { id: user.id },
           data: { companyId: null }
         });
       }
 
-      // Store user info for email notification before deletion
       const userEmail = user.email;
       const firstName = user.firstName;
       const lastName = user.lastName;
 
-      // Soft delete: Mark as deleted instead of actually deleting
-      await prisma.user.update({
-        where: { id: userId },
+      // Soft-delete persoonlijke recepten
+      await prisma.personalRecipe.updateMany({
+        where: { userId: user.id, deletedAt: null },
         data: {
           deletedAt: new Date(),
           deletedBy: decodedToken.id
         }
       });
 
-      // Soft delete personal recipes
-      if (user.personalRecipes.length > 0) {
-        await prisma.personalRecipe.updateMany({
-          where: { userId: user.id, deletedAt: null },
-          data: {
-            deletedAt: new Date(),
-            deletedBy: decodedToken.id
-          }
-        });
-      }
+      // Soft-delete gebruiker
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: decodedToken.id,
+          companyId: null
+        }
+      });
 
-      // Soft delete owned company
-      if (user.ownedCompany) {
+      // Soft-delete eigen bedrijf (record blijft bestaan voor recepten / historie)
+      if (ownedCompanyId) {
         await prisma.company.update({
-          where: { id: user.ownedCompany.id },
+          where: { id: ownedCompanyId },
           data: {
             deletedAt: new Date(),
             deletedBy: decodedToken.id
@@ -143,6 +149,13 @@ export async function DELETE(request: NextRequest) {
 
       return { success: true, deletedUser: { email: userEmail, id: user.id }, softDelete: true };
     });
+
+    if (!result) {
+      return NextResponse.json(
+        { success: false, error: 'Database niet beschikbaar of verwijderen mislukt.' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(result);
   } catch (error: any) {

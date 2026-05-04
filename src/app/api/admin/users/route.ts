@@ -1,7 +1,12 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, logError } from '@/lib/auth';
 import { safeDbOperation } from '@/lib/prisma';
-import { sendPasswordResetNotification } from '@/lib/email';
+import {
+  sendPasswordResetNotification,
+  sendPersonalRegistrationConfirmation,
+  sendBusinessRegistrationConfirmation,
+} from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   try {
@@ -119,6 +124,34 @@ export async function PUT(request: NextRequest) {
     let passwordToUse: string | null = null;
 
     const result = await safeDbOperation(async (prisma) => {
+      if (action === 'resend_verification') {
+        const full = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { ownedCompany: true },
+        });
+
+        if (!full) {
+          throw new Error('User not found');
+        }
+        if (full.deletedAt) {
+          throw new Error('Gebruiker is verwijderd');
+        }
+        if (full.emailVerified) {
+          throw new Error('E-mail is al geverifieerd');
+        }
+
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        await prisma.user.update({
+          where: { id: userId },
+          data: { emailVerificationToken: verificationToken },
+        });
+
+        return {
+          success: true as const,
+          resendPayload: { full, token: verificationToken },
+        };
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -203,7 +236,7 @@ export async function PUT(request: NextRequest) {
           throw new Error('Invalid action');
       }
 
-      return { success: true };
+      return { success: true as const };
     });
 
     if (!result) {
@@ -211,6 +244,67 @@ export async function PUT(request: NextRequest) {
         { error: 'Database operation failed' },
         { status: 500 }
       );
+    }
+
+    if ('resendPayload' in result && result.resendPayload) {
+      const { full, token } = result.resendPayload;
+      try {
+        if (full.ownedCompany) {
+          const c = full.ownedCompany;
+          emailSent = await sendBusinessRegistrationConfirmation(
+            {
+              firstName: full.firstName,
+              lastName: full.lastName,
+              email: full.email,
+              phone: full.phone || '',
+              companyName: c.name,
+              kvkNumber: c.kvkNumber,
+              vatNumber: c.vatNumber || undefined,
+              companyPhone: c.companyPhone || undefined,
+              address: {
+                country: 'Nederland',
+                postalCode: '',
+                street: c.address,
+                city: '',
+              },
+            },
+            token
+          );
+        } else {
+          emailSent = await sendPersonalRegistrationConfirmation(
+            {
+              firstName: full.firstName,
+              lastName: full.lastName,
+              email: full.email,
+              phone: full.phone || '',
+            },
+            token
+          );
+        }
+        if (!emailSent) {
+          emailError = 'E-mailfunctie heeft false geretourneerd';
+        }
+      } catch (sendErr: unknown) {
+        emailError =
+          sendErr instanceof Error ? sendErr.message : 'Onbekende e-mailfout';
+      }
+
+      await logError({
+        level: 'info',
+        message: `Admin resend_verification for user ID: ${userId}`,
+        userId: decoded.id,
+        url: request.url,
+        method: 'PUT',
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: emailSent
+          ? 'Verificatie-e-mail verzonden'
+          : 'Token bijgewerkt maar e-mail mogelijk niet verzonden',
+        emailSent,
+        emailError,
+      });
     }
 
     // Send email notification for password reset (after transaction completes)
@@ -315,7 +409,7 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { error: 'Failed to update user' },
+      { error: error?.message || 'Failed to update user' },
       { status: 500 }
     );
   }
