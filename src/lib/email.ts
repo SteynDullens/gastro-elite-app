@@ -5,6 +5,10 @@ import {
   isProbablyValidEmail,
   normalizeEmailForSMTP,
 } from '@/lib/email-address';
+import {
+  isResendConfigured,
+  sendHtmlViaResend,
+} from '@/lib/email-resend';
 
 // Get email configuration (called at runtime to ensure env vars are loaded)
 // Note: .trim() removes any newline characters that may have been added by environment variable tools
@@ -567,6 +571,19 @@ export async function sendPersonalRegistrationConfirmation(
       `,
     };
 
+    if (isResendConfigured()) {
+      console.log('📧 Verificatiemail via Resend (geen gedeelde SMTP-relay)');
+      const out = await sendHtmlViaResend({
+        to: toAddr,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      });
+      if (!out.success) {
+        console.error('❌ Resend personal registration:', out.error);
+      }
+      return out;
+    }
+
     const info = await getTransporter().sendMail(mailOptions);
     const out = mailSendResultFromInfo(info);
     if (!out.success) {
@@ -642,6 +659,19 @@ export async function sendBusinessRegistrationConfirmation(
         </div>
       `,
     };
+
+    if (isResendConfigured()) {
+      console.log('📧 Verificatiemail via Resend (geen gedeelde SMTP-relay)');
+      const out = await sendHtmlViaResend({
+        to: toAddr,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      });
+      if (!out.success) {
+        console.error('❌ Resend business registration:', out.error);
+      }
+      return out;
+    }
 
     const info = await getTransporter().sendMail(mailOptions);
     const out = mailSendResultFromInfo(info);
