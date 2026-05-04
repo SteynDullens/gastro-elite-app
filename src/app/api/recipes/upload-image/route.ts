@@ -2,11 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import {
+  put,
+  BlobStoreNotFoundError,
+  BlobStoreSuspendedError,
+} from "@vercel/blob";
 
 /** Vercel serverless request body is ~4.5MB max; stay under with margin. */
 const MAX_BYTES = 4 * 1024 * 1024;
 
 export const runtime = "nodejs";
+
+/** Trim env value; strip wrapping quotes; remove accidental whitespace/newlines (common paste mistakes). */
+function getBlobReadWriteToken(): string | undefined {
+  const raw = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!raw || typeof raw !== "string") return undefined;
+  let t = raw.trim();
+  if (
+    (t.startsWith('"') && t.endsWith('"')) ||
+    (t.startsWith("'") && t.endsWith("'"))
+  ) {
+    t = t.slice(1, -1).trim();
+  }
+  t = t.replace(/\s+/g, "");
+  return t.length > 0 ? t : undefined;
+}
+
+const STORE_NOT_FOUND_HELP =
+  "Het Blob-token hoort bij een store die niet (meer) bestaat of bij een ander Vercel-team hoort. " +
+  "Los het zo op: (1) Vercel → hetzelfde team als deze app → Storage → Blob. " +
+  "(2) Maak een nieuwe Blob-store aan of open een bestaande store die aan dit project hangt. " +
+  "(3) Onder de store: nieuw Read/Write-token genereren. " +
+  "(4) Project → Settings → Environment Variables → BLOB_READ_WRITE_TOKEN voor Production plakken (alleen de token, geen aanhalingstekens). " +
+  "(5) Redeploy. " +
+  "Zie: https://vercel.com/docs/storage/vercel-blob";
 
 function looksLikeImageFile(file: File): boolean {
   const t = (file.type || "").toLowerCase().trim();
@@ -50,13 +79,19 @@ function contentTypeForExtension(ext: string): string {
 }
 
 function uploadErrorMessage(err: unknown): string {
+  if (err instanceof BlobStoreNotFoundError) {
+    return STORE_NOT_FOUND_HELP;
+  }
+  if (err instanceof BlobStoreSuspendedError) {
+    return "Deze Blob-store is opgeschort in Vercel. Activeer de store opnieuw of maak een nieuwe store en token.";
+  }
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
   if (lower.includes("token") || lower.includes("401") || lower.includes("unauthorized")) {
     return "Blob-token ongeldig of ontbreekt. Controleer BLOB_READ_WRITE_TOKEN in Vercel (Production).";
   }
   if (lower.includes("not found") || lower.includes("store")) {
-    return "Blob-store niet bereikbaar. Controleer Storage → Blob in Vercel.";
+    return STORE_NOT_FOUND_HELP;
   }
   if (lower.includes("too large")) {
     return "Bestand te groot voor opslag.";
@@ -82,17 +117,18 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_BYTES) {
       return NextResponse.json(
-        { error: `Bestand te groot (max ${Math.floor(MAX_BYTES / (1024 * 1024))} MB op deze omgeving).` },
+        {
+          error: `Bestand te groot (max ${Math.floor(MAX_BYTES / (1024 * 1024))} MB op deze omgeving).`,
+        },
         { status: 400 }
       );
     }
 
     const extension = extensionFromFile(file);
     const isVercel = process.env.VERCEL === "1";
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    const blobToken = getBlobReadWriteToken();
 
     if (blobToken) {
-      const { put } = await import("@vercel/blob");
       const timestamp = Date.now();
       const filename = `recipe-images/recipe_${timestamp}.${extension}`;
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -136,9 +172,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Recipe image upload error:", error);
     const detail = uploadErrorMessage(error);
-    return NextResponse.json(
-      { error: `Upload mislukt: ${detail}` },
-      { status: 500 }
-    );
+    const status =
+      error instanceof BlobStoreNotFoundError ||
+      error instanceof BlobStoreSuspendedError
+        ? 503
+        : 500;
+    return NextResponse.json({ error: `Upload mislukt: ${detail}` }, { status });
   }
 }
