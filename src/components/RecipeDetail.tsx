@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import Image from "next/image";
 import Link from "next/link";
 import RecipeImagePlaceholder from "@/components/RecipeImagePlaceholder";
+import { displayRecipeImageUrl } from "@/lib/recipe-image-url";
 
 interface Ingredient {
   id: string;
@@ -48,7 +49,7 @@ export default function RecipeDetail({ recipe }: RecipeDetailProps) {
         <div className="relative aspect-video bg-stone-100 rounded-lg overflow-hidden border border-stone-200/90 shadow-sm">
           {showImage ? (
             <Image
-              src={recipe.image!}
+              src={displayRecipeImageUrl(recipe.image!)}
               alt={recipe.name}
               fill
               unoptimized

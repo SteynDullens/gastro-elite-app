@@ -9,6 +9,7 @@ import { ToastContainer } from "@/components/Toast";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { displayRecipeImageUrl } from "@/lib/recipe-image-url";
 import RecipeImagePlaceholder from "@/components/RecipeImagePlaceholder";
 
 const TrashIcon = (props: { className?: string }) => (
@@ -307,7 +308,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-stone-200/90 bg-stone-100">
               {showImage ? (
                 <Image
-                  src={recipe.image!}
+                  src={displayRecipeImageUrl(recipe.image!)}
                   alt={recipe.name ?? ""}
                   width={96}
                   height={96}
@@ -455,7 +456,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           <div className="relative aspect-video overflow-hidden bg-stone-100 border-b border-stone-200/60">
             {showImage ? (
               <Image
-                src={recipe.image!}
+                src={displayRecipeImageUrl(recipe.image!)}
                 alt={recipe.name ?? ""}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"

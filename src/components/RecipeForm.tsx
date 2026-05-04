@@ -5,6 +5,7 @@ import { useRecipes } from "@/context/RecipeContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { displayRecipeImageUrl } from "@/lib/recipe-image-url";
 
 interface Ingredient {
   id: string;
@@ -535,7 +536,11 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
             <div className="mt-3">
               <div className="w-full aspect-video bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview || formData.image} alt="Preview" className="h-full object-cover" />
+                <img
+                  src={imagePreview || displayRecipeImageUrl(formData.image)}
+                  alt="Preview"
+                  className="h-full object-cover"
+                />
               </div>
               {isUploading && <p className="text-sm text-gray-500 mt-1">{t.uploading}</p>}
             </div>

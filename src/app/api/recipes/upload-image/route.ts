@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
         try {
           const blob = await put(filename, buffer, {
-            access: "public",
+            access: "private",
             addRandomSuffix: true,
             contentType,
             token: value,
