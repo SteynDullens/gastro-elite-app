@@ -28,24 +28,11 @@ function normalizeTokenString(raw: string): string {
 }
 
 /**
- * Leest `BLOB_READ_WRITE_TOKEN`, of — als die ontbreekt of ongeldig lijkt — een andere env-var
- * waarvan de **waarde** eruitziet als `vercel_blob_rw_...` (zoals Vercel soms aanmaakt na Storage-koppeling).
+ * Alle unieke `vercel_blob_rw_`-tokens in env, **met andere keys vóór** `BLOB_READ_WRITE_TOKEN`.
+ * Zo wordt een verouderde handmatige `BLOB_READ_WRITE_TOKEN` niet meer voorrang gegeven boven een
+ * nieuwe token die Vercel onder een andere variabelenaam heeft gezet.
  */
-function resolveBlobReadWriteToken(): string | undefined {
-  const fromPrimary = process.env.BLOB_READ_WRITE_TOKEN;
-  const primaryNorm =
-    fromPrimary && typeof fromPrimary === "string"
-      ? normalizeTokenString(fromPrimary)
-      : undefined;
-  if (primaryNorm && VERCEL_BLOB_RW_RE.test(primaryNorm)) {
-    return primaryNorm;
-  }
-  if (primaryNorm) {
-    console.warn(
-      "[recipes/upload-image] BLOB_READ_WRITE_TOKEN is geen geldig vercel_blob_rw_-token; zoek alternatief in env"
-    );
-  }
-
+function collectBlobTokenCandidates(): { key: string; value: string }[] {
   const matches: { key: string; value: string }[] = [];
   for (const [key, val] of Object.entries(process.env)) {
     if (!val || typeof val !== "string") continue;
@@ -54,29 +41,18 @@ function resolveBlobReadWriteToken(): string | undefined {
       matches.push({ key, value: n });
     }
   }
-  if (matches.length === 0) {
-    return primaryNorm && primaryNorm.length > 0 ? primaryNorm : undefined;
+  const seen = new Set<string>();
+  const unique: { key: string; value: string }[] = [];
+  for (const m of matches) {
+    if (seen.has(m.value)) continue;
+    seen.add(m.value);
+    unique.push(m);
   }
-  if (matches.length === 1) {
-    if (matches[0]!.key !== "BLOB_READ_WRITE_TOKEN") {
-      console.warn(
-        `[recipes/upload-image] Gebruik Blob-token uit env-key "${matches[0]!.key}". Zet dezelfde waarde in BLOB_READ_WRITE_TOKEN om verwarring te voorkomen.`
-      );
-    }
-    return matches[0]!.value;
-  }
-  const preferred =
-    matches.find((m) => m.key === "BLOB_READ_WRITE_TOKEN") ||
-    matches.find(
-      (m) =>
-        m.key.endsWith("_READ_WRITE_TOKEN") ||
-        m.key.includes("vercel_blob")
-    ) ||
-    matches[0];
-  console.warn(
-    `[recipes/upload-image] Meerdere Blob-tokens in env; gebruik "${preferred!.key}". Ruim dubbele vars op.`
-  );
-  return preferred!.value;
+  const nonPrimary = unique
+    .filter((m) => m.key !== "BLOB_READ_WRITE_TOKEN")
+    .sort((a, b) => a.key.localeCompare(b.key));
+  const primary = unique.filter((m) => m.key === "BLOB_READ_WRITE_TOKEN");
+  return [...nonPrimary, ...primary];
 }
 
 const STORE_NOT_FOUND_HELP =
@@ -177,21 +153,44 @@ export async function POST(request: NextRequest) {
 
     const extension = extensionFromFile(file);
     const isVercel = process.env.VERCEL === "1";
-    const blobToken = resolveBlobReadWriteToken();
+    const candidates = collectBlobTokenCandidates();
 
-    if (blobToken) {
+    if (candidates.length > 0) {
       const timestamp = Date.now();
       const filename = `recipe-images/recipe_${timestamp}.${extension}`;
       const buffer = Buffer.from(await file.arrayBuffer());
       const contentType = file.type?.trim() || contentTypeForExtension(extension);
 
-      const blob = await put(filename, buffer, {
-        access: "public",
-        addRandomSuffix: true,
-        contentType,
-        token: blobToken,
-      });
-      return NextResponse.json({ success: true, url: blob.url });
+      let lastRetryable: unknown;
+      for (const { key, value } of candidates) {
+        try {
+          const blob = await put(filename, buffer, {
+            access: "public",
+            addRandomSuffix: true,
+            contentType,
+            token: value,
+          });
+          if (key !== "BLOB_READ_WRITE_TOKEN") {
+            console.warn(
+              `[recipes/upload-image] Upload gelukt met token uit env-key "${key}". Vervang de waarde van BLOB_READ_WRITE_TOKEN op Vercel door deze token om dubbele vars te vermijden.`
+            );
+          }
+          return NextResponse.json({ success: true, url: blob.url });
+        } catch (err) {
+          const retry =
+            err instanceof BlobStoreNotFoundError ||
+            err instanceof BlobStoreSuspendedError;
+          if (retry && candidates.length > 1) {
+            console.warn(
+              `[recipes/upload-image] Token uit "${key}" faalde (${err instanceof Error ? err.constructor.name : "?"}), probeer volgende…`
+            );
+            lastRetryable = err;
+            continue;
+          }
+          throw err;
+        }
+      }
+      if (lastRetryable) throw lastRetryable;
     }
 
     /** Vercel serverless FS is read-only — local uploads cannot work without Blob. */
