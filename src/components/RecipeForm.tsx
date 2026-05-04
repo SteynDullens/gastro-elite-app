@@ -329,7 +329,18 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         body: form,
         credentials: "include",
       });
-      const data = await res.json();
+      let data: { url?: string; error?: string } = {};
+      try {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          data = await res.json();
+        } else {
+          await res.text();
+        }
+      } catch {
+        alert(t.uploadFailed);
+        return;
+      }
       if (res.ok && data.url) {
         setFormData({ ...formData, image: data.url });
       } else {

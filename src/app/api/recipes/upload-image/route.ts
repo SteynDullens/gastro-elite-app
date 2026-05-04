@@ -3,6 +3,21 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
+/** Vercel serverless request body is ~4.5MB max; stay under with margin. */
+const MAX_BYTES = 4 * 1024 * 1024;
+
+export const runtime = "nodejs";
+
+function looksLikeImageFile(file: File): boolean {
+  const t = (file.type || "").toLowerCase().trim();
+  if (t.startsWith("image/")) return true;
+  /** Sommige mobiele browsers sturen geen MIME-type mee */
+  if (!t && file.name) {
+    return /\.(jpe?g|png|gif|webp|heic|heif|bmp|svg)$/i.test(file.name);
+  }
+  return false;
+}
+
 function extensionFromFile(file: File): string {
   const mime = (file.type || "").toLowerCase();
   if (mime.includes("jpeg") || mime === "image/jpg") return "jpg";
@@ -10,6 +25,8 @@ function extensionFromFile(file: File): string {
   if (mime.includes("webp")) return "webp";
   if (mime.includes("gif")) return "gif";
   if (mime.includes("svg")) return "svg";
+  if (mime.includes("heic")) return "heic";
+  if (mime.includes("heif")) return "heif";
   const n = file.name || "";
   const i = n.lastIndexOf(".");
   if (i >= 0) {
@@ -28,7 +45,23 @@ function contentTypeForExtension(ext: string): string {
   if (ext === "webp") return "image/webp";
   if (ext === "gif") return "image/gif";
   if (ext === "svg") return "image/svg+xml";
+  if (ext === "heic" || ext === "heif") return "image/heic";
   return "image/jpeg";
+}
+
+function uploadErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+  if (lower.includes("token") || lower.includes("401") || lower.includes("unauthorized")) {
+    return "Blob-token ongeldig of ontbreekt. Controleer BLOB_READ_WRITE_TOKEN in Vercel (Production).";
+  }
+  if (lower.includes("not found") || lower.includes("store")) {
+    return "Blob-store niet bereikbaar. Controleer Storage → Blob in Vercel.";
+  }
+  if (lower.includes("too large")) {
+    return "Bestand te groot voor opslag.";
+  }
+  return msg.length > 200 ? `${msg.slice(0, 200)}…` : msg;
 }
 
 export async function POST(request: NextRequest) {
@@ -40,18 +73,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "File must be an image" }, { status: 400 });
+    if (!looksLikeImageFile(file)) {
+      return NextResponse.json(
+        { error: "Alleen afbeeldingsbestanden zijn toegestaan." },
+        { status: 400 }
+      );
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json(
+        { error: `Bestand te groot (max ${Math.floor(MAX_BYTES / (1024 * 1024))} MB op deze omgeving).` },
+        { status: 400 }
+      );
     }
 
     const extension = extensionFromFile(file);
     const isVercel = process.env.VERCEL === "1";
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    if (blobToken) {
       const { put } = await import("@vercel/blob");
       const timestamp = Date.now();
       const filename = `recipe-images/recipe_${timestamp}.${extension}`;
@@ -62,6 +102,7 @@ export async function POST(request: NextRequest) {
         access: "public",
         addRandomSuffix: true,
         contentType,
+        token: blobToken,
       });
       return NextResponse.json({ success: true, url: blob.url });
     }
@@ -94,6 +135,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, url });
   } catch (error) {
     console.error("Recipe image upload error:", error);
-    return NextResponse.json({ error: "Failed to upload image" }, { status: 500 });
+    const detail = uploadErrorMessage(error);
+    return NextResponse.json(
+      { error: `Upload mislukt: ${detail}` },
+      { status: 500 }
+    );
   }
 }
