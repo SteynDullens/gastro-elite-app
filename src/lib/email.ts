@@ -471,22 +471,52 @@ export async function sendBusinessRegistrationNotification(
   }
 }
 
+function mailSendResultFromInfo(info: {
+  messageId?: string;
+  response?: string;
+  accepted?: unknown[];
+  rejected?: unknown[];
+}): EmailSendResult {
+  if (info.rejected && info.rejected.length > 0) {
+    const rejectedStrings = info.rejected.map((r: unknown) =>
+      typeof r === 'string' ? r : (r as { address?: string }).address || String(r)
+    );
+    return {
+      success: false,
+      rejected: rejectedStrings,
+      error: `SMTP weigerde ontvanger(s): ${rejectedStrings.join(', ')}`,
+    };
+  }
+  if (!info.accepted || info.accepted.length === 0) {
+    return {
+      success: false,
+      error: 'SMTP-server accepteerde geen ontvangers (controleer adres en SPF/DKIM).',
+    };
+  }
+  const acceptedStrings = info.accepted.map((a: unknown) =>
+    typeof a === 'string' ? a : (a as { address?: string }).address || String(a)
+  );
+  return {
+    success: true,
+    messageId: info.messageId,
+    accepted: acceptedStrings,
+    response: info.response,
+  };
+}
+
 // Send personal registration confirmation
 export async function sendPersonalRegistrationConfirmation(
   data: PersonalRegistrationData,
   verificationToken: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   try {
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
-    
+
     console.log('📧 Sending personal registration confirmation to:', data.email);
-    console.log('📧 From:', emailConfig.auth.user);
-    console.log('📧 Verification token:', verificationToken);
-    
+
     const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
-    console.log('📧 Verification URL:', verificationUrl);
-    
+
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
       to: data.email,
@@ -522,38 +552,23 @@ export async function sendPersonalRegistrationConfirmation(
           
           <p>Met vriendelijke groet,<br>Het Gastro-Elite Team</p>
         </div>
-      `
+      `,
     };
 
-    const transporter = getTransporter();
-    
-    // First verify the connection
-    console.log('📧 Verifying SMTP connection...');
-    try {
-      await transporter.verify();
-      console.log('✅ SMTP connection verified!');
-    } catch (verifyError: any) {
-      console.error('❌ SMTP verification failed:', verifyError.message);
-      console.error('Full verify error:', JSON.stringify(verifyError, Object.getOwnPropertyNames(verifyError)));
+    const info = await getTransporter().sendMail(mailOptions);
+    const out = mailSendResultFromInfo(info);
+    if (!out.success) {
+      console.error('❌ Personal registration mail niet geaccepteerd:', out.error);
     }
-    
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Personal registration email sent successfully!');
-    console.log('📧 Message ID:', result.messageId);
-    console.log('📧 Response:', result.response);
-    console.log('📧 Accepted:', result.accepted);
-    console.log('📧 Rejected:', result.rejected);
-    console.log('📧 Envelope:', JSON.stringify(result.envelope));
-    return true;
-  } catch (error: any) {
-    console.error('❌ Error sending personal registration confirmation');
-    console.error('Error name:', error.name);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
-    console.error('Error command:', error.command);
-    console.error('Error responseCode:', error.responseCode);
-    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    return false;
+    return out;
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string; responseCode?: string };
+    console.error('❌ Error sending personal registration confirmation:', err?.message);
+    return {
+      success: false,
+      error: err?.message || 'Onbekende SMTP-fout',
+      code: err?.code,
+    };
   }
 }
 
@@ -561,12 +576,12 @@ export async function sendPersonalRegistrationConfirmation(
 export async function sendBusinessRegistrationConfirmation(
   data: BusinessRegistrationData,
   verificationToken: string
-): Promise<boolean> {
+): Promise<EmailSendResult> {
   try {
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
     const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
-    
+
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
       to: data.email,
@@ -605,14 +620,23 @@ export async function sendBusinessRegistrationConfirmation(
           
           <p>Met vriendelijke groet,<br>Het Gastro-Elite Team</p>
         </div>
-      `
+      `,
     };
 
-    await getTransporter().sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    console.error('Error sending business registration confirmation:', error);
-    return false;
+    const info = await getTransporter().sendMail(mailOptions);
+    const out = mailSendResultFromInfo(info);
+    if (!out.success) {
+      console.error('❌ Business registration confirmation niet geaccepteerd:', out.error);
+    }
+    return out;
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string };
+    console.error('Error sending business registration confirmation:', err?.message);
+    return {
+      success: false,
+      error: err?.message || 'Onbekende SMTP-fout',
+      code: err?.code,
+    };
   }
 }
 

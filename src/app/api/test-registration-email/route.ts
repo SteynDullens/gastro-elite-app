@@ -32,6 +32,17 @@ export async function POST(request: Request) {
       const result = await sendPersonalRegistrationConfirmation(personalData, verificationToken);
       console.log('✅ Email sending result:', result);
       
+      if (!result.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: result.error || 'E-mail verzenden mislukt',
+            code: result.code,
+          },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json({
         success: true,
         message: `Registration email sent to ${email}`,

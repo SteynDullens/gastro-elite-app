@@ -16,10 +16,10 @@ async function testRegistrationEmail() {
     console.log('📧 Sending registration email...');
     const result = await sendPersonalRegistrationConfirmation(testData, verificationToken);
     
-    if (result) {
+    if (result.success) {
       console.log('✅ Registration email sent successfully!');
     } else {
-      console.log('❌ Registration email failed!');
+      console.log('❌ Registration email failed:', result.error || 'unknown');
     }
     
   } catch (error) {

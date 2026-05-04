@@ -20,9 +20,9 @@ export async function POST(request: Request) {
     };
     
     const verificationToken = 'test-token-' + Date.now();
-    const success = await sendPersonalRegistrationConfirmation(testData, verificationToken);
+    const mailResult = await sendPersonalRegistrationConfirmation(testData, verificationToken);
     
-    if (success) {
+    if (mailResult.success) {
       console.log('✅ Test email sent successfully to:', email);
       return NextResponse.json({ 
         success: true, 
@@ -30,10 +30,10 @@ export async function POST(request: Request) {
         verificationToken: verificationToken
       });
     } else {
-      console.log('❌ Failed to send test email to:', email);
+      console.log('❌ Failed to send test email to:', email, mailResult.error);
       return NextResponse.json({ 
         success: false, 
-        message: 'Failed to send test email' 
+        message: mailResult.error || 'Failed to send test email' 
       }, { status: 500 });
     }
     

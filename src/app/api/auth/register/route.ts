@@ -217,11 +217,23 @@ export async function POST(request: NextRequest) {
           
           try {
             console.log('📧 Sending business registration emails...');
-            await Promise.all([
-              sendBusinessRegistrationNotification(businessData, kvkDocumentPath, kvkDocumentData, company.id),
-              sendBusinessRegistrationConfirmation(businessData, verificationToken)
-            ]);
-            console.log('✅ Business registration emails sent successfully');
+            await sendBusinessRegistrationNotification(
+              businessData,
+              kvkDocumentPath,
+              kvkDocumentData,
+              company.id
+            );
+            const confirmResult = await sendBusinessRegistrationConfirmation(
+              businessData,
+              verificationToken
+            );
+            if (!confirmResult.success) {
+              console.error(
+                '❌ Business verification e-mail mislukt:',
+                confirmResult.error
+              );
+            }
+            console.log('✅ Business registration notification flow done');
           } catch (error) {
             console.error('❌ Error sending business registration emails:', error);
           }
@@ -235,8 +247,18 @@ export async function POST(request: NextRequest) {
           
           try {
             console.log('📧 Sending personal registration email...');
-            await sendPersonalRegistrationConfirmation(personalData, verificationToken);
-            console.log('✅ Personal registration email sent successfully');
+            const pResult = await sendPersonalRegistrationConfirmation(
+              personalData,
+              verificationToken
+            );
+            if (pResult.success) {
+              console.log('✅ Personal registration email sent successfully');
+            } else {
+              console.error(
+                '❌ Personal registration email failed:',
+                pResult.error
+              );
+            }
           } catch (error) {
             console.error('❌ Error sending personal registration email:', error);
           }

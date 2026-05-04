@@ -6,6 +6,7 @@ import {
   sendPasswordResetNotification,
   sendPersonalRegistrationConfirmation,
   sendBusinessRegistrationConfirmation,
+  type EmailSendResult,
 } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
@@ -249,9 +250,10 @@ export async function PUT(request: NextRequest) {
     if ('resendPayload' in result && result.resendPayload) {
       const { full, token } = result.resendPayload;
       try {
+        let mailResult: EmailSendResult;
         if (full.ownedCompany) {
           const c = full.ownedCompany;
-          emailSent = await sendBusinessRegistrationConfirmation(
+          mailResult = await sendBusinessRegistrationConfirmation(
             {
               firstName: full.firstName,
               lastName: full.lastName,
@@ -271,7 +273,7 @@ export async function PUT(request: NextRequest) {
             token
           );
         } else {
-          emailSent = await sendPersonalRegistrationConfirmation(
+          mailResult = await sendPersonalRegistrationConfirmation(
             {
               firstName: full.firstName,
               lastName: full.lastName,
@@ -281,8 +283,11 @@ export async function PUT(request: NextRequest) {
             token
           );
         }
-        if (!emailSent) {
-          emailError = 'E-mailfunctie heeft false geretourneerd';
+        emailSent = mailResult.success;
+        if (!mailResult.success) {
+          emailError =
+            mailResult.error ||
+            'E-mail kon niet worden verzonden (zie serverlogs voor details).';
         }
       } catch (sendErr: unknown) {
         emailError =

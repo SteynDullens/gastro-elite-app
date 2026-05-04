@@ -479,7 +479,7 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
           );
         } else {
           setMessage(
-            `Waarschuwing: ${result.emailError || "E-mail werd mogelijk niet verzonden. Controleer SMTP-logboeken."}`
+            `Waarschuwing: ${result.emailError || "E-mail werd mogelijk niet verzonden."}\n\nDe verificatietoken is wel vernieuwd in de database — gebruikers kunnen niet op een oude link verifiëren tot een nieuwe mail aankomt.`
           );
         }
         fetchUsers();
