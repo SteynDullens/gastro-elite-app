@@ -1,3 +1,6 @@
+/**
+ * BACKUP — `/recipes` pagina vóór dezelfde refresh. Herstellen: naar `page.tsx` kopiëren.
+ */
 "use client";
 
 import RecipeList from "@/components/RecipeList";
@@ -82,17 +85,15 @@ export default function RecipesPage() {
   }
   
   return (
-    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <BackBubble href="/" className="absolute top-4 left-4 z-10" />
       
-      <header className="text-center pt-2 space-y-2">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500 font-medium">Gastro-Elite</p>
-        <h1 className="text-3xl sm:text-4xl font-semibold text-stone-900 tracking-tight">{t.recipes}</h1>
-        <p className="text-sm text-stone-500 max-w-lg mx-auto leading-relaxed">{t.manageRecipeCollection}</p>
-      </header>
+      <div className="text-center">
+        <h1 className="text-3xl font-bold">{t.recipes}</h1>
+      </div>
       
       {/* Recipe List */}
-      <div className="bg-white border border-stone-200/90 rounded-lg p-5 sm:p-6 shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
         {loading ? (
           <div className="text-center py-8">
             <div className="text-gray-500">{t.loading}</div>

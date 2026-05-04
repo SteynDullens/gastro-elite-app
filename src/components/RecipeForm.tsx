@@ -327,6 +327,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       const res = await fetch("/api/recipes/upload-image", {
         method: "POST",
         body: form,
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok && data.url) {

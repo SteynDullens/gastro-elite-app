@@ -1,3 +1,7 @@
+/**
+ * BACKUP — recepturenlijst (RecipeList) zoals vóór de “gourmet / exclusiever” refresh.
+ * Herstellen: kopieer dit bestand naar `RecipeList.tsx` (overschrijven).
+ */
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -8,25 +12,6 @@ import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/Toast";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
-import RecipeImagePlaceholder from "@/components/RecipeImagePlaceholder";
-
-const TrashIcon = (props: { className?: string }) => (
-  <svg
-    className={props.className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    aria-hidden
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-    />
-  </svg>
-);
 
 interface Ingredient {
   id: string;
@@ -286,38 +271,35 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
   // Recipe card component (reusable)
   const RecipeCard = ({ recipe, variant = "grid" }: { recipe: Recipe; variant?: "grid" | "row" | "alphabetical" }) => {
-    const [coverFailed, setCoverFailed] = useState(false);
-
-    useEffect(() => {
-      setCoverFailed(false);
-    }, [recipe.id, recipe.image]);
-
     const isRow = variant === "row";
     const isAlphabetical = variant === "alphabetical";
     const cardCategories = recipe.categories ?? [];
     const cardIngredients = recipe.ingredients ?? [];
-    const showImage = Boolean(recipe.image) && !coverFailed;
 
     if (isRow) {
-      // Row view — list / table style
+      // Row View - Professional Gronda-style
       return (
-        <div className="bg-white border-b border-stone-200/80 hover:bg-stone-50/80 transition-colors duration-200">
+        <div className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
           <div className="flex items-center gap-6 p-4">
             {/* Image */}
-            <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-stone-200/90 bg-stone-100">
-              {showImage ? (
+            <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+              {recipe.image ? (
                 <Image
-                  src={recipe.image!}
+                  src={recipe.image}
                   alt={recipe.name ?? ""}
                   width={96}
                   height={96}
                   className="h-full w-full object-cover"
                   unoptimized
                   referrerPolicy="no-referrer"
-                  onError={() => setCoverFailed(true)}
                 />
               ) : (
-                <RecipeImagePlaceholder compact className="h-full w-full" />
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
               )}
             </div>
             
@@ -326,13 +308,13 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-stone-900 truncate tracking-tight">{recipe.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">{recipe.name}</h3>
                     {recipe.companyId ? (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
                         {t.businessDatabase || 'Business'}
                       </span>
                     ) : recipe.userId ? (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded border border-slate-200 bg-slate-50 text-slate-800">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
                         {t.personalDatabase || 'Personal'}
                       </span>
                     ) : null}
@@ -343,7 +325,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                       {cardCategories.slice(0, 3).map((category) => (
                         <span
                           key={typeof category === 'string' ? category : (category as any).id}
-                          className="px-2 py-0.5 bg-stone-50 text-stone-600 text-xs rounded-md border border-stone-200/80"
+                          className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
                         >
                           {translateCategory(typeof category === 'string' ? category : (category as any).name)}
                         </span>
@@ -354,7 +336,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-4 text-sm text-stone-500">
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
                     {cardIngredients.length > 0 && (
                       <span>{cardIngredients.length} {cardIngredients.length === 1 ? 'ingredient' : 'ingredients'}</span>
                     )}
@@ -372,28 +354,27 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link
+                  <a 
                     href={`/recipes/${recipe.id}`}
-                    className="px-4 py-2 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
+                    className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors font-medium"
                   >
                     {t.view}
-                  </Link>
+                  </a>
                   {canEditRecipe(recipe) && (
-                    <Link
+                    <a 
                       href={`/recipes/${recipe.id}/edit`}
-                      className="px-4 py-2 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 transition-colors"
+                      className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium border border-gray-300 transition-colors"
                     >
                       {t.edit}
-                    </Link>
+                    </a>
                   )}
                   {canDeleteRecipe(recipe) && (
                     <button
-                      type="button"
                       onClick={() => handleDeleteClick(recipe.id)}
-                      className="inline-flex items-center justify-center px-3 py-2 text-red-700 text-sm rounded-md border border-red-200 bg-white hover:bg-red-50 font-medium transition-colors"
+                      className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 font-medium transition-colors"
                       title={t.delete || 'Delete'}
                     >
-                      <TrashIcon className="w-4 h-4" />
+                      🗑️
                     </button>
                   )}
                 </div>
@@ -403,45 +384,44 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         </div>
       );
     } else if (isAlphabetical) {
-      // Alphabetical View — minimal list
+      // Alphabetical View - Simple list item
       return (
-        <div className="bg-white border-b border-stone-200/80 hover:bg-stone-50/60 transition-colors duration-150">
+        <div className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <h3 className="text-base font-medium text-stone-900 tracking-tight">{recipe.name}</h3>
+              <h3 className="text-base font-medium text-gray-900">{recipe.name}</h3>
               {recipe.companyId ? (
-                <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
                   {t.businessDatabase || 'Business'}
                 </span>
               ) : recipe.userId ? (
-                <span className="px-2 py-0.5 text-xs font-medium rounded border border-slate-200 bg-slate-50 text-slate-800">
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
                   {t.personalDatabase || 'Personal'}
                 </span>
               ) : null}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Link
+              <a 
                 href={`/recipes/${recipe.id}`}
-                className="px-3 py-1.5 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
+                className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded hover:bg-gray-800 transition-colors font-medium"
               >
                 {t.view}
-              </Link>
+              </a>
               {canEditRecipe(recipe) && (
-                <Link
+                <a 
                   href={`/recipes/${recipe.id}/edit`}
-                  className="px-3 py-1.5 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 transition-colors"
+                  className="px-3 py-1.5 bg-white text-gray-700 text-sm rounded hover:bg-gray-50 font-medium border border-gray-300 transition-colors"
                 >
                   {t.edit}
-                </Link>
+                </a>
               )}
               {canDeleteRecipe(recipe) && (
                 <button
-                  type="button"
                   onClick={() => handleDeleteClick(recipe.id)}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-red-700 text-sm rounded-md border border-red-200 bg-white hover:bg-red-50 font-medium transition-colors"
+                  className="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600 font-medium transition-colors"
                   title={t.delete || 'Delete'}
                 >
-                  <TrashIcon className="w-4 h-4" />
+                  🗑️
                 </button>
               )}
             </div>
@@ -449,47 +429,58 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         </div>
       );
     } else {
-      // Grid — editorial cards
+      // Grid View - Current view (fallback)
       return (
-        <div className="group bg-white border border-stone-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-stone-300/90 transition-all duration-300 h-full flex flex-col">
-          <div className="relative aspect-video overflow-hidden bg-stone-100 border-b border-stone-200/60">
-            {showImage ? (
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
+          <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden flex items-center justify-center shadow-inner">
+            {recipe.image ? (
               <Image
-                src={recipe.image!}
+                src={recipe.image}
                 alt={recipe.name ?? ""}
                 fill
-                className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                className="object-cover"
                 sizes="(max-width: 768px) 100vw, 480px"
                 unoptimized
                 referrerPolicy="no-referrer"
-                onError={() => setCoverFailed(true)}
+                onError={(e) => {
+                  const wrapper = e.currentTarget.parentElement;
+                  if (wrapper) {
+                    (wrapper as HTMLElement).style.display = "none";
+                    wrapper.nextElementSibling?.classList.remove("hidden");
+                  }
+                }}
               />
-            ) : (
-              <RecipeImagePlaceholder className="absolute inset-0" />
-            )}
+            ) : null}
+            <div className={`flex flex-col items-center justify-center text-gray-400 ${recipe.image ? 'hidden' : ''}`}>
+              <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="text-sm">{t.noPhoto}</span>
+            </div>
           </div>
           
           <div className="p-5 flex flex-col flex-grow">
             <div className="mb-2 flex justify-center">
               {recipe.companyId ? (
-                <span className="px-2.5 py-1 text-[11px] uppercase tracking-wide font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-semibold shadow-sm">
                   {t.businessDatabase || 'Business'}
                 </span>
               ) : recipe.userId ? (
-                <span className="px-2.5 py-1 text-[11px] uppercase tracking-wide font-medium rounded border border-slate-200 bg-slate-50 text-slate-800">
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold shadow-sm">
                   {t.personalDatabase || 'Personal'}
                 </span>
               ) : null}
             </div>
             
-            <h3 className="font-semibold text-base mb-3 text-center text-stone-900 tracking-tight leading-snug">{recipe.name}</h3>
+            <h3 className="font-bold text-lg mb-3 text-center text-gray-800">{recipe.name}</h3>
             
             {cardCategories.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-2 justify-center">
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
                 {cardCategories.map((category) => (
                   <span
                     key={typeof category === 'string' ? category : (category as any).id}
-                    className="px-2.5 py-0.5 bg-stone-50 text-stone-600 text-xs rounded-md border border-stone-200/90 font-medium"
+                    className="px-3 py-1 bg-orange-200 text-orange-800 text-xs rounded-full font-medium shadow-sm"
                   >
                     {translateCategory(typeof category === 'string' ? category : (category as any).name)}
                   </span>
@@ -498,28 +489,30 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             )}
 
             <div className="mt-5 flex gap-2 justify-center">
-              <Link
+              <a 
                 href={`/recipes/${recipe.id}`}
-                className="flex-1 px-4 py-2.5 text-white text-sm rounded-md text-center font-medium bg-stone-900 hover:bg-stone-800 transition-colors"
+                className="flex-1 px-4 py-2 text-white text-sm rounded-lg text-center font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                style={{ backgroundColor: '#ff6b35' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e55a2b'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff6b35'}
               >
                 {t.view}
-              </Link>
+              </a>
               {canEditRecipe(recipe) && (
-                <Link
+                <a 
                   href={`/recipes/${recipe.id}/edit`}
-                  className="px-4 py-2.5 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 text-center transition-colors"
+                  className="px-4 py-2 bg-white text-gray-700 text-sm rounded-lg hover:bg-gray-50 font-medium shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 text-center"
                 >
                   {t.edit}
-                </Link>
+                </a>
               )}
               {canDeleteRecipe(recipe) && (
                 <button
-                  type="button"
                   onClick={() => handleDeleteClick(recipe.id)}
-                  className="inline-flex items-center justify-center px-3 py-2.5 text-red-700 text-sm rounded-md border border-red-200 bg-white hover:bg-red-50 font-medium transition-colors"
+                  className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 font-medium shadow-md hover:shadow-lg transition-all duration-200"
                   title={t.delete || 'Delete'}
                 >
-                  <TrashIcon className="w-4 h-4" />
+                  🗑️
                 </button>
               )}
             </div>
@@ -574,16 +567,16 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 <button
                   onClick={handleDeleteConfirm}
                   disabled={isDeleting}
-                  className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-all duration-200 font-medium disabled:opacity-50 flex items-center gap-2"
+                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-medium disabled:opacity-50 flex items-center gap-2"
                 >
                   {isDeleting ? (
                     <>
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
+                      <span className="animate-spin">⏳</span>
                       <span>{t.deleting || 'Deleting...'}</span>
                     </>
                   ) : (
                     <>
-                      <TrashIcon className="w-4 h-4" />
+                      <span>🗑️</span>
                       <span>{t.delete || 'Delete'}</span>
                     </>
                   )}
@@ -601,21 +594,21 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           placeholder={t.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-5 py-3 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-400/25 focus:border-stone-300 shadow-sm bg-white text-stone-800 placeholder-stone-400"
+          className="w-full px-5 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 shadow-sm bg-white text-gray-700 placeholder-gray-500"
         />
       </div>
 
       {/* View Switcher and Filter */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-stone-600">{t.switchView || 'Switch View'}:</span>
-          <div className="flex gap-1 bg-stone-100 rounded-lg p-1 border border-stone-200/90">
+          <span className="text-sm font-semibold text-gray-700">{t.switchView || 'Switch View'}:</span>
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 border border-gray-200">
             <button
               onClick={() => setViewMode("grid")}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                 viewMode === "grid"
-                  ? "bg-white text-stone-900 shadow-sm"
-                  : "text-stone-500 hover:text-stone-900"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
               title={t.gridView || 'Grid View'}
             >
@@ -628,8 +621,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               onClick={() => setViewMode("row")}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                 viewMode === "row"
-                  ? "bg-white text-stone-900 shadow-sm"
-                  : "text-stone-500 hover:text-stone-900"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
               title={t.rowView || 'Row View'}
             >
@@ -642,8 +635,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               onClick={() => setViewMode("alphabetical")}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                 viewMode === "alphabetical"
-                  ? "bg-white text-stone-900 shadow-sm"
-                  : "text-stone-500 hover:text-stone-900"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
               title={t.alphabeticalView || 'Alphabetical View'}
             >
@@ -661,8 +654,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
               filterDropdownOpen || databaseFilter !== "all" || selectedCategory !== ""
-                ? "bg-stone-900 text-white border-stone-900"
-                : "bg-white text-stone-700 border-stone-200 hover:bg-stone-50"
+                ? "bg-gray-900 text-white border-gray-900"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
             title={t.filter || 'Filter'}
           >
@@ -677,7 +670,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
           {/* Filter Dropdown Menu */}
           {filterDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-white border border-stone-200 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+            <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
               <div className="p-4">
                 {/* Database Filter Section */}
                 {(() => {
@@ -691,7 +684,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   
                   return (
                     <div className="mb-6">
-                      <h3 className="text-sm font-semibold text-stone-700 mb-3">{t.database || 'Database'}</h3>
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">{t.database || 'Database'}</h3>
                       <div className="space-y-2">
                         <button
                           onClick={() => {
@@ -700,8 +693,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                           }}
                           className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
                             databaseFilter === "all"
-                              ? "bg-stone-900 text-white"
-                              : "bg-stone-50 text-stone-700 hover:bg-stone-100"
+                              ? "bg-gray-900 text-white"
+                              : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                           }`}
                         >
                           {t.allRecipes || 'Alle recepten'}
@@ -714,8 +707,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
                               databaseFilter === "personal"
-                                ? "bg-slate-800 text-white"
-                                : "bg-stone-50 text-stone-700 hover:bg-stone-100"
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                             }`}
                           >
                             {t.personalDatabase}
@@ -729,8 +722,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
                               databaseFilter === "business"
-                                ? "bg-emerald-900 text-white"
-                                : "bg-stone-50 text-stone-700 hover:bg-stone-100"
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                             }`}
                           >
                             {t.businessDatabase}
@@ -743,7 +736,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
 
                 {/* Category Filter Section */}
                 <div>
-                  <h3 className="text-sm font-semibold text-stone-700 mb-3">{t.categories}</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">{t.categories}</h3>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     <button
                       onClick={() => {
@@ -752,8 +745,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                       }}
                       className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
                         selectedCategory === ""
-                          ? "bg-stone-900 text-white"
-                          : "bg-stone-50 text-stone-700 hover:bg-stone-100"
+                          ? "bg-gray-900 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       {t.allCategories}
@@ -767,8 +760,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                         }}
                         className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
                           selectedCategory === category
-                            ? "bg-stone-900 text-white"
-                            : "bg-stone-50 text-stone-700 hover:bg-stone-100"
+                            ? "bg-gray-900 text-white"
+                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                         }`}
                       >
                         {translateCategory(category)}
@@ -786,20 +779,18 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       {filteredRecipes.length === 0 ? (
         <div className="text-center py-16">
           {searchTerm || selectedCategory ? (
-            <div className="bg-stone-50 rounded-lg p-8 border border-stone-200/90">
-              <div className="text-stone-700 text-xl font-semibold mb-3">{t.noRecipesFound}</div>
-              <p className="text-stone-500">{t.tryAdjustingSearch}</p>
+            <div className="bg-gray-50 rounded-lg p-8 border border-gray-200">
+              <div className="text-gray-600 text-xl font-semibold mb-3">{t.noRecipesFound}</div>
+              <p className="text-gray-500">{t.tryAdjustingSearch}</p>
             </div>
           ) : (
-            <div className="bg-stone-50/80 rounded-lg p-12 border border-stone-200/90">
-              <div className="mx-auto relative h-20 w-20 mb-6 opacity-90">
-                <Image src="/logo.svg" alt="Gastro-Elite" fill className="object-contain" />
-              </div>
-              <div className="text-stone-900 text-2xl font-semibold tracking-tight mb-3">{t.noRecipesYet}</div>
-              <p className="text-stone-600 mb-8 text-base max-w-md mx-auto leading-relaxed">{t.startAddingFirstRecipe}</p>
+            <div className="bg-gray-50 rounded-lg p-12 border border-gray-200">
+              <div className="text-6xl mb-6">🍽️</div>
+              <div className="text-gray-800 text-2xl font-bold mb-4">{t.noRecipesYet}</div>
+              <p className="text-gray-600 mb-8 text-lg">{t.startAddingFirstRecipe}</p>
               <a 
                 href="/add"
-                className="inline-block px-8 py-3.5 bg-stone-900 text-white rounded-md font-medium transition-all duration-200 shadow-sm hover:shadow-md hover:bg-stone-800"
+                className="inline-block px-8 py-4 bg-gray-900 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-gray-800"
               >
                 {t.addFirstRecipe}
               </a>
@@ -808,11 +799,11 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         </div>
       ) : viewMode === "row" ? (
         // View 1: Row View (Gronda-style) - Professional row layout
-        <div className="bg-white border border-stone-200/90 rounded-lg overflow-hidden shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
           {filteredRecipes.map((recipe, index) => (
             <div key={recipe.id}>
               <RecipeCard recipe={recipe} variant="row" />
-              {index < filteredRecipes.length - 1 && <div className="border-b border-stone-200/80" />}
+              {index < filteredRecipes.length - 1 && <div className="border-b border-gray-200" />}
             </div>
           ))}
         </div>
@@ -820,15 +811,15 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         // View 2: Alphabetical View with scrollable alphabet
         <div className="flex gap-6 relative">
           {/* Main content */}
-          <div className="flex-1 bg-white border border-stone-200/90 rounded-lg overflow-hidden shadow-sm" style={{ maxHeight: 'calc(100vh - 400px)' }}>
+          <div className="flex-1 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm" style={{ maxHeight: 'calc(100vh - 400px)' }}>
             <div className="overflow-y-auto h-full">
               {sortedLetters.length === 0 ? (
-                <div className="p-8 text-center text-stone-500">{t.noRecipesFound}</div>
+                <div className="p-8 text-center text-gray-500">{t.noRecipesFound}</div>
               ) : (
                 sortedLetters.map((letter) => (
                   <div key={letter} id={`letter-${letter}`} className="scroll-mt-4">
                     {/* Letter header */}
-                    <div className="sticky top-0 bg-stone-900 text-white px-6 py-3 font-semibold text-lg z-10 tracking-tight border-b border-stone-700">
+                    <div className="sticky top-0 bg-gray-900 text-white px-6 py-3 font-bold text-lg z-10 border-b-2 border-gray-700">
                       {letter}
                     </div>
                     {/* Recipes for this letter */}
@@ -841,7 +832,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                       .map((recipe, idx) => (
                         <div key={recipe.id}>
                           <RecipeCard recipe={recipe} variant="alphabetical" />
-                          {idx < groupedByLetter[letter].length - 1 && <div className="border-b border-stone-100" />}
+                          {idx < groupedByLetter[letter].length - 1 && <div className="border-b border-gray-100" />}
                         </div>
                       ))}
                   </div>
@@ -852,7 +843,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           
           {/* Alphabet sidebar - Desktop */}
           <div className="hidden lg:block">
-            <div className="sticky top-4 bg-white border border-stone-200/90 rounded-lg p-3 shadow-sm">
+            <div className="sticky top-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
               <div className="flex flex-col gap-1.5 max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
                 {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter) => {
                   const hasRecipes = sortedLetters.includes(letter);
@@ -862,10 +853,10 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                       onClick={() => scrollToLetter(letter)}
                       className={`w-11 h-11 rounded-lg text-sm font-bold transition-all ${
                         selectedLetter === letter
-                          ? "bg-stone-900 text-white shadow-md scale-105"
+                          ? "bg-gray-900 text-white shadow-md scale-105"
                           : hasRecipes
-                          ? "bg-stone-100 text-stone-700 hover:bg-stone-200 hover:scale-105"
-                          : "text-stone-300 cursor-not-allowed opacity-40"
+                          ? "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105"
+                          : "text-gray-300 cursor-not-allowed opacity-40"
                       }`}
                       disabled={!hasRecipes}
                     >
@@ -878,7 +869,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           </div>
           
           {/* Mobile alphabet scrollbar - floating at bottom */}
-          <div className="lg:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-stone-200 rounded-xl p-3 shadow-2xl z-40 max-w-[95vw]">
+          <div className="lg:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border-2 border-gray-300 rounded-xl p-3 shadow-2xl z-40 max-w-[95vw]">
             <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
               {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter) => {
                 const hasRecipes = sortedLetters.includes(letter);
@@ -888,10 +879,10 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                     onClick={() => scrollToLetter(letter)}
                     className={`w-9 h-9 rounded-lg text-xs font-bold transition-all flex-shrink-0 flex items-center justify-center ${
                       selectedLetter === letter
-                        ? "bg-stone-900 text-white scale-110"
+                        ? "bg-gray-900 text-white scale-110"
                         : hasRecipes
-                        ? "bg-stone-100 text-stone-700 hover:bg-stone-200 active:scale-95"
-                        : "text-stone-300 cursor-not-allowed opacity-50"
+                        ? "bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-95"
+                        : "text-gray-300 cursor-not-allowed opacity-50"
                     }`}
                     disabled={!hasRecipes}
                   >

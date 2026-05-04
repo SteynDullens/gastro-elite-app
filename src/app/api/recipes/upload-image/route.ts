@@ -3,6 +3,34 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
+function extensionFromFile(file: File): string {
+  const mime = (file.type || "").toLowerCase();
+  if (mime.includes("jpeg") || mime === "image/jpg") return "jpg";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("gif")) return "gif";
+  if (mime.includes("svg")) return "svg";
+  const n = file.name || "";
+  const i = n.lastIndexOf(".");
+  if (i >= 0) {
+    const ext = n
+      .slice(i + 1)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    if (ext.length > 0 && ext.length <= 8) return ext;
+  }
+  return "jpg";
+}
+
+function contentTypeForExtension(ext: string): string {
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "gif") return "image/gif";
+  if (ext === "svg") return "image/svg+xml";
+  return "image/jpeg";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -20,17 +48,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
     }
 
-    const extension = file.type.split("/")[1] || "jpg";
+    const extension = extensionFromFile(file);
+    const isVercel = process.env.VERCEL === "1";
 
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       const { put } = await import("@vercel/blob");
       const timestamp = Date.now();
       const filename = `recipe-images/recipe_${timestamp}.${extension}`;
-      const blob = await put(filename, file, {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const contentType = file.type?.trim() || contentTypeForExtension(extension);
+
+      const blob = await put(filename, buffer, {
         access: "public",
         addRandomSuffix: true,
+        contentType,
       });
       return NextResponse.json({ success: true, url: blob.url });
+    }
+
+    /** Vercel serverless FS is read-only — local uploads cannot work without Blob. */
+    if (isVercel) {
+      return NextResponse.json(
+        {
+          error:
+            "Afbeelding upload niet beschikbaar: stel BLOB_READ_WRITE_TOKEN in (Vercel → Storage → Blob) en redeploy.",
+        },
+        { status: 503 }
+      );
     }
 
     const uploadsDir = join(process.cwd(), "public", "uploads", "recipes");

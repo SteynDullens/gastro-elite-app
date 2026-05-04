@@ -101,9 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn("Non-JSON response from /api/auth/me");
           setUser(null);
         }
-      } else {
+      } else if (response.status === 401) {
         setUser(null);
       }
+      /** 5xx / tijdelijke fouten: sessie niet wissen (voorkomt valse uitlogs). */
     } catch (error: unknown) {
       const name = error instanceof Error ? error.name : "";
       if (name === "AbortError") {
@@ -111,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       console.error("Failed to refresh user:", error);
-      setUser(null);
+      /** Netwerkfout: bestaande gebruiker behouden. */
     } finally {
       setLoading(false);
     }
