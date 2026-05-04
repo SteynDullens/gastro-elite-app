@@ -1,6 +1,10 @@
 import nodemailer from 'nodemailer';
 import { promises as fs } from 'fs';
 import path from 'path';
+import {
+  isProbablyValidEmail,
+  normalizeEmailForSMTP,
+} from '@/lib/email-address';
 
 // Get email configuration (called at runtime to ensure env vars are loaded)
 // Note: .trim() removes any newline characters that may have been added by environment variable tools
@@ -510,16 +514,24 @@ export async function sendPersonalRegistrationConfirmation(
   verificationToken: string
 ): Promise<EmailSendResult> {
   try {
+    const toAddr = normalizeEmailForSMTP(data.email);
+    if (!isProbablyValidEmail(toAddr)) {
+      return {
+        success: false,
+        error: `Ongeldig e-mailadres na normalisatie: "${data.email.trim()}"`,
+      };
+    }
+
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
 
-    console.log('📧 Sending personal registration confirmation to:', data.email);
+    console.log('📧 Sending personal registration confirmation to:', toAddr);
 
     const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
-      to: data.email,
+      to: toAddr,
       subject: 'Welkom bij Gastro-Elite - Verifieer je account',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -532,7 +544,7 @@ export async function sendPersonalRegistrationConfirmation(
           <h3>Je registratiegegevens</h3>
           <ul>
             <li><strong>Naam:</strong> ${data.firstName} ${data.lastName}</li>
-            <li><strong>E-mail:</strong> ${data.email}</li>
+            <li><strong>E-mail:</strong> ${toAddr}</li>
             <li><strong>Telefoon:</strong> ${data.phone || 'Niet opgegeven'}</li>
             <li><strong>Accounttype:</strong> Persoonlijk Account</li>
           </ul>
@@ -578,13 +590,21 @@ export async function sendBusinessRegistrationConfirmation(
   verificationToken: string
 ): Promise<EmailSendResult> {
   try {
+    const toAddr = normalizeEmailForSMTP(data.email);
+    if (!isProbablyValidEmail(toAddr)) {
+      return {
+        success: false,
+        error: `Ongeldig e-mailadres na normalisatie: "${data.email.trim()}"`,
+      };
+    }
+
     const emailConfig = getEmailConfig();
     const appUrl = getAppUrl();
     const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
-      to: data.email,
+      to: toAddr,
       subject: 'Bedrijfsaccount registratie - In behandeling',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -599,7 +619,7 @@ export async function sendBusinessRegistrationConfirmation(
             <li><strong>Bedrijfsnaam:</strong> ${data.companyName}</li>
             <li><strong>KvK Nummer:</strong> ${data.kvkNumber}</li>
             <li><strong>Contactpersoon:</strong> ${data.firstName} ${data.lastName}</li>
-            <li><strong>E-mail:</strong> ${data.email}</li>
+            <li><strong>E-mail:</strong> ${toAddr}</li>
             <li><strong>Telefoon:</strong> ${data.phone || 'Niet opgegeven'}</li>
           </ul>
           

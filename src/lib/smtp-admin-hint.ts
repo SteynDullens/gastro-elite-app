@@ -11,10 +11,27 @@ export function smtpResendHint(raw: string | undefined): string {
       t.includes("all recipients were rejected") ||
       t.includes("no such"))
   ) {
+    const here =
+      t.includes("here") ||
+      t.includes("no such recipient here") ||
+      t.includes("recipient here");
+
+    if (here) {
+      return (
+        "\n\n—\n" +
+        "«No such recipient here» wijst vaak op gedeelde hosting-SMTP: de server probeert lokaal af te leveren in plaats van uitgaand te relayen naar externe domeinen (Gmail, iCloud, …). " +
+        "Dat is meestal een relay-/poortprobleem bij de host, niet per se een fout e-mailadres in de app.\n\n" +
+        "Wat je kunt doen:\n" +
+        "• Hosting: uitgaande SMTP / authenticated relay inschakelen (vaak poort 587 met STARTTLS, naast 465).\n" +
+        "• Of een transactional provider (Resend, SendGrid, Mailgun, Postmark) voor uitgaande mail.\n" +
+        "• Controleer toch het adres in de gebruikerslijst (typfouten, verkeerd domein)."
+      );
+    }
+
     return (
       "\n\n—\n" +
-      "Meestal betekent dit: het e-mailadres in dit account bestaat niet meer bij de provider van dat adres (typfout, mailbox opgeheven), " +
-      "of jouw SMTP-server mag niet naar dat domein leveren. Controleer het adres in de gebruikerslijst en corrigeer het; vraag zo nodig een werkend adres aan de gebruiker."
+      "Vaak: het ontvanger-adres bestaat niet (typfout, mailbox opgeheven), of je SMTP-server mag dat domein niet bereiken. " +
+      "Controleer het adres in de gebruikerslijst; probeer desnoods een ander adres."
     );
   }
 

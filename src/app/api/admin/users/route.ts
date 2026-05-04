@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, logError } from '@/lib/auth';
 import { getPrisma, safeDbOperation } from '@/lib/prisma';
 import { formatSmtpErrorForAdmin } from '@/lib/smtp-admin-hint';
+import { normalizeEmailForSMTP } from '@/lib/email-address';
 import {
   sendPasswordResetNotification,
   sendPersonalRegistrationConfirmation,
@@ -214,6 +215,18 @@ export async function PUT(request: NextRequest) {
         where: { id: userId },
         data: { emailVerificationToken: verificationToken },
       });
+
+      const normalizedEmail = normalizeEmailForSMTP(full.email);
+      if (normalizedEmail !== full.email) {
+        try {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { email: normalizedEmail },
+          });
+        } catch {
+          /* bij uniek conflict tweede adres laten zoals het was */
+        }
+      }
 
       await logError({
         level: 'info',
