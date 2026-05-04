@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, logError } from '@/lib/auth';
-import { safeDbOperation } from '@/lib/prisma';
+import { getPrisma, safeDbOperation } from '@/lib/prisma';
+import { formatSmtpErrorForAdmin } from '@/lib/smtp-admin-hint';
 import {
   sendPasswordResetNotification,
   sendPersonalRegistrationConfirmation,
@@ -120,39 +121,120 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    /** Verificatie-mail eerst versturen; token pas opslaan bij succes (oude link blijft dan geldig bij SMTP-fout). */
+    if (action === 'resend_verification') {
+      const prisma = getPrisma();
+      if (!prisma) {
+        return NextResponse.json(
+          { success: false, error: 'Database niet bereikbaar' },
+          { status: 503 }
+        );
+      }
+
+      const full = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { ownedCompany: true },
+      });
+
+      if (!full) {
+        return NextResponse.json(
+          { success: false, error: 'Gebruiker niet gevonden' },
+          { status: 404 }
+        );
+      }
+      if (full.deletedAt) {
+        return NextResponse.json(
+          { success: false, error: 'Gebruiker is verwijderd' },
+          { status: 400 }
+        );
+      }
+      if (full.emailVerified) {
+        return NextResponse.json(
+          { success: false, error: 'E-mail is al geverifieerd' },
+          { status: 400 }
+        );
+      }
+
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+
+      let mailResult: EmailSendResult;
+      if (full.ownedCompany) {
+        const c = full.ownedCompany;
+        mailResult = await sendBusinessRegistrationConfirmation(
+          {
+            firstName: full.firstName,
+            lastName: full.lastName,
+            email: full.email,
+            phone: full.phone || '',
+            companyName: c.name,
+            kvkNumber: c.kvkNumber,
+            vatNumber: c.vatNumber || undefined,
+            companyPhone: c.companyPhone || undefined,
+            address: {
+              country: 'Nederland',
+              postalCode: '',
+              street: c.address,
+              city: '',
+            },
+          },
+          verificationToken
+        );
+      } else {
+        mailResult = await sendPersonalRegistrationConfirmation(
+          {
+            firstName: full.firstName,
+            lastName: full.lastName,
+            email: full.email,
+            phone: full.phone || '',
+          },
+          verificationToken
+        );
+      }
+
+      if (!mailResult.success) {
+        await logError({
+          level: 'warning',
+          message: `Admin resend_verification SMTP mislukt user ${userId}: ${mailResult.error}`,
+          userId: decoded.id,
+          url: request.url,
+          method: 'PUT',
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            emailSent: false,
+            emailError: formatSmtpErrorForAdmin(mailResult.error),
+            error: 'Verificatie-e-mail niet verzonden',
+          },
+          { status: 400 }
+        );
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { emailVerificationToken: verificationToken },
+      });
+
+      await logError({
+        level: 'info',
+        message: `Admin resend_verification OK user ${userId}`,
+        userId: decoded.id,
+        url: request.url,
+        method: 'PUT',
+      });
+
+      return NextResponse.json({
+        success: true,
+        emailSent: true,
+        message: 'Verificatie-e-mail verzonden',
+      });
+    }
+
     let emailSent = false;
     let emailError: string | null = null;
     let passwordToUse: string | null = null;
 
     const result = await safeDbOperation(async (prisma) => {
-      if (action === 'resend_verification') {
-        const full = await prisma.user.findUnique({
-          where: { id: userId },
-          include: { ownedCompany: true },
-        });
-
-        if (!full) {
-          throw new Error('User not found');
-        }
-        if (full.deletedAt) {
-          throw new Error('Gebruiker is verwijderd');
-        }
-        if (full.emailVerified) {
-          throw new Error('E-mail is al geverifieerd');
-        }
-
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        await prisma.user.update({
-          where: { id: userId },
-          data: { emailVerificationToken: verificationToken },
-        });
-
-        return {
-          success: true as const,
-          resendPayload: { full, token: verificationToken },
-        };
-      }
-
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -245,71 +327,6 @@ export async function PUT(request: NextRequest) {
         { error: 'Database operation failed' },
         { status: 500 }
       );
-    }
-
-    if ('resendPayload' in result && result.resendPayload) {
-      const { full, token } = result.resendPayload;
-      try {
-        let mailResult: EmailSendResult;
-        if (full.ownedCompany) {
-          const c = full.ownedCompany;
-          mailResult = await sendBusinessRegistrationConfirmation(
-            {
-              firstName: full.firstName,
-              lastName: full.lastName,
-              email: full.email,
-              phone: full.phone || '',
-              companyName: c.name,
-              kvkNumber: c.kvkNumber,
-              vatNumber: c.vatNumber || undefined,
-              companyPhone: c.companyPhone || undefined,
-              address: {
-                country: 'Nederland',
-                postalCode: '',
-                street: c.address,
-                city: '',
-              },
-            },
-            token
-          );
-        } else {
-          mailResult = await sendPersonalRegistrationConfirmation(
-            {
-              firstName: full.firstName,
-              lastName: full.lastName,
-              email: full.email,
-              phone: full.phone || '',
-            },
-            token
-          );
-        }
-        emailSent = mailResult.success;
-        if (!mailResult.success) {
-          emailError =
-            mailResult.error ||
-            'E-mail kon niet worden verzonden (zie serverlogs voor details).';
-        }
-      } catch (sendErr: unknown) {
-        emailError =
-          sendErr instanceof Error ? sendErr.message : 'Onbekende e-mailfout';
-      }
-
-      await logError({
-        level: 'info',
-        message: `Admin resend_verification for user ID: ${userId}`,
-        userId: decoded.id,
-        url: request.url,
-        method: 'PUT',
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: emailSent
-          ? 'Verificatie-e-mail verzonden'
-          : 'Token bijgewerkt maar e-mail mogelijk niet verzonden',
-        emailSent,
-        emailError,
-      });
     }
 
     // Send email notification for password reset (after transaction completes)

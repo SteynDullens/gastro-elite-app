@@ -472,21 +472,19 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       });
 
       const result = await response.json();
-      if (result.success) {
-        if (result.emailSent) {
-          setMessage(
-            `Verificatie-e-mail verzonden naar ${userEmail}. Controleer eventueel de spamfolder.`
-          );
-        } else {
-          setMessage(
-            `Waarschuwing: ${result.emailError || "E-mail werd mogelijk niet verzonden."}\n\nDe verificatietoken is wel vernieuwd in de database — gebruikers kunnen niet op een oude link verifiëren tot een nieuwe mail aankomt.`
-          );
-        }
+      if (result.success && result.emailSent) {
+        setMessage(
+          `Verificatie-e-mail verzonden naar ${userEmail}. Controleer eventueel de spamfolder.`
+        );
         fetchUsers();
         setTimeout(() => setMessage(""), 10000);
       } else {
-        setMessage(`Fout: ${result.error || "Onbekende fout"}`);
-        setTimeout(() => setMessage(""), 5000);
+        setMessage(
+          result.emailError ||
+            result.error ||
+            "Verificatie-e-mail kon niet worden verzonden."
+        );
+        setTimeout(() => setMessage(""), 14000);
       }
     } catch {
       setMessage("Netwerk fout bij verzenden verificatie-e-mail");
