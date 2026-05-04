@@ -329,13 +329,18 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         body: form,
         credentials: "include",
       });
-      let data: { url?: string; error?: string } = {};
+      let data: { url?: string; error?: string; blobErrorName?: string } = {};
       try {
         const ct = res.headers.get("content-type") || "";
         if (ct.includes("application/json")) {
           data = await res.json();
         } else {
-          await res.text();
+          const text = await res.text();
+          console.error("[recipe image upload] niet-JSON response:", res.status, text.slice(0, 500));
+          alert(
+            `${t.uploadFailed} (HTTP ${res.status}). Open F12 → Network → upload-image → Response.`
+          );
+          return;
         }
       } catch {
         alert(t.uploadFailed);
@@ -344,9 +349,12 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       if (res.ok && data.url) {
         setFormData({ ...formData, image: data.url });
       } else {
-        alert(data.error || t.uploadFailed);
+        const hint = data.blobErrorName ? ` [${data.blobErrorName}]` : "";
+        console.error("[recipe image upload]", res.status, data);
+        alert(`${data.error || t.uploadFailed}${hint}`);
       }
     } catch (err) {
+      console.error("[recipe image upload] fetch failed:", err);
       alert(t.uploadFailed);
     } finally {
       setIsUploading(false);

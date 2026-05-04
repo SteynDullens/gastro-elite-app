@@ -4,6 +4,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import {
   put,
+  list,
   BlobStoreNotFoundError,
   BlobStoreSuspendedError,
 } from "@vercel/blob";
@@ -22,6 +23,25 @@ const STORE_NOT_FOUND_HELP =
   "(4) Project → Settings → Environment Variables → BLOB_READ_WRITE_TOKEN voor Production plakken (alleen de token, geen aanhalingstekens). " +
   "(5) Redeploy. " +
   "Zie: https://vercel.com/docs/storage/vercel-blob";
+
+function errName(err: unknown): string | undefined {
+  return err instanceof Error ? err.name : undefined;
+}
+
+/** Werkt ook als bundling twee kopieën van @vercel/blob laadt (instanceof faalt). */
+function isBlobStoreNotFound(err: unknown): boolean {
+  return (
+    err instanceof BlobStoreNotFoundError ||
+    (err instanceof Error && err.name === "BlobStoreNotFoundError")
+  );
+}
+
+function isBlobStoreSuspended(err: unknown): boolean {
+  return (
+    err instanceof BlobStoreSuspendedError ||
+    (err instanceof Error && err.name === "BlobStoreSuspendedError")
+  );
+}
 
 function looksLikeImageFile(file: File): boolean {
   const t = (file.type || "").toLowerCase().trim();
@@ -65,10 +85,10 @@ function contentTypeForExtension(ext: string): string {
 }
 
 function uploadErrorMessage(err: unknown): string {
-  if (err instanceof BlobStoreNotFoundError) {
+  if (isBlobStoreNotFound(err)) {
     return STORE_NOT_FOUND_HELP;
   }
-  if (err instanceof BlobStoreSuspendedError) {
+  if (isBlobStoreSuspended(err)) {
     return "Deze Blob-store is opgeschort in Vercel. Activeer de store opnieuw of maak een nieuwe store en token.";
   }
   const msg = err instanceof Error ? err.message : String(err);
@@ -76,7 +96,11 @@ function uploadErrorMessage(err: unknown): string {
   if (lower.includes("token") || lower.includes("401") || lower.includes("unauthorized")) {
     return "Blob-token ongeldig of ontbreekt. Controleer BLOB_READ_WRITE_TOKEN in Vercel (Production).";
   }
-  if (lower.includes("not found") || lower.includes("store")) {
+  /** Niet breng op "store" / "not found": dat matcht te veel (o.a. “restore”, generieke 404-teksten). */
+  if (
+    lower.includes("this store does not exist") ||
+    lower.includes("store_not_found")
+  ) {
     return STORE_NOT_FOUND_HELP;
   }
   if (lower.includes("too large")) {
@@ -122,6 +146,23 @@ export async function POST(request: NextRequest) {
 
       let lastRetryable: unknown;
       for (const { key, value } of candidates) {
+        let listOk = false;
+        try {
+          await list({ token: value, limit: 1 });
+          listOk = true;
+        } catch (listErr) {
+          const retryList =
+            isBlobStoreNotFound(listErr) || isBlobStoreSuspended(listErr);
+          if (retryList && candidates.length > 1) {
+            console.warn(
+              `[recipes/upload-image] list() voor "${key}" faalde (${errName(listErr)}), probeer volgende token…`
+            );
+            lastRetryable = listErr;
+            continue;
+          }
+          throw listErr;
+        }
+
         try {
           const blob = await put(filename, buffer, {
             access: "public",
@@ -136,12 +177,26 @@ export async function POST(request: NextRequest) {
           }
           return NextResponse.json({ success: true, url: blob.url });
         } catch (err) {
+          if (listOk && isBlobStoreNotFound(err)) {
+            console.error(
+              "[recipes/upload-image] put() store_not_found terwijl list() net slaagde — zelfde token; check Vercel logs / dubbele @vercel/blob bundle.",
+              err
+            );
+            return NextResponse.json(
+              {
+                error:
+                  "Upload mislukt: onverwachte Blob-fout bij wegschrijven (na geslaagde test). Open Vercel → Project → Logs bij deze request. " +
+                  "Als dit blijft: deploy opnieuw met de laatste app-versie of meld bij Vercel support.",
+                blobErrorName: errName(err),
+              },
+              { status: 500 }
+            );
+          }
           const retry =
-            err instanceof BlobStoreNotFoundError ||
-            err instanceof BlobStoreSuspendedError;
+            isBlobStoreNotFound(err) || isBlobStoreSuspended(err);
           if (retry && candidates.length > 1) {
             console.warn(
-              `[recipes/upload-image] Token uit "${key}" faalde (${err instanceof Error ? err.constructor.name : "?"}), probeer volgende…`
+              `[recipes/upload-image] put() voor "${key}" faalde (${errName(err)}), probeer volgende…`
             );
             lastRetryable = err;
             continue;
@@ -182,10 +237,13 @@ export async function POST(request: NextRequest) {
     console.error("Recipe image upload error:", error);
     const detail = uploadErrorMessage(error);
     const status =
-      error instanceof BlobStoreNotFoundError ||
-      error instanceof BlobStoreSuspendedError
-        ? 503
-        : 500;
-    return NextResponse.json({ error: `Upload mislukt: ${detail}` }, { status });
+      isBlobStoreNotFound(error) || isBlobStoreSuspended(error) ? 503 : 500;
+    return NextResponse.json(
+      {
+        error: `Upload mislukt: ${detail}`,
+        blobErrorName: errName(error),
+      },
+      { status }
+    );
   }
 }
