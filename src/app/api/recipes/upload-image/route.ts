@@ -13,10 +13,10 @@ const MAX_BYTES = 4 * 1024 * 1024;
 
 export const runtime = "nodejs";
 
-/** Trim env value; strip wrapping quotes; remove accidental whitespace/newlines (common paste mistakes). */
-function getBlobReadWriteToken(): string | undefined {
-  const raw = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!raw || typeof raw !== "string") return undefined;
+/** Vercel Blob read/write token shape (na prefix wisselt de rest). */
+const VERCEL_BLOB_RW_RE = /^vercel_blob_rw_[A-Za-z0-9_-]{20,256}$/;
+
+function normalizeTokenString(raw: string): string {
   let t = raw.trim();
   if (
     (t.startsWith('"') && t.endsWith('"')) ||
@@ -24,8 +24,59 @@ function getBlobReadWriteToken(): string | undefined {
   ) {
     t = t.slice(1, -1).trim();
   }
-  t = t.replace(/\s+/g, "");
-  return t.length > 0 ? t : undefined;
+  return t.replace(/\s+/g, "");
+}
+
+/**
+ * Leest `BLOB_READ_WRITE_TOKEN`, of — als die ontbreekt of ongeldig lijkt — een andere env-var
+ * waarvan de **waarde** eruitziet als `vercel_blob_rw_...` (zoals Vercel soms aanmaakt na Storage-koppeling).
+ */
+function resolveBlobReadWriteToken(): string | undefined {
+  const fromPrimary = process.env.BLOB_READ_WRITE_TOKEN;
+  const primaryNorm =
+    fromPrimary && typeof fromPrimary === "string"
+      ? normalizeTokenString(fromPrimary)
+      : undefined;
+  if (primaryNorm && VERCEL_BLOB_RW_RE.test(primaryNorm)) {
+    return primaryNorm;
+  }
+  if (primaryNorm) {
+    console.warn(
+      "[recipes/upload-image] BLOB_READ_WRITE_TOKEN is geen geldig vercel_blob_rw_-token; zoek alternatief in env"
+    );
+  }
+
+  const matches: { key: string; value: string }[] = [];
+  for (const [key, val] of Object.entries(process.env)) {
+    if (!val || typeof val !== "string") continue;
+    const n = normalizeTokenString(val);
+    if (VERCEL_BLOB_RW_RE.test(n)) {
+      matches.push({ key, value: n });
+    }
+  }
+  if (matches.length === 0) {
+    return primaryNorm && primaryNorm.length > 0 ? primaryNorm : undefined;
+  }
+  if (matches.length === 1) {
+    if (matches[0]!.key !== "BLOB_READ_WRITE_TOKEN") {
+      console.warn(
+        `[recipes/upload-image] Gebruik Blob-token uit env-key "${matches[0]!.key}". Zet dezelfde waarde in BLOB_READ_WRITE_TOKEN om verwarring te voorkomen.`
+      );
+    }
+    return matches[0]!.value;
+  }
+  const preferred =
+    matches.find((m) => m.key === "BLOB_READ_WRITE_TOKEN") ||
+    matches.find(
+      (m) =>
+        m.key.endsWith("_READ_WRITE_TOKEN") ||
+        m.key.includes("vercel_blob")
+    ) ||
+    matches[0];
+  console.warn(
+    `[recipes/upload-image] Meerdere Blob-tokens in env; gebruik "${preferred!.key}". Ruim dubbele vars op.`
+  );
+  return preferred!.value;
 }
 
 const STORE_NOT_FOUND_HELP =
@@ -126,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     const extension = extensionFromFile(file);
     const isVercel = process.env.VERCEL === "1";
-    const blobToken = getBlobReadWriteToken();
+    const blobToken = resolveBlobReadWriteToken();
 
     if (blobToken) {
       const timestamp = Date.now();
