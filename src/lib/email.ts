@@ -1018,10 +1018,11 @@ export async function sendPasswordResetEmail(
   try {
     const emailConfig = getEmailConfig();
     const resetUrl = `${getAppUrl()}/reset-password?token=${resetToken}`;
+    const toAddr = normalizeEmailForSMTP(userEmail);
     
     const mailOptions = {
       from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
-      to: userEmail,
+      to: toAddr,
       subject: '🔐 Wachtwoord Resetten - Gastro-Elite',
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
@@ -1081,8 +1082,22 @@ export async function sendPasswordResetEmail(
       `
     };
 
+    if (isResendConfigured()) {
+      const resendOut = await sendHtmlViaResend({
+        to: toAddr,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      });
+      if (!resendOut.success) {
+        console.error('❌ Password reset via Resend failed:', resendOut.error);
+        return false;
+      }
+      console.log('✅ Password reset email sent via Resend to:', toAddr);
+      return true;
+    }
+
     await getTransporter().sendMail(mailOptions);
-    console.log('✅ Password reset email sent to:', userEmail);
+    console.log('✅ Password reset email sent via SMTP to:', toAddr);
     return true;
   } catch (error) {
     console.error('Error sending password reset email:', error);
