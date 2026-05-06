@@ -690,6 +690,79 @@ export async function sendBusinessRegistrationConfirmation(
   }
 }
 
+// Send business conversion setup mail (admin-initiated conversion for existing user)
+export async function sendBusinessConversionSetupEmail(params: {
+  toEmail: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  kvkNumber: string;
+  vatNumber?: string;
+  companyPhone?: string;
+  address?: string;
+  conversionToken: string;
+}): Promise<EmailSendResult> {
+  try {
+    const toAddr = normalizeEmailForSMTP(params.toEmail);
+    if (!isProbablyValidEmail(toAddr)) {
+      return {
+        success: false,
+        error: `Ongeldig e-mailadres na normalisatie: "${params.toEmail.trim()}"`,
+      };
+    }
+
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    const uploadUrl = `${appUrl}/business-conversion?token=${params.conversionToken}`;
+
+    const mailOptions = {
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: toAddr,
+      subject: 'Bedrijfsomzetting gestart - upload KvK-document',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto;">
+          <h2 style="color: #FF8C00;">Bedrijfsomzetting gestart</h2>
+          <p>Beste ${params.firstName} ${params.lastName},</p>
+          <p>Een administrator heeft je account voorbereid voor omzetting naar een bedrijfsaccount.</p>
+          <p><strong>Controleer onderstaande gegevens:</strong></p>
+          <ul>
+            <li><strong>Bedrijfsnaam:</strong> ${params.companyName}</li>
+            <li><strong>KvK-nummer:</strong> ${params.kvkNumber}</li>
+            <li><strong>BTW-nummer:</strong> ${params.vatNumber || 'Niet opgegeven'}</li>
+            <li><strong>Bedrijfstelefoon:</strong> ${params.companyPhone || 'Niet opgegeven'}</li>
+            <li><strong>Adres:</strong> ${params.address || 'Niet opgegeven'}</li>
+          </ul>
+          <p><strong>Volgende stap:</strong> upload eerst je KvK-document. Daarna ontvang je automatisch de verificatiemail en gaat de aanvraag naar de admin ter goedkeuring.</p>
+          <div style="margin: 28px 0; text-align: center;">
+            <a href="${uploadUrl}" style="background-color: #FF8C00; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 6px; display: inline-block;">
+              KvK-document uploaden
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #666;">Werkt de knop niet? Kopieer deze link: ${uploadUrl}</p>
+        </div>
+      `,
+    };
+
+    if (isResendConfigured()) {
+      return await sendHtmlViaResend({
+        to: toAddr,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      });
+    }
+
+    const info = await getTransporter().sendMail(mailOptions);
+    return mailSendResultFromInfo(info);
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string };
+    return {
+      success: false,
+      error: err?.message || 'Onbekende fout bij business-conversie mail',
+      code: err?.code,
+    };
+  }
+}
+
 // Send business account approval notification
 export async function sendBusinessApprovalNotification(
   userEmail: string,

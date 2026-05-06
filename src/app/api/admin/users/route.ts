@@ -8,6 +8,7 @@ import {
   sendPasswordResetNotification,
   sendPersonalRegistrationConfirmation,
   sendBusinessRegistrationConfirmation,
+  sendBusinessConversionSetupEmail,
   type EmailSendResult,
 } from '@/lib/email';
 
@@ -64,7 +65,9 @@ export async function GET(request: NextRequest) {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone || '',
-      account_type: user.isAdmin ? 'admin' : (user.ownedCompany ? 'business' : 'user'),
+      account_type: user.isAdmin
+        ? 'admin'
+        : (user.ownedCompany && user.ownedCompany.status !== 'draft_kvk' ? 'business' : 'user'),
       isActive: !user.isBlocked,
       emailVerified: user.emailVerified,
       companyName: user.ownedCompany?.name || null,
@@ -246,6 +249,17 @@ export async function PUT(request: NextRequest) {
     let emailSent = false;
     let emailError: string | null = null;
     let passwordToUse: string | null = null;
+    let conversionMailPayload: null | {
+      toEmail: string;
+      firstName: string;
+      lastName: string;
+      companyName: string;
+      kvkNumber: string;
+      vatNumber?: string;
+      companyPhone?: string;
+      address?: string;
+      conversionToken: string;
+    } = null;
 
     const result = await safeDbOperation(async (prisma) => {
       const user = await prisma.user.findUnique({
@@ -321,12 +335,88 @@ export async function PUT(request: NextRequest) {
           if (!['user', 'business', 'admin'].includes(newRole)) {
             throw new Error('Invalid role');
           }
-          // Update isAdmin based on role
+
+          // "business" is not a standalone role flag in this schema.
+          // A user is considered business only when linked as company owner.
+          if (newRole === 'business') {
+            throw new Error('Om een gebruiker business te maken moet er een bedrijfsprofiel (company owner) gekoppeld worden. Rolwissel alleen ondersteunt user/admin.');
+          }
+
+          // Only toggle admin privileges here.
           await prisma.user.update({
             where: { id: userId },
             data: { isAdmin: newRole === 'admin' }
           });
           break;
+
+        case 'start_business_conversion': {
+          const {
+            companyName,
+            kvkNumber,
+            vatNumber,
+            companyPhone,
+            businessAddress,
+          } = data || {};
+
+          if (!companyName || !kvkNumber) {
+            throw new Error('Bedrijfsnaam en KvK-nummer zijn verplicht.');
+          }
+
+          const target = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { ownedCompany: true },
+          });
+
+          if (!target) {
+            throw new Error('Gebruiker niet gevonden.');
+          }
+          if (target.ownedCompany) {
+            throw new Error('Deze gebruiker heeft al een bedrijfsprofiel.');
+          }
+
+          const conversionToken = crypto.randomBytes(32).toString('hex');
+          const addressString = businessAddress
+            ? `${businessAddress.street || ''} ${businessAddress.houseNumber || ''}, ${businessAddress.postalCode || ''} ${businessAddress.city || ''}, ${businessAddress.country || 'Nederland'}`
+                .trim()
+                .replace(/\s+/g, ' ')
+                .replace(/,\s*,/g, ',')
+            : '';
+
+          const newCompany = await prisma.company.create({
+            data: {
+              name: companyName,
+              kvkNumber,
+              vatNumber: vatNumber || null,
+              companyPhone: companyPhone || null,
+              address: addressString,
+              status: 'draft_kvk',
+              ownerId: target.id,
+            },
+          });
+
+          await prisma.user.update({
+            where: { id: target.id },
+            data: {
+              companyId: newCompany.id,
+              emailVerified: false,
+              emailVerifiedAt: null,
+              emailVerificationToken: conversionToken,
+            },
+          });
+
+          conversionMailPayload = {
+            toEmail: target.email,
+            firstName: target.firstName,
+            lastName: target.lastName,
+            companyName,
+            kvkNumber,
+            vatNumber: vatNumber || undefined,
+            companyPhone: companyPhone || undefined,
+            address: addressString || undefined,
+            conversionToken,
+          };
+          break;
+        }
 
         default:
           throw new Error('Invalid action');
@@ -396,6 +486,19 @@ export async function PUT(request: NextRequest) {
           lastName,
           passwordToUse: !!passwordToUse
         });
+      }
+    }
+
+    if (action === 'start_business_conversion' && result && conversionMailPayload) {
+      const conversionMail = await sendBusinessConversionSetupEmail(conversionMailPayload);
+      if (!conversionMail.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Conversie is aangemaakt, maar de e-mail kon niet worden verzonden: ${conversionMail.error || 'onbekende fout'}`,
+          },
+          { status: 400 }
+        );
       }
     }
 

@@ -62,8 +62,9 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
   
   // Determine user role
   const isCompanyOwner = !!user?.ownedCompany?.id;
-  const isEmployee = !!user?.companyId && !user?.ownedCompany?.id;
-  const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id;
+  const hasBusinessMembership = (user?.companyMemberships?.length ?? 0) > 0;
+  const isEmployee = (!!user?.companyId || hasBusinessMembership) && !user?.ownedCompany?.id;
+  const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id && !hasBusinessMembership;
   
   // Company owners always save to company (no choice)
   // Personal users always save to personal (no choice)
@@ -752,7 +753,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       {/* Hidden info for company owners and personal users */}
       {!showStorageOptions && (
         <div className="text-xs text-gray-500 mb-2">
-          {isCompanyOwner && (
+          {(isCompanyOwner || isEmployee) && (
             <span>Dit recept wordt automatisch opgeslagen in de bedrijfsdatabase.</span>
           )}
           {isPersonalUser && (

@@ -17,6 +17,11 @@ export async function GET(request: NextRequest) {
 
     const applications = await safeDbOperation(async (prisma) => {
       return await prisma.company.findMany({
+        where: {
+          status: {
+            in: ['pending', 'approved', 'rejected'],
+          },
+        },
         include: {
           owner: {
             select: {

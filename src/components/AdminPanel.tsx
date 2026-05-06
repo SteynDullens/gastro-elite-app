@@ -492,6 +492,60 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
     }
   };
 
+  const startBusinessConversion = async (u: User) => {
+    const companyName = prompt(`Bedrijfsnaam voor ${u.email}:`, "");
+    if (!companyName) return;
+    const kvkNumber = prompt("KvK-nummer (8 cijfers):", "");
+    if (!kvkNumber) return;
+    const vatNumber = prompt("BTW-nummer (optioneel):", "") || "";
+    const companyPhone = prompt("Bedrijfstelefoon (optioneel):", "") || "";
+    const street = prompt("Straat:", "") || "";
+    const houseNumber = prompt("Huisnummer:", "") || "";
+    const postalCode = prompt("Postcode:", "") || "";
+    const city = prompt("Plaats:", "") || "";
+    const country = prompt("Land:", "Nederland") || "Nederland";
+
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          userId: u.id,
+          action: "start_business_conversion",
+          data: {
+            companyName,
+            kvkNumber,
+            vatNumber,
+            companyPhone,
+            businessAddress: {
+              street,
+              houseNumber,
+              postalCode,
+              city,
+              country,
+            },
+          },
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setMessage(`❌ ${result.error || "Conversie starten mislukt"}`);
+        setTimeout(() => setMessage(""), 7000);
+        return;
+      }
+
+      setMessage(`✅ Conversie gestart voor ${u.email}. De gebruiker heeft een e-mail ontvangen voor KvK-upload.`);
+      fetchUsers();
+      fetchBusinessApplications();
+      setTimeout(() => setMessage(""), 7000);
+    } catch {
+      setMessage("❌ Netwerkfout bij starten business conversie");
+      setTimeout(() => setMessage(""), 4000);
+    }
+  };
+
   useEffect(() => {
     if (user?.isAdmin) {
       fetchUsers();
@@ -955,13 +1009,21 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                       >
                         Reset Wachtwoord
                       </button>
+                      {user.account_type === "user" && (
+                        <button
+                          onClick={() => startBusinessConversion(user)}
+                          className="px-3 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          Start Business Conversie
+                        </button>
+                      )}
                       <select
-                        value={user.account_type}
+                        value={user.account_type === "admin" ? "admin" : "user"}
                         onChange={(e) => handleUserAction(user.id, "change_role", { newRole: e.target.value })}
                         className="px-2 py-1 border border-gray-300 rounded text-xs"
+                        title="Alleen admin-rechten wijzigen. Business wordt bepaald door gekoppeld bedrijfsprofiel."
                       >
                         <option value="user">User</option>
-                        <option value="business">Business</option>
                         <option value="admin">Admin</option>
                       </select>
                       <button
