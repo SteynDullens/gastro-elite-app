@@ -377,17 +377,43 @@ export async function PUT(request: NextRequest) {
           if (!target) {
             throw new Error('Gebruiker niet gevonden.');
           }
-          if (target.ownedCompany) {
-            throw new Error('Deze gebruiker heeft al een bedrijfsprofiel.');
-          }
-
-          const conversionToken = createBusinessConversionToken(target.id);
           const addressString = businessAddress
             ? `${businessAddress.street || ''} ${businessAddress.houseNumber || ''}, ${businessAddress.postalCode || ''} ${businessAddress.city || ''}, ${businessAddress.country || 'Nederland'}`
                 .trim()
                 .replace(/\s+/g, ' ')
                 .replace(/,\s*,/g, ',')
             : '';
+          const conversionToken = createBusinessConversionToken(target.id);
+
+          if (target.ownedCompany) {
+            // If a conversion draft already exists, update details and resend setup mail.
+            if (target.ownedCompany.status === 'draft_kvk') {
+              const updated = await prisma.company.update({
+                where: { id: target.ownedCompany.id },
+                data: {
+                  name: companyName || target.ownedCompany.name,
+                  kvkNumber: kvkNumber || target.ownedCompany.kvkNumber,
+                  vatNumber: vatNumber || target.ownedCompany.vatNumber || null,
+                  companyPhone: companyPhone || target.ownedCompany.companyPhone || null,
+                  address: addressString || target.ownedCompany.address || '',
+                },
+              });
+
+              conversionMailPayload = {
+                toEmail: target.email,
+                firstName: target.firstName,
+                lastName: target.lastName,
+                companyName: updated.name,
+                kvkNumber: updated.kvkNumber || 'Nog in te vullen',
+                vatNumber: updated.vatNumber || undefined,
+                companyPhone: updated.companyPhone || undefined,
+                address: updated.address || undefined,
+                conversionToken,
+              };
+              break;
+            }
+            throw new Error('Deze gebruiker heeft al een bedrijfsprofiel.');
+          }
 
           const newCompany = await prisma.company.create({
             data: {
