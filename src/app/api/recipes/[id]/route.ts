@@ -329,6 +329,29 @@ export async function PUT(
       },
     };
 
+    const createRecipeDataBase = {
+      name,
+      image,
+      batchSize: batchAmount || null,
+      servings: batchUnit === 'personen' ? (batchAmount || null) : null,
+      instructions: steps
+        .map((s: string, i: number) => (s && s.trim() ? `${i + 1}. ${s.trim()}` : ''))
+        .filter(Boolean)
+        .join('\n'),
+      categories: {
+        connect: categoryRecords
+          .filter((c) => Boolean(c && (c as any).id))
+          .map((c) => ({ id: (c as any).id })),
+      },
+      ingredients: {
+        create: ingredients.map((ing) => ({
+          name: ing.name,
+          quantity: ing.quantity,
+          unit: ing.unit as any,
+        })),
+      },
+    };
+
     // Update based on recipe type
     let updatedRecipe: any;
 
@@ -385,22 +408,21 @@ export async function PUT(
                 })
               );
             } else {
-              await safeDbOperation(async (prisma) =>
+              const createdCompanyCounterpart = await safeDbOperation(async (prisma) =>
                 prisma.companyRecipe.create({
                   data: {
-                    ...recipeData,
+                    ...createRecipeDataBase,
                     companyId,
                     creatorId: user.id,
-                    ingredients: {
-                      create: ingredients.map((ing) => ({
-                        name: ing.name,
-                        quantity: ing.quantity,
-                        unit: ing.unit as any,
-                      })),
-                    },
                   },
                 })
               );
+              if (!createdCompanyCounterpart) {
+                return NextResponse.json(
+                  { error: 'Kon geen bedrijfskopie aanmaken tijdens opslaan.' },
+                  { status: 500 }
+                );
+              }
             }
             if (saveTo === 'business') {
               await safeDbOperation(async (prisma) => prisma.personalRecipe.delete({ where: { id: recipeId } }));
@@ -456,21 +478,20 @@ export async function PUT(
               })
             );
           } else {
-            await safeDbOperation(async (prisma) =>
+            const createdPersonalCounterpart = await safeDbOperation(async (prisma) =>
               prisma.personalRecipe.create({
                 data: {
-                  ...recipeData,
+                  ...createRecipeDataBase,
                   userId: user.id,
-                  ingredients: {
-                    create: ingredients.map((ing) => ({
-                      name: ing.name,
-                      quantity: ing.quantity,
-                      unit: ing.unit as any,
-                    })),
-                  },
                 },
               })
             );
+            if (!createdPersonalCounterpart) {
+              return NextResponse.json(
+                { error: 'Kon geen persoonlijke kopie aanmaken tijdens opslaan.' },
+                { status: 500 }
+              );
+            }
           }
           if (saveTo === 'personal') {
             await safeDbOperation(async (prisma) => prisma.companyRecipe.delete({ where: { id: recipeId } }));
