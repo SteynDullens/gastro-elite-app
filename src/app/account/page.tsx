@@ -12,7 +12,7 @@ type BusinessTab = 'edit-details' | 'language' | 'employees' | 'logout';
 
 export default function AccountPage() {
   const { t, language, setLanguage } = useLanguage();
-  const { user, logout, loading, isBusiness, login } = useAuth();
+  const { user, logout, loading, isBusiness, login, refreshUser } = useAuth();
   const router = useRouter();
   
   // Active tab state for business users
@@ -103,6 +103,7 @@ export default function AccountPage() {
   const [employeeEmail, setEmployeeEmail] = useState("");
   const [businessError, setBusinessError] = useState("");
   const [businessSuccess, setBusinessSuccess] = useState("");
+  const [leavingCompany, setLeavingCompany] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   
   // Pending invitation notification
@@ -226,20 +227,21 @@ export default function AccountPage() {
 
       // Fetch company data for business users
       // Check if user has a company (either as owner or employee)
-      const hasCompany = user?.ownedCompany?.id || user?.companyId;
-      if (isBusiness && hasCompany) {
+      const membershipCompanyId = user?.companyMemberships?.[0]?.companyId;
+      const hasCompany = user?.ownedCompany?.id || user?.companyId || membershipCompanyId;
+      if (hasCompany) {
         fetchCompanyData();
       }
     }
   }, [user, isBusiness, fetchCompanyData]);
 
   // Business functions
-  // Helper to get the company ID (from ownedCompany for business owners, or companyId for employees)
+  // Helper to get the company ID (owner first, then legacy companyId, then membership fallback)
   const getCompanyId = () => {
     if (user?.ownedCompany?.id) {
       return user.ownedCompany.id; // Business owner
     }
-    return user?.companyId; // Employee or null
+    return user?.companyId || user?.companyMemberships?.[0]?.companyId; // Employee or null
   };
 
   const handleAddEmployee = async (e: React.FormEvent) => {
@@ -413,6 +415,32 @@ export default function AccountPage() {
     } catch (error: any) {
       console.error('❌ Error removing employee/invitation:', error);
       setBusinessError(error.message || "Verwijderen mislukt");
+    }
+  };
+
+  const handleLeaveCompany = async () => {
+    if (!company?.id && !user?.companyId) return;
+    if (!confirm('Weet je zeker dat je jezelf wilt ontkoppelen van dit bedrijf?')) return;
+    setLeavingCompany(true);
+    try {
+      const response = await fetch('/api/company/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ companyId: company?.id || user?.companyId }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Ontkoppelen mislukt');
+      }
+      setBusinessSuccess('Je bent succesvol ontkoppeld van het bedrijf.');
+      await refreshUser();
+      setCompany(null);
+      setEmployees([]);
+    } catch (error: any) {
+      setBusinessError(error?.message || 'Ontkoppelen mislukt');
+    } finally {
+      setLeavingCompany(false);
     }
   };
 
@@ -1076,15 +1104,25 @@ export default function AccountPage() {
                   <h3 className="text-xl font-semibold mb-6">{t.editDetails}</h3>
                   
                   {/* Company Connection Message */}
-                  {user?.companyId && company && (
+                  {!user?.ownedCompany?.id && company && (
                     <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                      <div className="flex items-center">
-                        <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                        <p className="text-sm text-orange-800">
-                          <strong>Jij maakt deel uit van &quot;{company.name}&quot;</strong>
-                        </p>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center">
+                          <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          <p className="text-sm text-orange-800">
+                            <strong>Je bent als medewerker gekoppeld aan &quot;{company.name}&quot;.</strong>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleLeaveCompany}
+                          disabled={leavingCompany}
+                          className="px-3 py-1.5 text-xs font-semibold rounded bg-white border border-orange-300 text-orange-800 hover:bg-orange-100 disabled:opacity-60"
+                        >
+                          {leavingCompany ? 'Bezig...' : 'Ontkoppel mezelf'}
+                        </button>
                       </div>
                     </div>
                   )}

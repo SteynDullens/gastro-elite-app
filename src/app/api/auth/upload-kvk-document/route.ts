@@ -27,52 +27,53 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if Vercel Blob is configured
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      // Use Vercel Blob Storage
-      const { put } = await import('@vercel/blob');
-      
-      const timestamp = Date.now();
-      const fileExtension = document.name.split('.').pop();
-      const safeKvkPart = kvkNumber || 'unknown-kvk';
-      const filename = `kvk-documents/kvk_${safeKvkPart}_${timestamp}.${fileExtension}`;
-
-      const blob = await put(filename, document, {
-        access: 'public',
-        addRandomSuffix: false,
-      });
-
-      console.log('✅ Document uploaded to Vercel Blob:', blob.url);
-
-      return NextResponse.json({ 
-        success: true, 
-        documentPath: blob.url,
-        message: 'Document uploaded successfully' 
-      });
-    } else {
-      // Fallback: Convert to base64 data URL and store reference
-      // This works for serverless but document will be stored as data URL
+    const buildBase64Fallback = async () => {
       const bytes = await document.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const base64 = buffer.toString('base64');
-      const mimeType = document.type;
+      const mimeType = document.type || 'application/octet-stream';
       const dataUrl = `data:${mimeType};base64,${base64}`;
-      
-      // For production, we'll store a reference that indicates it's a base64 document
-      // The actual data will be stored in the company record
       const timestamp = Date.now();
       const safeKvkPart = kvkNumber || 'unknown-kvk';
       const documentRef = `base64:${safeKvkPart}:${timestamp}:${document.name}`;
-      
-      console.log('✅ Document converted to base64, size:', base64.length);
-
-      return NextResponse.json({ 
-        success: true, 
+      console.log('✅ Document converted to base64 fallback, size:', base64.length);
+      return NextResponse.json({
+        success: true,
         documentPath: documentRef,
-        documentData: dataUrl, // Include the actual data for storage
-        message: 'Document uploaded successfully' 
+        documentData: dataUrl,
+        message: 'Document uploaded successfully',
       });
+    };
+
+    // Check if Vercel Blob is configured
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { put } = await import('@vercel/blob');
+        const timestamp = Date.now();
+        const fileExtension = document.name.split('.').pop();
+        const safeKvkPart = kvkNumber || 'unknown-kvk';
+        const filename = `kvk-documents/kvk_${safeKvkPart}_${timestamp}.${fileExtension}`;
+
+        const blob = await put(filename, document, {
+          access: 'public',
+          addRandomSuffix: false,
+        });
+
+        console.log('✅ Document uploaded to Vercel Blob:', blob.url);
+
+        return NextResponse.json({
+          success: true,
+          documentPath: blob.url,
+          message: 'Document uploaded successfully',
+        });
+      } catch (blobError) {
+        console.warn('⚠️ Blob upload failed, falling back to base64:', blobError);
+        return await buildBase64Fallback();
+      }
     }
+
+    // Fallback: Convert to base64 data URL and store reference
+    return await buildBase64Fallback();
 
   } catch (error) {
     console.error('KvK document upload error:', error);
