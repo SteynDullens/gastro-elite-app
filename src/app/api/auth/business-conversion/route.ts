@@ -46,6 +46,11 @@ export async function POST(request: NextRequest) {
   const token = body?.token?.trim();
   const kvkDocumentPath = body?.kvkDocumentPath?.trim();
   const kvkDocumentData = body?.kvkDocumentData;
+  const companyName = body?.companyName?.trim();
+  const kvkNumber = body?.kvkNumber?.trim();
+  const vatNumber = body?.vatNumber?.trim();
+  const companyPhone = body?.companyPhone?.trim();
+  const address = body?.address?.trim();
 
   if (!token || !kvkDocumentPath) {
     return NextResponse.json(
@@ -68,9 +73,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Ongeldige of verlopen conversielink' }, { status: 404 });
   }
 
+  if (!companyName || !kvkNumber) {
+    return NextResponse.json(
+      { success: false, error: 'Bedrijfsnaam en KvK-nummer zijn verplicht.' },
+      { status: 400 }
+    );
+  }
+
   const company = await prisma.company.update({
     where: { id: user.ownedCompany.id },
     data: {
+      name: companyName,
+      kvkNumber,
+      vatNumber: vatNumber || null,
+      companyPhone: companyPhone || null,
+      address: address || '',
       kvkDocumentPath,
       kvkDocumentData: kvkDocumentData || null,
       status: 'pending',

@@ -358,8 +358,8 @@ export async function PUT(request: NextRequest) {
             businessAddress,
           } = data || {};
 
-          if (!companyName || !kvkNumber) {
-            throw new Error('Bedrijfsnaam en KvK-nummer zijn verplicht.');
+          if (!companyName) {
+            throw new Error('Bedrijfsnaam is verplicht.');
           }
 
           const target = await prisma.user.findUnique({
@@ -385,7 +385,7 @@ export async function PUT(request: NextRequest) {
           const newCompany = await prisma.company.create({
             data: {
               name: companyName,
-              kvkNumber,
+              kvkNumber: kvkNumber || '',
               vatNumber: vatNumber || null,
               companyPhone: companyPhone || null,
               address: addressString,
@@ -409,7 +409,7 @@ export async function PUT(request: NextRequest) {
             firstName: target.firstName,
             lastName: target.lastName,
             companyName,
-            kvkNumber,
+            kvkNumber: kvkNumber || 'Nog in te vullen',
             vatNumber: vatNumber || undefined,
             companyPhone: companyPhone || undefined,
             address: addressString || undefined,

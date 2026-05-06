@@ -18,6 +18,7 @@ export default function BusinessConversionPage() {
   const params = useSearchParams();
   const token = useMemo(() => params.get("token") || "", [params]);
   const [info, setInfo] = useState<ConversionInfo | null>(null);
+  const [form, setForm] = useState<ConversionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -39,6 +40,7 @@ export default function BusinessConversionPage() {
         setError(result.error || "Conversiegegevens konden niet geladen worden.");
       } else {
         setInfo(result.data);
+        setForm(result.data);
       }
       setLoading(false);
     })();
@@ -51,7 +53,15 @@ export default function BusinessConversionPage() {
     e.preventDefault();
     setError("");
     setMessage("");
-    if (!info) return;
+    if (!info || !form) return;
+    if (!form.companyName.trim()) {
+      setError("Bedrijfsnaam is verplicht.");
+      return;
+    }
+    if (!form.kvkNumber.trim()) {
+      setError("KvK-nummer is verplicht voordat je kunt indienen.");
+      return;
+    }
     if (!file) {
       setError("Upload eerst het KvK-document.");
       return;
@@ -61,7 +71,7 @@ export default function BusinessConversionPage() {
     try {
       const uploadForm = new FormData();
       uploadForm.append("document", file);
-      uploadForm.append("kvkNumber", info.kvkNumber);
+      uploadForm.append("kvkNumber", form.kvkNumber);
 
       const uploadResponse = await fetch("/api/auth/upload-kvk-document", {
         method: "POST",
@@ -79,6 +89,11 @@ export default function BusinessConversionPage() {
           token,
           kvkDocumentPath: uploadResult.documentPath,
           kvkDocumentData: uploadResult.documentData || null,
+          companyName: form.companyName,
+          kvkNumber: form.kvkNumber,
+          vatNumber: form.vatNumber,
+          companyPhone: form.companyPhone,
+          address: form.address,
         }),
       });
       const finishResult = await finishResponse.json();
@@ -106,19 +121,63 @@ export default function BusinessConversionPage() {
   return (
     <main className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-semibold mb-4">Bedrijfsomzetting voltooien</h1>
-      {info && (
+      {form && (
         <div className="mb-6 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded p-4">
-          <p><strong>Naam:</strong> {info.firstName} {info.lastName}</p>
-          <p><strong>E-mail:</strong> {info.email}</p>
-          <p><strong>Bedrijf:</strong> {info.companyName}</p>
-          <p><strong>KvK:</strong> {info.kvkNumber}</p>
-          <p><strong>BTW:</strong> {info.vatNumber || "Niet opgegeven"}</p>
-          <p><strong>Telefoon:</strong> {info.companyPhone || "Niet opgegeven"}</p>
-          <p><strong>Adres:</strong> {info.address || "Niet opgegeven"}</p>
+          <p><strong>Naam:</strong> {form.firstName} {form.lastName}</p>
+          <p><strong>E-mail:</strong> {form.email}</p>
         </div>
       )}
 
       <form onSubmit={onSubmit} className="space-y-4">
+        {form && (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-2">Bedrijfsnaam</label>
+              <input
+                type="text"
+                value={form.companyName}
+                onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">KvK-nummer</label>
+              <input
+                type="text"
+                value={form.kvkNumber}
+                onChange={(e) => setForm({ ...form, kvkNumber: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">BTW-nummer</label>
+              <input
+                type="text"
+                value={form.vatNumber}
+                onChange={(e) => setForm({ ...form, vatNumber: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Bedrijfstelefoon</label>
+              <input
+                type="text"
+                value={form.companyPhone}
+                onChange={(e) => setForm({ ...form, companyPhone: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Adres</label>
+              <input
+                type="text"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              />
+            </div>
+          </>
+        )}
         <div>
           <label className="block text-sm font-medium mb-2">KvK-document (PDF/JPG/PNG, max 5MB)</label>
           <input
