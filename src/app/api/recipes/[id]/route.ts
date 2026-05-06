@@ -263,7 +263,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, image, batchAmount, batchUnit, ingredients, steps, categories } = body as {
+    const { name, image, batchAmount, batchUnit, ingredients, steps, categories, saveTo: requestedSaveTo } = body as {
       name: string;
       image?: string;
       batchAmount?: number;
@@ -271,10 +271,23 @@ export async function PUT(
       ingredients: { quantity: number; unit: string; name: string }[];
       steps: string[];
       categories: string[];
+      saveTo?: 'personal' | 'business' | 'both';
     };
 
     if (!name || !Array.isArray(ingredients) || !Array.isArray(steps)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    // Apply the same role-based save rules as create endpoint
+    let saveTo = requestedSaveTo;
+    if (isCompanyOwner) {
+      saveTo = 'business';
+    } else if (isPersonalUser) {
+      saveTo = 'personal';
+    } else if (isEmployee) {
+      if (!saveTo || (saveTo !== 'personal' && saveTo !== 'business' && saveTo !== 'both')) {
+        saveTo = 'personal';
+      }
     }
 
     // Ensure categories exist
@@ -336,6 +349,65 @@ export async function PUT(
         originalOwnerId: updatedRecipe.userId,
         isSharedWithBusiness: false,
       };
+
+      if (isEmployee) {
+        const companyId = employeeCompanyIds[0] || user.companyId || null;
+        if (companyId) {
+          const nameCandidates = Array.from(new Set([existingRecipe.name, name].filter(Boolean)));
+          if (saveTo === 'personal') {
+            // User moved back to personal: remove business copies for this employee+company+name
+            await safeDbOperation(async (prisma) =>
+              prisma.companyRecipe.deleteMany({
+                where: {
+                  companyId,
+                  creatorId: user.id,
+                  name: { in: nameCandidates as string[] },
+                },
+              })
+            );
+          } else if (saveTo === 'business' || saveTo === 'both') {
+            // Ensure business copy exists and is synced
+            const counterpart = await safeDbOperation(async (prisma) =>
+              prisma.companyRecipe.findFirst({
+                where: {
+                  companyId,
+                  creatorId: user.id,
+                  name: { in: nameCandidates as string[] },
+                },
+                orderBy: { createdAt: 'desc' },
+              })
+            );
+            if (counterpart) {
+              await safeDbOperation(async (prisma) =>
+                prisma.companyRecipe.update({
+                  where: { id: counterpart.id },
+                  data: recipeData,
+                })
+              );
+            } else {
+              await safeDbOperation(async (prisma) =>
+                prisma.companyRecipe.create({
+                  data: {
+                    ...recipeData,
+                    companyId,
+                    creatorId: user.id,
+                    ingredients: {
+                      create: ingredients.map((ing) => ({
+                        name: ing.name,
+                        quantity: ing.quantity,
+                        unit: ing.unit as any,
+                      })),
+                    },
+                  },
+                })
+              );
+            }
+            if (saveTo === 'business') {
+              await safeDbOperation(async (prisma) => prisma.personalRecipe.delete({ where: { id: recipeId } }));
+            }
+          }
+        }
+      }
     } else if (existingRecipe.type === 'company') {
       updatedRecipe = await safeDbOperation(async (prisma) => {
         return await prisma.companyRecipe.update({
@@ -353,6 +425,58 @@ export async function PUT(
         originalOwnerId: updatedRecipe.creatorId,
         isSharedWithBusiness: false,
       };
+
+      if (isEmployee) {
+        const nameCandidates = Array.from(new Set([existingRecipe.name, name].filter(Boolean)));
+        if (saveTo === 'business') {
+          // Remove personal copies when explicitly choosing business only
+          await safeDbOperation(async (prisma) =>
+            prisma.personalRecipe.deleteMany({
+              where: {
+                userId: user.id,
+                name: { in: nameCandidates as string[] },
+              },
+            })
+          );
+        } else if (saveTo === 'personal' || saveTo === 'both') {
+          const personalCounterpart = await safeDbOperation(async (prisma) =>
+            prisma.personalRecipe.findFirst({
+              where: {
+                userId: user.id,
+                name: { in: nameCandidates as string[] },
+              },
+              orderBy: { createdAt: 'desc' },
+            })
+          );
+          if (personalCounterpart) {
+            await safeDbOperation(async (prisma) =>
+              prisma.personalRecipe.update({
+                where: { id: personalCounterpart.id },
+                data: recipeData,
+              })
+            );
+          } else {
+            await safeDbOperation(async (prisma) =>
+              prisma.personalRecipe.create({
+                data: {
+                  ...recipeData,
+                  userId: user.id,
+                  ingredients: {
+                    create: ingredients.map((ing) => ({
+                      name: ing.name,
+                      quantity: ing.quantity,
+                      unit: ing.unit as any,
+                    })),
+                  },
+                },
+              })
+            );
+          }
+          if (saveTo === 'personal') {
+            await safeDbOperation(async (prisma) => prisma.companyRecipe.delete({ where: { id: recipeId } }));
+          }
+        }
+      }
     }
 
     console.log('✅ Recipe update successful:', recipeId);
