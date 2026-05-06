@@ -12,6 +12,13 @@ import {
   type EmailSendResult,
 } from '@/lib/email';
 
+function createBusinessConversionToken(userId: string): string {
+  const secret = process.env.JWT_SECRET || process.env.DWT_SECRET || 'gastro-elite-secret';
+  const payload = `${userId}.${Date.now()}`;
+  const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 32);
+  return `${payload}.${signature}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('auth-token')?.value;
@@ -374,7 +381,7 @@ export async function PUT(request: NextRequest) {
             throw new Error('Deze gebruiker heeft al een bedrijfsprofiel.');
           }
 
-          const conversionToken = crypto.randomBytes(32).toString('hex');
+          const conversionToken = createBusinessConversionToken(target.id);
           const addressString = businessAddress
             ? `${businessAddress.street || ''} ${businessAddress.houseNumber || ''}, ${businessAddress.postalCode || ''} ${businessAddress.city || ''}, ${businessAddress.country || 'Nederland'}`
                 .trim()
@@ -398,9 +405,6 @@ export async function PUT(request: NextRequest) {
             where: { id: target.id },
             data: {
               companyId: newCompany.id,
-              emailVerified: false,
-              emailVerifiedAt: null,
-              emailVerificationToken: conversionToken,
             },
           });
 

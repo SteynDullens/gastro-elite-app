@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getPrisma } from '@/lib/prisma';
 import {
-  sendBusinessRegistrationConfirmation,
   sendBusinessRegistrationNotification,
 } from '@/lib/email';
+
+function verifyBusinessConversionToken(token: string): { userId: string; ok: boolean } {
+  const parts = token.split('.');
+  if (parts.length !== 3) return { userId: '', ok: false };
+  const [userId, ts, sig] = parts;
+  if (!userId || !ts || !sig) return { userId: '', ok: false };
+  const secret = process.env.JWT_SECRET || process.env.DWT_SECRET || 'gastro-elite-secret';
+  const payload = `${userId}.${ts}`;
+  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 32);
+  if (sig !== expected) return { userId: '', ok: false };
+
+  const issuedAt = Number(ts);
+  if (!Number.isFinite(issuedAt)) return { userId: '', ok: false };
+  const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 dagen
+  if (Date.now() - issuedAt > maxAgeMs) return { userId: '', ok: false };
+
+  return { userId, ok: true };
+}
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token')?.trim();
@@ -17,8 +34,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Database niet bereikbaar' }, { status: 503 });
   }
 
+  const parsed = verifyBusinessConversionToken(token);
+  if (!parsed.ok) {
+    return NextResponse.json({ success: false, error: 'Ongeldige of verlopen conversielink' }, { status: 404 });
+  }
+
   const user = await prisma.user.findFirst({
-    where: { emailVerificationToken: token, deletedAt: null },
+    where: { id: parsed.userId, deletedAt: null },
     include: { ownedCompany: true },
   });
 
@@ -64,8 +86,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Database niet bereikbaar' }, { status: 503 });
   }
 
+  const parsed = verifyBusinessConversionToken(token);
+  if (!parsed.ok) {
+    return NextResponse.json({ success: false, error: 'Ongeldige of verlopen conversielink' }, { status: 404 });
+  }
+
   const user = await prisma.user.findFirst({
-    where: { emailVerificationToken: token, deletedAt: null },
+    where: { id: parsed.userId, deletedAt: null },
     include: { ownedCompany: true },
   });
 
@@ -94,16 +121,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerificationToken: verificationToken,
-      emailVerified: false,
-      emailVerifiedAt: null,
-    },
-  });
-
   await sendBusinessRegistrationNotification(
     {
       firstName: user.firstName,
@@ -126,29 +143,8 @@ export async function POST(request: NextRequest) {
     company.id
   );
 
-  await sendBusinessRegistrationConfirmation(
-    {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone || '',
-      companyName: company.name,
-      kvkNumber: company.kvkNumber,
-      vatNumber: company.vatNumber || undefined,
-      companyPhone: company.companyPhone || undefined,
-      address: {
-        country: 'Nederland',
-        postalCode: '',
-        street: company.address || '',
-        city: '',
-      },
-    },
-    verificationToken
-  );
-
   return NextResponse.json({
     success: true,
-    message:
-      'KvK-document is ontvangen. Je aanvraag staat nu op pending en de verificatie-e-mail is verzonden.',
+    message: 'KvK-document is ontvangen. Je aanvraag staat nu op pending voor admin-goedkeuring.',
   });
 }

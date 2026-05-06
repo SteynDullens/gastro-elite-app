@@ -732,7 +732,7 @@ export async function sendBusinessConversionSetupEmail(params: {
             <li><strong>Bedrijfstelefoon:</strong> ${params.companyPhone || 'Niet opgegeven'}</li>
             <li><strong>Adres:</strong> ${params.address || 'Niet opgegeven'}</li>
           </ul>
-          <p><strong>Volgende stap:</strong> upload eerst je KvK-document. Daarna ontvang je automatisch de verificatiemail en gaat de aanvraag naar de admin ter goedkeuring.</p>
+          <p><strong>Volgende stap:</strong> upload eerst je KvK-document. Daarna gaat de aanvraag naar de admin ter goedkeuring.</p>
           <div style="margin: 28px 0; text-align: center;">
             <a href="${uploadUrl}" style="background-color: #FF8C00; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 6px; display: inline-block;">
               KvK-document uploaden
