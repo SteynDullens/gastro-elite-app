@@ -61,15 +61,15 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
   const isEditing = !!recipeId;
   
   // Determine user role
-  const isCompanyOwner = !!user?.ownedCompany?.id;
+  const isActiveCompanyOwner = !!user?.ownedCompany?.id;
   const hasBusinessMembership = (user?.companyMemberships?.length ?? 0) > 0;
-  const isEmployee = (!!user?.companyId || hasBusinessMembership) && !user?.ownedCompany?.id;
+  const isEmployee = (!!user?.companyId || hasBusinessMembership) && !isActiveCompanyOwner;
   const isPersonalUser = !user?.companyId && !user?.ownedCompany?.id && !hasBusinessMembership;
   
   // Company owners always save to company (no choice)
   // Personal users always save to personal (no choice)
   // Employees can choose personal, company, or both
-  const showStorageOptions = isEmployee && !isEditing;
+  const showStorageOptions = isEmployee;
 
   // Category translation map
   const translateCategory = (category: string): string => {
@@ -122,7 +122,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
     
     // Set default saveTo based on user role
     let defaultSaveTo: "personal" | "business" | "both" = "personal";
-    if (isCompanyOwner) {
+    if (isActiveCompanyOwner) {
       defaultSaveTo = "business"; // Company owners always save to company
     } else if (isEmployee) {
       defaultSaveTo = "personal"; // Employees default to personal, but can choose
@@ -472,7 +472,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
           ingredients: [],
           steps: [""],
           categories: [],
-          saveTo: isEmployee ? "personal" : (isCompanyOwner ? "business" : "personal"), // Reset based on role
+          saveTo: isEmployee ? "personal" : (isActiveCompanyOwner ? "business" : "personal"), // Reset based on role
         });
         setImagePreview("");
       }
@@ -753,7 +753,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       {/* Hidden info for company owners and personal users */}
       {!showStorageOptions && (
         <div className="text-xs text-gray-500 mb-2">
-          {(isCompanyOwner || isEmployee) && (
+          {(isActiveCompanyOwner || isEmployee) && (
             <span>Dit recept wordt automatisch opgeslagen in de bedrijfsdatabase.</span>
           )}
           {isPersonalUser && (
