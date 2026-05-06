@@ -1104,6 +1104,18 @@ export default function AccountPage() {
                   <h3 className="text-xl font-semibold mb-6">{t.editDetails}</h3>
                   
                   {/* Company Connection Message */}
+                  {user?.ownedCompany?.id && company && (
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M5 21V7l8-4 8 4v14M9 9h.01M9 12h.01M9 15h.01M13 9h.01M13 12h.01M13 15h.01M17 9h.01M17 12h.01M17 15h.01" />
+                        </svg>
+                        <p className="text-sm text-blue-900">
+                          <strong>Dit account is een bedrijfsaccount (eigenaar) van &quot;{company.name}&quot;.</strong>
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {!user?.ownedCompany?.id && company && (
                     <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                       <div className="flex items-center justify-between gap-4">
