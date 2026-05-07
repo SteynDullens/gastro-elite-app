@@ -65,7 +65,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const { toasts, success, error, removeToast } = useToast();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [databaseFilter, setDatabaseFilter] = useState<"all" | "personal" | "business">("all");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -198,7 +198,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         if (res.ok) {
           const names = (data.categories || []).map((c: { name: string }) => c.name);
           setCategories(names);
-          setSelectedCategory(prev => (prev && !names.includes(prev) ? "" : prev));
+          setSelectedCategories((prev) => prev.filter((c) => names.includes(c)));
         } else {
           setCategories([]);
         }
@@ -246,7 +246,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     const recipeCategories = categories.map((cat: any) =>
       typeof cat === "string" ? cat : cat?.name || cat
     );
-    const matchesCategory = !selectedCategory || recipeCategories.includes(selectedCategory);
+    const matchesCategory =
+      selectedCategories.length === 0 ||
+      selectedCategories.some((sel) => recipeCategories.includes(sel));
     
     let matchesDatabase = true;
     
@@ -274,7 +276,17 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     return acc;
   }, {});
 
-  const sortedLetters = Object.keys(groupedByLetter).sort();
+  const sortedLetters = Object.keys(groupedByLetter).sort((a, b) => {
+    if (a === "#") return 1;
+    if (b === "#") return -1;
+    return a.localeCompare(b, undefined, { sensitivity: "base" });
+  });
+
+  const toggleCategoryFilter = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
+    );
+  };
 
   // Scroll to letter in alphabetical view
   const scrollToLetter = (letter: string) => {
@@ -303,9 +315,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       // Row view — list / table style
       return (
         <div className="bg-white border-b border-stone-200/80 hover:bg-stone-50/80 transition-colors duration-200">
-          <div className="flex items-center gap-6 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-4">
             {/* Image */}
-            <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-stone-200/90 bg-stone-100">
+            <div className="relative w-full sm:w-24 h-40 sm:h-24 flex-shrink-0 rounded-md overflow-hidden border border-stone-200/90 bg-stone-100">
               {showImage ? (
                 <Image
                   src={displayRecipeImageUrl(recipe.image!)}
@@ -324,7 +336,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold text-stone-900 truncate tracking-tight">{recipe.name}</h3>
@@ -372,17 +384,17 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 </div>
                 
                 {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end max-w-full">
                   <Link
                     href={`/recipes/${recipe.id}`}
-                    className="px-4 py-2 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
+                    className="px-3 sm:px-4 py-2 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
                   >
                     {t.view}
                   </Link>
                   {canEditRecipe(recipe) && (
                     <Link
                       href={`/recipes/${recipe.id}/edit`}
-                      className="px-4 py-2 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 transition-colors"
+                      className="px-3 sm:px-4 py-2 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 transition-colors"
                     >
                       {t.edit}
                     </Link>
@@ -407,8 +419,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       // Alphabetical View — minimal list
       return (
         <div className="bg-white border-b border-stone-200/80 hover:bg-stone-50/60 transition-colors duration-150">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <h3 className="text-base font-medium text-stone-900 tracking-tight">{recipe.name}</h3>
               {recipe.companyId ? (
                 <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
@@ -420,7 +432,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <Link
                 href={`/recipes/${recipe.id}`}
                 className="px-3 py-1.5 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
@@ -498,17 +510,17 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               </div>
             )}
 
-            <div className="mt-5 flex gap-2 justify-center">
+            <div className="mt-5 flex gap-2 justify-center flex-wrap">
               <Link
                 href={`/recipes/${recipe.id}`}
-                className="flex-1 px-4 py-2.5 text-white text-sm rounded-md text-center font-medium bg-stone-900 hover:bg-stone-800 transition-colors"
+                className="w-full sm:flex-1 px-4 py-2.5 text-white text-sm rounded-md text-center font-medium bg-stone-900 hover:bg-stone-800 transition-colors"
               >
                 {t.view}
               </Link>
               {canEditRecipe(recipe) && (
                 <Link
                   href={`/recipes/${recipe.id}/edit`}
-                  className="px-4 py-2.5 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 text-center transition-colors"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 text-center transition-colors min-w-[120px]"
                 >
                   {t.edit}
                 </Link>
@@ -607,61 +619,71 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       </div>
 
       {/* View Switcher and Filter */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto">
           <span className="text-sm font-semibold text-stone-600">{t.switchView || 'Switch View'}:</span>
-          <div className="flex gap-1 bg-stone-100 rounded-lg p-1 border border-stone-200/90">
+          <div className="flex gap-1 bg-stone-100 rounded-lg p-1 border border-stone-200/90 flex-1 sm:flex-initial">
             <button
+              type="button"
               onClick={() => setViewMode("grid")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
                 viewMode === "grid"
                   ? "bg-white text-stone-900 shadow-sm"
                   : "text-stone-500 hover:text-stone-900"
               }`}
-              title={t.gridView || 'Grid View'}
+              title={t.gridView || "Grid View"}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
               </svg>
-              <span className="hidden sm:inline">{t.gridView || 'Grid'}</span>
+              <span className="sm:hidden text-[10px] font-semibold leading-tight truncate max-w-full">
+                {t.recipeViewShortGrid}
+              </span>
+              <span className="hidden sm:inline">{t.gridView || "Grid"}</span>
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("row")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
                 viewMode === "row"
                   ? "bg-white text-stone-900 shadow-sm"
                   : "text-stone-500 hover:text-stone-900"
               }`}
-              title={t.rowView || 'Row View'}
+              title={t.rowView || "Row View"}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span className="hidden sm:inline">{t.rowView || 'Row'}</span>
+              <span className="sm:hidden text-[10px] font-semibold leading-tight truncate max-w-full">
+                {t.recipeViewShortRow}
+              </span>
+              <span className="hidden sm:inline">{t.rowView || "Row"}</span>
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("alphabetical")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
                 viewMode === "alphabetical"
                   ? "bg-white text-stone-900 shadow-sm"
                   : "text-stone-500 hover:text-stone-900"
               }`}
-              title={t.alphabeticalView || 'Alphabetical View'}
+              title={t.alphabeticalView || "Alphabetical View"}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              <span className="hidden sm:inline">{t.alphabeticalView || 'Alphabetical'}</span>
+              <span className="sm:hidden text-[10px] font-semibold leading-tight">{t.recipeViewShortAz}</span>
+              <span className="hidden sm:inline">{t.alphabeticalView || "Alphabetical"}</span>
             </button>
           </div>
         </div>
 
         {/* Filter Dropdown Button */}
-        <div className="relative" ref={filterDropdownRef}>
+        <div className="relative w-full sm:w-auto" ref={filterDropdownRef}>
           <button
             onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-              filterDropdownOpen || databaseFilter !== "all" || selectedCategory !== ""
+            className={`flex items-center justify-center sm:justify-start gap-2 px-4 py-2 rounded-lg border transition-all w-full sm:w-auto ${
+              filterDropdownOpen || databaseFilter !== "all" || selectedCategories.length > 0
                 ? "bg-stone-900 text-white border-stone-900"
                 : "bg-white text-stone-700 border-stone-200 hover:bg-stone-50"
             }`}
@@ -671,14 +693,14 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             <span className="hidden sm:inline text-sm font-medium">{t.filter || 'Filter'}</span>
-            {(databaseFilter !== "all" || selectedCategory !== "") && (
+            {(databaseFilter !== "all" || selectedCategories.length > 0) && (
               <span className="w-2 h-2 bg-white rounded-full"></span>
             )}
           </button>
 
           {/* Filter Dropdown Menu */}
           {filterDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-white border border-stone-200 rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+            <div className="absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-full sm:w-72 bg-white border border-stone-200 rounded-lg shadow-xl z-[1100] max-h-[80vh] overflow-y-auto">
               <div className="p-4">
                 {/* Database Filter Section */}
                 {(() => {
@@ -742,39 +764,43 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   );
                 })()}
 
-                {/* Category Filter Section */}
+                {/* Category Filter Section (multi-select) */}
                 <div>
-                  <h3 className="text-sm font-semibold text-stone-700 mb-3">{t.categories}</h3>
+                  <h3 className="text-sm font-semibold text-stone-700 mb-1">{t.categories}</h3>
+                  <p className="text-xs text-stone-500 mb-3">{t.multipleCategoriesHint}</p>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     <button
-                      onClick={() => {
-                        setSelectedCategory("");
-                        setFilterDropdownOpen(false);
-                      }}
+                      type="button"
+                      onClick={() => setSelectedCategories([])}
                       className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-                        selectedCategory === ""
+                        selectedCategories.length === 0
                           ? "bg-stone-900 text-white"
                           : "bg-stone-50 text-stone-700 hover:bg-stone-100"
                       }`}
                     >
                       {t.allCategories}
                     </button>
-                    {categories.map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setFilterDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-all ${
-                          selectedCategory === category
-                            ? "bg-stone-900 text-white"
-                            : "bg-stone-50 text-stone-700 hover:bg-stone-100"
-                        }`}
-                      >
-                        {translateCategory(category)}
-                      </button>
-                    ))}
+                    {categories.map((category) => {
+                      const checked = selectedCategories.includes(category);
+                      return (
+                        <label
+                          key={category}
+                          className={`flex items-center gap-3 w-full text-left px-4 py-2 rounded-lg cursor-pointer transition-all border-2 ${
+                            checked
+                              ? "border-stone-900 bg-stone-100 text-stone-900"
+                              : "border-transparent bg-stone-50 text-stone-700 hover:bg-stone-100"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="rounded border-stone-400 text-stone-900 focus:ring-stone-500"
+                            checked={checked}
+                            onChange={() => toggleCategoryFilter(category)}
+                          />
+                          <span className="text-sm font-medium flex-1">{translateCategory(category)}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -786,7 +812,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
       {/* Recipe Display */}
       {filteredRecipes.length === 0 ? (
         <div className="text-center py-16">
-          {searchTerm || selectedCategory ? (
+          {searchTerm || selectedCategories.length > 0 ? (
             <div className="bg-stone-50 rounded-lg p-8 border border-stone-200/90">
               <div className="text-stone-700 text-xl font-semibold mb-3">{t.noRecipesFound}</div>
               <p className="text-stone-500">{t.tryAdjustingSearch}</p>
@@ -818,21 +844,19 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           ))}
         </div>
       ) : viewMode === "alphabetical" ? (
-        // View 2: Alphabetical View with scrollable alphabet
-        <div className="flex gap-6 relative">
-          {/* Main content */}
-          <div className="flex-1 bg-white border border-stone-200/90 rounded-lg overflow-hidden shadow-sm" style={{ maxHeight: 'calc(100vh - 400px)' }}>
-            <div className="overflow-y-auto h-full">
+        // A–Z: alleen letters met recepten; op mobiel één doorlopende gestapelde lijst (geen A–Z met lege letters)
+        <div className="flex gap-3 sm:gap-6 relative lg:pb-0 pb-28 max-sm:pb-32">
+          {/* Main content — mobiel: geen vaste max-height, volledige pagina-scroll */}
+          <div className="flex-1 bg-white border border-stone-200/90 rounded-lg overflow-hidden shadow-sm lg:max-h-[calc(100vh-400px)]">
+            <div className="lg:overflow-y-auto lg:max-h-[calc(100vh-400px)]">
               {sortedLetters.length === 0 ? (
                 <div className="p-8 text-center text-stone-500">{t.noRecipesFound}</div>
               ) : (
                 sortedLetters.map((letter) => (
-                  <div key={letter} id={`letter-${letter}`} className="scroll-mt-4">
-                    {/* Letter header */}
-                    <div className="sticky top-0 bg-stone-900 text-white px-6 py-3 font-semibold text-lg z-10 tracking-tight border-b border-stone-700">
-                      {letter}
+                  <div key={letter} id={`letter-${letter}`} className="scroll-mt-20 lg:scroll-mt-4">
+                    <div className="sticky top-0 lg:top-0 bg-stone-900 text-white px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg z-10 tracking-tight border-b border-stone-700">
+                      {letter === "#" ? t.otherRecipesLetter : letter}
                     </div>
-                    {/* Recipes for this letter */}
                     {groupedByLetter[letter]
                       .sort((a, b) =>
                         (a.name ?? "").localeCompare(b.name ?? "", undefined, {
@@ -850,62 +874,62 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               )}
             </div>
           </div>
-          
-          {/* Alphabet sidebar - Desktop */}
+
+          {/* Desktop: alleen letters die daadwerkelijk voorkomen */}
           <div className="hidden lg:block">
             <div className="sticky top-4 bg-white border border-stone-200/90 rounded-lg p-3 shadow-sm">
               <div className="flex flex-col gap-1.5 max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
-                {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter) => {
-                  const hasRecipes = sortedLetters.includes(letter);
-                  return (
-                    <button
-                      key={letter}
-                      onClick={() => scrollToLetter(letter)}
-                      className={`w-11 h-11 rounded-lg text-sm font-bold transition-all ${
-                        selectedLetter === letter
-                          ? "bg-stone-900 text-white shadow-md scale-105"
-                          : hasRecipes
-                          ? "bg-stone-100 text-stone-700 hover:bg-stone-200 hover:scale-105"
-                          : "text-stone-300 cursor-not-allowed opacity-40"
-                      }`}
-                      disabled={!hasRecipes}
-                    >
-                      {letter}
-                    </button>
-                  );
-                })}
+                {sortedLetters.map((letter) => (
+                  <button
+                    key={letter}
+                    type="button"
+                    onClick={() => scrollToLetter(letter)}
+                    className={`w-11 h-11 rounded-lg text-sm font-bold transition-all ${
+                      selectedLetter === letter
+                        ? "bg-stone-900 text-white shadow-md scale-105"
+                        : "bg-stone-100 text-stone-700 hover:bg-stone-200 hover:scale-105"
+                    }`}
+                  >
+                    {letter === "#" ? "…" : letter}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-          
-          {/* Mobile alphabet scrollbar - floating at bottom */}
-          <div className="lg:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border border-stone-200 rounded-xl p-3 shadow-2xl z-40 max-w-[95vw]">
-            <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
-              {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map((letter) => {
-                const hasRecipes = sortedLetters.includes(letter);
-                return (
+
+          {/* Mobiel: snelkiezer alleen voor letters met recepten */}
+          {sortedLetters.length > 0 && (
+            <div
+              className="lg:hidden fixed left-1/2 -translate-x-1/2 bg-white border border-stone-200 rounded-xl p-2.5 shadow-2xl z-[1005] max-w-[95vw]"
+              style={{
+                bottom: "calc(5.35rem + env(safe-area-inset-bottom, 0px))",
+              }}
+            >
+              <div
+                className="flex gap-1.5 overflow-x-auto pb-0.5 px-0.5"
+                style={{ scrollbarWidth: "thin", WebkitOverflowScrolling: "touch" }}
+              >
+                {sortedLetters.map((letter) => (
                   <button
                     key={letter}
+                    type="button"
                     onClick={() => scrollToLetter(letter)}
-                    className={`w-9 h-9 rounded-lg text-xs font-bold transition-all flex-shrink-0 flex items-center justify-center ${
+                    className={`min-w-[2.25rem] h-9 px-2 rounded-lg text-xs font-bold transition-all flex-shrink-0 flex items-center justify-center ${
                       selectedLetter === letter
-                        ? "bg-stone-900 text-white scale-110"
-                        : hasRecipes
-                        ? "bg-stone-100 text-stone-700 hover:bg-stone-200 active:scale-95"
-                        : "text-stone-300 cursor-not-allowed opacity-50"
+                        ? "bg-stone-900 text-white scale-105"
+                        : "bg-stone-100 text-stone-700 hover:bg-stone-200 active:scale-95"
                     }`}
-                    disabled={!hasRecipes}
                   >
-                    {letter}
+                    {letter === "#" ? "…" : letter}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : (
         // Grid View (current/fallback)
-        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {filteredRecipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} variant="grid" />
           ))}

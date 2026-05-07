@@ -18,8 +18,8 @@ export default function AddPage() {
   
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
+      <div className="relative min-h-[60vh] flex items-center justify-center py-8">
+        <div className="relative w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.addRecipe}</h1>
             <p className="text-gray-600">{t.createNewRecipes}</p>

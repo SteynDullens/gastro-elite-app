@@ -40,9 +40,9 @@ export default function RecipesPage() {
   
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <BackBubble href="/" className="absolute top-4 left-4 z-10" />
+      <div className="relative min-h-[60vh] flex items-center justify-center py-8">
+        <div className="relative w-full max-w-md">
+          <BackBubble href="/" className="absolute -top-2 left-0 z-10 sm:top-0" />
           
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.recipes}</h1>
@@ -82,8 +82,8 @@ export default function RecipesPage() {
   }
   
   return (
-    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6">
-      <BackBubble href="/" className="absolute top-4 left-4 z-10" />
+    <div className="relative w-full max-w-6xl mx-auto space-y-6">
+      <BackBubble href="/" className="absolute top-0 left-0 z-10" />
       
       <header className="text-center pt-2 space-y-2">
         <p className="text-[11px] uppercase tracking-[0.35em] text-stone-500 font-medium">Gastro-Elite</p>

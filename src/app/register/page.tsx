@@ -314,7 +314,7 @@ function RegisterPageContent() {
         </button>
       )}
 
-      <div className="relative z-10 container mx-auto px-4 py-12 max-w-4xl">
+      <div className="relative z-10 w-full max-w-4xl mx-auto py-12">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">

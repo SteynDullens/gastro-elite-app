@@ -311,10 +311,28 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
   };
 
   const onEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, id: string) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault();
       commitEditIngredient(id);
     }
+  };
+
+  const newIngredientNameInputRef = useRef<HTMLInputElement>(null);
+
+  /** Voorkomt dat Enter het hele recept opslaat; op naam: ingrediënt vastleggen zoals op "Toevoegen". */
+  const onNewIngredientKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+    field: "quantity" | "unit" | "name"
+  ) => {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) {
+      return;
+    }
+    e.preventDefault();
+    if (field === "quantity" || field === "unit") {
+      newIngredientNameInputRef.current?.focus();
+      return;
+    }
+    addIngredient();
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,6 +526,11 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
             id="name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: autoReplaceText(e.target.value) })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+              }
+            }}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
@@ -838,6 +861,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
               placeholder="e.g. 250"
               value={newIngredient.quantity}
               onChange={(e) => setNewIngredient({ ...newIngredient, quantity: e.target.value })}
+              onKeyDown={(e) => onNewIngredientKeyDown(e, "quantity")}
               className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
               min="0"
               step="0.1"
@@ -845,6 +869,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
             <select
               value={newIngredient.unit}
               onChange={(e) => setNewIngredient({ ...newIngredient, unit: e.target.value })}
+              onKeyDown={(e) => onNewIngredientKeyDown(e, "unit")}
               className="px-2 py-1 border border-gray-300 rounded text-sm"
             >
               {UNITS.map((unit) => (
@@ -854,10 +879,12 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
               ))}
             </select>
             <input
+              ref={newIngredientNameInputRef}
               type="text"
               placeholder={t.ingredientName}
               value={newIngredient.name}
               onChange={(e) => setNewIngredient({ ...newIngredient, name: autoReplaceText(e.target.value) })}
+              onKeyDown={(e) => onNewIngredientKeyDown(e, "name")}
               className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
             />
             <button

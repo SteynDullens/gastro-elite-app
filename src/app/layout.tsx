@@ -12,7 +12,10 @@ import "./globals.css";
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "700", "900"],
+  /** Beperk gewichten i.v.m. ongebruikte preload-warnings; sluit aan op Tailwind (400–700). */
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -33,9 +36,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-        <html lang="en">
+        <html lang="en" className={roboto.variable}>
           <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
             <meta name="format-detection" content="telephone=no" />
             <meta name="mobile-web-app-capable" content="yes" />
             <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -58,7 +61,7 @@ export default function RootLayout({
               }}
             />
           </head>
-      <body className={`${roboto.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <div className="min-h-screen" style={{ backgroundColor: '#A0A0A0' }}>
           <AuthProvider>
             <LanguageProvider>
@@ -72,8 +75,8 @@ export default function RootLayout({
                   <DesktopSidebar />
                   
                   {/* Main content area */}
-                  <main className="main-content flex-1">
-                    <div className="max-w-7xl mx-auto p-4 lg:p-8 animate-app-enter">
+                  <main className="main-content flex-1 min-w-0 w-full">
+                    <div className="app-shell max-w-7xl mx-auto w-full animate-app-enter">
                       {children}
                     </div>
                   </main>

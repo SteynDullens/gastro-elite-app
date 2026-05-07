@@ -928,7 +928,7 @@ export default function AccountPage() {
           </div>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="relative w-full max-w-7xl mx-auto py-6 lg:py-8">
       {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-6">{t.account}</h1>
