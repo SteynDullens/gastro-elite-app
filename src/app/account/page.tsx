@@ -993,11 +993,11 @@ export default function AccountPage() {
         </div>
       </div>
 
-        {/* Two Column Layout */}
-        <div className="flex gap-6">
+        {/* Tabs: stacked on mobile, sidebar + panel from lg */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Left Sidebar - Tabs */}
-          <div className="w-56 flex-shrink-0">
-            <nav className="space-y-2">
+          <div className="w-full lg:w-56 lg:flex-shrink-0 min-w-0">
+            <nav className="flex flex-col gap-2">
               {/* Edit Details Tab */}
               <button
                 onClick={() => setActiveTab('edit-details')}
