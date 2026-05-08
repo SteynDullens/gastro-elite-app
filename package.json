@@ -15,7 +15,8 @@
     "ensure-table": "node scripts/ensure-employee-invitation-table.js || true",
     "ensure-recipe-tables": "node scripts/ensure-recipe-tables.js || true",
     "ensure-company-membership": "node scripts/ensure-company-membership-table.js || true",
-    "ensure-daily-backup": "node scripts/ensure-daily-backup-table.js || true"
+    "ensure-daily-backup": "node scripts/ensure-daily-backup-table.js || true",
+    "social-screenshots": "node scripts/capture-social-screenshots.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
@@ -44,6 +45,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.7",
+    "playwright": "^1.49.1",
     "prisma": "^6.16.3",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
