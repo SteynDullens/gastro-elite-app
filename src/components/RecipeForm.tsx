@@ -311,10 +311,27 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
   };
 
   const onEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, id: string) => {
+    if (e.key === "Escape" && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      setEditingIngredientId(null);
+      setEditingDraft(null);
+      return;
+    }
     if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault();
       commitEditIngredient(id);
     }
+  };
+
+  /** Commit ingredient edit only when focus leaves the whole row (not when jumping qty ↔ unit ↔ name). */
+  const handleIngredientEditBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>,
+    id: string
+  ) => {
+    const rt = e.relatedTarget as Node | null;
+    const row = (e.currentTarget as HTMLElement).closest("[data-ingredient-edit-row]");
+    if (row && rt && row.contains(rt)) return;
+    commitEditIngredient(id);
   };
 
   const newIngredientNameInputRef = useRef<HTMLInputElement>(null);
@@ -791,12 +808,16 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
           {formData.ingredients.map((ingredient) => (
             <div key={ingredient.id} className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 rounded-md w-full">
               {editingIngredientId === ingredient.id ? (
-                <>
+                <div
+                  className="flex flex-wrap items-center gap-2 w-full min-w-0"
+                  data-ingredient-edit-row=""
+                >
                   <input
                     type="number"
                     placeholder="e.g. 250"
                     value={editingDraft?.quantity ?? ""}
                     onChange={(e) => setEditingDraft(prev => ({ ...(prev as any), quantity: e.target.value }))}
+                    onBlur={(e) => handleIngredientEditBlur(e, ingredient.id)}
                     onKeyDown={(e) => onEditKeyDown(e, ingredient.id)}
                     className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="0"
@@ -805,6 +826,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
                   <select
                     value={editingDraft?.unit ?? "gram"}
                     onChange={(e) => setEditingDraft(prev => ({ ...(prev as any), unit: e.target.value }))}
+                    onBlur={(e) => handleIngredientEditBlur(e, ingredient.id)}
                     onKeyDown={(e) => onEditKeyDown(e, ingredient.id)}
                     className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -818,13 +840,13 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
                     type="text"
                     value={editingDraft?.name ?? ""}
                     onChange={(e) => setEditingDraft(prev => ({ ...(prev as any), name: autoReplaceText(e.target.value) }))}
-                    onBlur={() => commitEditIngredient(ingredient.id)}
+                    onBlur={(e) => handleIngredientEditBlur(e, ingredient.id)}
                     onKeyDown={(e) => onEditKeyDown(e, ingredient.id)}
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t.ingredientName}
                     autoFocus
                   />
-                </>
+                </div>
               ) : (
                 <>
               <span className="font-medium">{ingredient.quantity}</span>
@@ -974,6 +996,7 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
         </button>
         <button
           type="button"
+          onClick={() => router.back()}
           className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           {t.cancelRecipe}

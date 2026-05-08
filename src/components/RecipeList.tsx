@@ -29,6 +29,12 @@ const TrashIcon = (props: { className?: string }) => (
   </svg>
 );
 
+const PencilIcon = (props: { className?: string }) => (
+  <svg className={props.className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M21.731 2.269a2.625 2.625 0 00-3.714 0l-1.157 1.157 3.714 3.714 1.157-1.157a2.625 2.625 0 000-3.714zM19.513 8.199l-3.714-3.714L3.879 16.405a4.5 4.5 0 00-1.112 1.846l-.799 2.796a.75.75 0 00.927.927l2.796-.799a4.5 4.5 0 001.846-1.112L19.513 8.199z" />
+  </svg>
+);
+
 interface Ingredient {
   id: string;
   quantity: number;
@@ -312,12 +318,22 @@ export default function RecipeList({ recipes }: RecipeListProps) {
     const showImage = Boolean(recipe.image) && !coverFailed;
 
     if (isRow) {
-      // Row view — list / table style
+      // Row view — tap row to open; edit/delete stop propagation
       return (
-        <div className="bg-white border-b border-stone-200/80 hover:bg-stone-50/80 transition-colors duration-200">
+        <div
+          className="bg-white border-b border-stone-200/80 hover:bg-stone-50/80 transition-colors duration-200 cursor-pointer"
+          onClick={() => router.push(`/recipes/${recipe.id}`)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push(`/recipes/${recipe.id}`);
+            }
+          }}
+          role="link"
+          tabIndex={0}
+        >
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-4">
-            {/* Image */}
-            <div className="relative w-full sm:w-24 h-40 sm:h-24 flex-shrink-0 rounded-md overflow-hidden border border-stone-200/90 bg-stone-100">
+            <div className="relative w-full sm:w-24 h-40 sm:h-24 flex-shrink-0 rounded-md overflow-hidden border border-stone-200/90 bg-stone-100 pointer-events-none">
               {showImage ? (
                 <Image
                   src={displayRecipeImageUrl(recipe.image!)}
@@ -333,77 +349,39 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 <RecipeImagePlaceholder compact className="h-full w-full" />
               )}
             </div>
-            
-            {/* Content */}
+
             <div className="flex-1 min-w-0">
-              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-stone-900 truncate tracking-tight">{recipe.name}</h3>
-                    {recipe.companyId ? (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
-                        {t.businessDatabase || 'Business'}
-                      </span>
-                    ) : recipe.userId ? (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded border border-slate-200 bg-slate-50 text-slate-800">
-                        {t.personalDatabase || 'Personal'}
-                      </span>
-                    ) : null}
-                  </div>
-                  
-                  {cardCategories.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {cardCategories.slice(0, 3).map((category) => (
-                        <span
-                          key={typeof category === 'string' ? category : (category as any).id}
-                          className="px-2 py-0.5 bg-stone-50 text-stone-600 text-xs rounded-md border border-stone-200/80"
-                        >
-                          {translateCategory(typeof category === 'string' ? category : (category as any).name)}
-                        </span>
-                      ))}
-                      {cardCategories.length > 3 && (
-                        <span className="px-2 py-0.5 text-gray-500 text-xs">+{cardCategories.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-4 text-sm text-stone-500">
-                    {cardIngredients.length > 0 && (
-                      <span>{cardIngredients.length} {cardIngredients.length === 1 ? 'ingredient' : 'ingredients'}</span>
-                    )}
-                    {(recipe.batchSize || recipe.servings) && (
-                      <span>•</span>
-                    )}
-                    {recipe.batchSize && (
-                      <span>{recipe.batchSize} {t.pieces || 'stuks'}</span>
-                    )}
-                    {recipe.servings && (
-                      <span>{recipe.servings} {t.persons || 'personen'}</span>
-                    )}
-                  </div>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-stone-900 tracking-tight break-words">{recipe.name}</h3>
+                  {recipe.companyId ? (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900 shrink-0">
+                      {t.businessDatabase || 'Business'}
+                    </span>
+                  ) : recipe.userId ? (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded border border-slate-200 bg-slate-50 text-slate-800 shrink-0">
+                      {t.personalDatabase || 'Personal'}
+                    </span>
+                  ) : null}
                 </div>
-                
-                {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end max-w-full">
-                  <Link
-                    href={`/recipes/${recipe.id}`}
-                    className="px-3 sm:px-4 py-2 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
-                  >
-                    {t.view}
-                  </Link>
+                <div
+                  className="flex items-center gap-1 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {canEditRecipe(recipe) && (
                     <Link
                       href={`/recipes/${recipe.id}/edit`}
-                      className="px-3 sm:px-4 py-2 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 transition-colors"
+                      className="inline-flex items-center justify-center p-2 rounded-md border border-stone-200 bg-white hover:bg-stone-50 text-stone-800 transition-colors"
+                      title={t.edit}
                     >
-                      {t.edit}
+                      <PencilIcon className="w-4 h-4" />
                     </Link>
                   )}
                   {canDeleteRecipe(recipe) && (
                     <button
                       type="button"
                       onClick={() => handleDeleteClick(recipe.id)}
-                      className="inline-flex items-center justify-center px-3 py-2 text-red-700 text-sm rounded-md border border-red-200 bg-white hover:bg-red-50 font-medium transition-colors"
+                      className="inline-flex items-center justify-center p-2 text-red-700 rounded-md border border-red-200 bg-white hover:bg-red-50 transition-colors"
                       title={t.delete || 'Delete'}
                     >
                       <TrashIcon className="w-4 h-4" />
@@ -411,47 +389,84 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                   )}
                 </div>
               </div>
+
+              {cardCategories.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2 pointer-events-none">
+                  {cardCategories.slice(0, 3).map((category) => (
+                    <span
+                      key={typeof category === 'string' ? category : (category as any).id}
+                      className="px-2 py-0.5 bg-stone-50 text-stone-600 text-xs rounded-md border border-stone-200/80"
+                    >
+                      {translateCategory(typeof category === 'string' ? category : (category as any).name)}
+                    </span>
+                  ))}
+                  {cardCategories.length > 3 && (
+                    <span className="px-2 py-0.5 text-gray-500 text-xs">+{cardCategories.length - 3}</span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 text-sm text-stone-500 pointer-events-none flex-wrap">
+                {cardIngredients.length > 0 && (
+                  <span>{cardIngredients.length} {cardIngredients.length === 1 ? 'ingredient' : 'ingredients'}</span>
+                )}
+                {(recipe.batchSize || recipe.servings) && (
+                  <span aria-hidden>•</span>
+                )}
+                {recipe.batchSize && (
+                  <span>{recipe.batchSize} {t.pieces || 'stuks'}</span>
+                )}
+                {recipe.servings && (
+                  <span>{recipe.servings} {t.persons || 'personen'}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       );
     } else if (isAlphabetical) {
-      // Alphabetical View — minimal list
+      // Alphabetical — tap row to open recipe
       return (
-        <div className="bg-white border-b border-stone-200/80 hover:bg-stone-50/60 transition-colors duration-150">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
-            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-              <h3 className="text-base font-medium text-stone-900 tracking-tight">{recipe.name}</h3>
+        <div
+          className="bg-white border-b border-stone-200/80 hover:bg-stone-50/60 transition-colors duration-150 cursor-pointer"
+          onClick={() => router.push(`/recipes/${recipe.id}`)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push(`/recipes/${recipe.id}`);
+            }
+          }}
+          tabIndex={0}
+          aria-label={`${recipe.name}`}
+        >
+          <div className="flex items-center justify-between gap-2 p-4">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h3 className="text-base font-medium text-stone-900 tracking-tight truncate">{recipe.name}</h3>
               {recipe.companyId ? (
-                <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
+                <span className="px-2 py-0.5 text-xs font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900 shrink-0">
                   {t.businessDatabase || 'Business'}
                 </span>
               ) : recipe.userId ? (
-                <span className="px-2 py-0.5 text-xs font-medium rounded border border-slate-200 bg-slate-50 text-slate-800">
+                <span className="px-2 py-0.5 text-xs font-medium rounded border border-slate-200 bg-slate-50 text-slate-800 shrink-0">
                   {t.personalDatabase || 'Personal'}
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              <Link
-                href={`/recipes/${recipe.id}`}
-                className="px-3 py-1.5 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition-colors font-medium"
-              >
-                {t.view}
-              </Link>
+            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               {canEditRecipe(recipe) && (
                 <Link
                   href={`/recipes/${recipe.id}/edit`}
-                  className="px-3 py-1.5 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 transition-colors"
+                  className="inline-flex items-center justify-center p-2 rounded-md border border-stone-200 bg-white hover:bg-stone-50 text-stone-800 transition-colors"
+                  title={t.edit}
                 >
-                  {t.edit}
+                  <PencilIcon className="w-4 h-4" />
                 </Link>
               )}
               {canDeleteRecipe(recipe) && (
                 <button
                   type="button"
                   onClick={() => handleDeleteClick(recipe.id)}
-                  className="inline-flex items-center justify-center px-3 py-1.5 text-red-700 text-sm rounded-md border border-red-200 bg-white hover:bg-red-50 font-medium transition-colors"
+                  className="inline-flex items-center justify-center p-2 text-red-700 rounded-md border border-red-200 bg-white hover:bg-red-50 transition-colors"
                   title={t.delete || 'Delete'}
                 >
                   <TrashIcon className="w-4 h-4" />
@@ -462,10 +477,21 @@ export default function RecipeList({ recipes }: RecipeListProps) {
         </div>
       );
     } else {
-      // Grid — editorial cards
+      // Grid — tap card or title to open; edit/delete next to title
       return (
-        <div className="group bg-white border border-stone-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-stone-300/90 transition-all duration-300 h-full flex flex-col">
-          <div className="relative aspect-video overflow-hidden bg-stone-100 border-b border-stone-200/60">
+        <div
+          className="group bg-white border border-stone-200/90 rounded-lg shadow-sm hover:shadow-md hover:border-stone-300/90 transition-all duration-300 h-full flex flex-col cursor-pointer"
+          onClick={() => router.push(`/recipes/${recipe.id}`)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push(`/recipes/${recipe.id}`);
+            }
+          }}
+          tabIndex={0}
+          aria-label={`${recipe.name}`}
+        >
+          <div className="relative aspect-video overflow-hidden bg-stone-100 border-b border-stone-200/60 pointer-events-none">
             {showImage ? (
               <Image
                 src={displayRecipeImageUrl(recipe.image!)}
@@ -481,9 +507,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               <RecipeImagePlaceholder className="absolute inset-0" />
             )}
           </div>
-          
+
           <div className="p-5 flex flex-col flex-grow">
-            <div className="mb-2 flex justify-center">
+            <div className="mb-2 flex justify-center pointer-events-none">
               {recipe.companyId ? (
                 <span className="px-2.5 py-1 text-[11px] uppercase tracking-wide font-medium rounded border border-emerald-900/15 bg-emerald-950/[0.04] text-emerald-900">
                   {t.businessDatabase || 'Business'}
@@ -494,11 +520,36 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 </span>
               ) : null}
             </div>
-            
-            <h3 className="font-semibold text-base mb-3 text-center text-stone-900 tracking-tight leading-snug">{recipe.name}</h3>
-            
+
+            <div className="flex items-start justify-between gap-2 mb-3 w-full min-w-0">
+              <h3 className="font-semibold text-base text-left text-stone-900 tracking-tight leading-snug flex-1 min-w-0 break-words pr-1">
+                {recipe.name}
+              </h3>
+              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                {canEditRecipe(recipe) && (
+                  <Link
+                    href={`/recipes/${recipe.id}/edit`}
+                    className="inline-flex items-center justify-center p-2 rounded-md border border-stone-200 bg-white hover:bg-stone-50 text-stone-800 transition-colors"
+                    title={t.edit}
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </Link>
+                )}
+                {canDeleteRecipe(recipe) && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteClick(recipe.id)}
+                    className="inline-flex items-center justify-center p-2 text-red-700 rounded-md border border-red-200 bg-white hover:bg-red-50 transition-colors"
+                    title={t.delete || 'Delete'}
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             {cardCategories.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-2 justify-center">
+              <div className="mt-1 flex flex-wrap gap-2 justify-center pointer-events-none">
                 {cardCategories.map((category) => (
                   <span
                     key={typeof category === 'string' ? category : (category as any).id}
@@ -509,33 +560,6 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 ))}
               </div>
             )}
-
-            <div className="mt-5 flex gap-2 justify-center flex-wrap">
-              <Link
-                href={`/recipes/${recipe.id}`}
-                className="w-full sm:flex-1 px-4 py-2.5 text-white text-sm rounded-md text-center font-medium bg-stone-900 hover:bg-stone-800 transition-colors"
-              >
-                {t.view}
-              </Link>
-              {canEditRecipe(recipe) && (
-                <Link
-                  href={`/recipes/${recipe.id}/edit`}
-                  className="flex-1 sm:flex-none px-4 py-2.5 bg-white text-stone-800 text-sm rounded-md hover:bg-stone-50 font-medium border border-stone-200 text-center transition-colors min-w-[120px]"
-                >
-                  {t.edit}
-                </Link>
-              )}
-              {canDeleteRecipe(recipe) && (
-                <button
-                  type="button"
-                  onClick={() => handleDeleteClick(recipe.id)}
-                  className="inline-flex items-center justify-center px-3 py-2.5 text-red-700 text-sm rounded-md border border-red-200 bg-white hover:bg-red-50 font-medium transition-colors"
-                  title={t.delete || 'Delete'}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              )}
-            </div>
           </div>
         </div>
       );
