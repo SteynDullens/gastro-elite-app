@@ -64,6 +64,9 @@ interface RecipeListProps {
 
 type ViewMode = "grid" | "row" | "alphabetical";
 
+/** v2: nieuwe key zodat oude/local test-waarden niet raster als default forceren */
+const RECIPE_VIEW_STORAGE_KEY = "gastro-elite-recipe-view-v2";
+
 export default function RecipeList({ recipes }: RecipeListProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -77,6 +80,26 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("alphabetical");
   const alphabetRef = useRef<HTMLDivElement>(null);
+
+  const persistViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(RECIPE_VIEW_STORAGE_KEY, mode);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECIPE_VIEW_STORAGE_KEY);
+      if (raw === "grid" || raw === "row" || raw === "alphabetical") {
+        setViewMode(raw);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -649,7 +672,23 @@ export default function RecipeList({ recipes }: RecipeListProps) {
           <div className="flex gap-1 bg-stone-100 rounded-lg p-1 border border-stone-200/90 flex-1 sm:flex-initial">
             <button
               type="button"
-              onClick={() => setViewMode("grid")}
+              onClick={() => persistViewMode("alphabetical")}
+              className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
+                viewMode === "alphabetical"
+                  ? "bg-white text-stone-900 shadow-sm"
+                  : "text-stone-500 hover:text-stone-900"
+              }`}
+              title={t.alphabeticalView || "Alphabetical View"}
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span className="sm:hidden text-[10px] font-semibold leading-tight">{t.recipeViewShortAz}</span>
+              <span className="hidden sm:inline">{t.alphabeticalView || "Alphabetical"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => persistViewMode("grid")}
               className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
                 viewMode === "grid"
                   ? "bg-white text-stone-900 shadow-sm"
@@ -667,7 +706,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             </button>
             <button
               type="button"
-              onClick={() => setViewMode("row")}
+              onClick={() => persistViewMode("row")}
               className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
                 viewMode === "row"
                   ? "bg-white text-stone-900 shadow-sm"
@@ -682,22 +721,6 @@ export default function RecipeList({ recipes }: RecipeListProps) {
                 {t.recipeViewShortRow}
               </span>
               <span className="hidden sm:inline">{t.rowView || "Row"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("alphabetical")}
-              className={`px-2 sm:px-4 py-2 rounded-md text-sm font-medium transition-all flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 flex-1 sm:flex-none min-w-0 ${
-                viewMode === "alphabetical"
-                  ? "bg-white text-stone-900 shadow-sm"
-                  : "text-stone-500 hover:text-stone-900"
-              }`}
-              title={t.alphabeticalView || "Alphabetical View"}
-            >
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span className="sm:hidden text-[10px] font-semibold leading-tight">{t.recipeViewShortAz}</span>
-              <span className="hidden sm:inline">{t.alphabeticalView || "Alphabetical"}</span>
             </button>
           </div>
         </div>
@@ -857,8 +880,14 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             </div>
           )}
         </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {filteredRecipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} variant="grid" />
+          ))}
+        </div>
       ) : viewMode === "row" ? (
-        // View 1: Row View (Gronda-style) - Professional row layout
+        // Row View — lijst met covers
         <div className="bg-white border border-stone-200/90 rounded-lg overflow-hidden shadow-sm">
           {filteredRecipes.map((recipe, index) => (
             <div key={recipe.id}>
@@ -867,7 +896,8 @@ export default function RecipeList({ recipes }: RecipeListProps) {
             </div>
           ))}
         </div>
-      ) : viewMode === "alphabetical" ? (
+      ) : (
+        // Alfabetisch — standaard (fallback als viewMode niet expliciet grid/row is)
         // A–Z: alleen letters met recepten; op mobiel één doorlopende gestapelde lijst (geen A–Z met lege letters)
         <div className="flex gap-3 sm:gap-6 relative lg:pb-0 pb-28 max-sm:pb-32">
           {/* Main content — mobiel: geen vaste max-height, volledige pagina-scroll */}
@@ -950,13 +980,6 @@ export default function RecipeList({ recipes }: RecipeListProps) {
               </div>
             </div>
           )}
-        </div>
-      ) : (
-        // Grid View (current/fallback)
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} variant="grid" />
-          ))}
         </div>
       )}
     </div>
