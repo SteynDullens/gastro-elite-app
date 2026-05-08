@@ -1218,37 +1218,56 @@ export async function sendEmployeeInvitationToExistingUser(
       </div>
     `;
 
-    const mailOptions = {
-      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
-      to: employeeEmail,
-      subject: t.subject,
-      html: emailHtml
-    };
+    const toAddr = normalizeEmailForSMTP(employeeEmail);
+    if (!isProbablyValidEmail(employeeEmail)) {
+      console.error("❌ Ongeldig e-mailadres voor teamuitnodiging:", employeeEmail);
+      return false;
+    }
 
-    console.log('📧 Attempting to send employee invitation email:', {
-      to: employeeEmail,
+    console.log("📧 Attempting to send employee invitation email:", {
+      to: toAddr,
       from: emailConfig.auth.user,
       subject: t.subject,
       acceptUrl,
-      declineUrl
+      declineUrl,
+      resendAvailable: isResendConfigured(),
     });
 
-    // Verify SMTP connection first
+    /** Productie (Vercel): SMTP is vaak geblokkeerd; zelfde pad als verificatiemail. */
+    if (isResendConfigured()) {
+      const resendOut = await sendHtmlViaResend({
+        to: toAddr,
+        subject: t.subject,
+        html: emailHtml,
+      });
+      if (resendOut.success) {
+        console.log("✅ Employee invitation sent via Resend:", toAddr);
+        return true;
+      }
+      console.warn("⚠️ Resend failed, fallback SMTP:", resendOut.error);
+    }
+
     const transporter = getTransporter();
     try {
       await transporter.verify();
-      console.log('✅ SMTP connection verified');
-    } catch (verifyError: any) {
-      console.error('❌ SMTP verification failed:', verifyError);
-      throw new Error(`SMTP connection failed: ${verifyError.message}`);
+      console.log("✅ SMTP connection verified");
+    } catch (verifyError: unknown) {
+      const msg = verifyError instanceof Error ? verifyError.message : String(verifyError);
+      console.error("❌ SMTP verification failed:", verifyError);
+      throw new Error(`SMTP connection failed: ${msg}`);
     }
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Employee invitation email sent successfully:', {
+    const result = await transporter.sendMail({
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: toAddr,
+      subject: t.subject,
+      html: emailHtml,
+    });
+    console.log("✅ Employee invitation email sent via SMTP:", {
       messageId: result.messageId,
-      to: employeeEmail,
+      to: toAddr,
       accepted: result.accepted,
-      rejected: result.rejected
+      rejected: result.rejected,
     });
     return true;
   } catch (error: any) {
@@ -1334,11 +1353,7 @@ export async function sendEmployeeInvitationToNewUser(
 
     const t = translations[language] || translations.nl;
 
-    const mailOptions = {
-      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
-      to: employeeEmail,
-      subject: t.subject,
-      html: `
+    const emailHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -1395,11 +1410,39 @@ export async function sendEmployeeInvitationToNewUser(
             </p>
           </div>
         </div>
-      `
-    };
+      `;
 
-    await getTransporter().sendMail(mailOptions);
-    console.log('✅ Employee registration invitation email sent to:', employeeEmail);
+    const toAddr = normalizeEmailForSMTP(employeeEmail);
+    if (!isProbablyValidEmail(employeeEmail)) {
+      console.error("❌ Ongeldig e-mailadres voor registratie-uitnodiging:", employeeEmail);
+      return false;
+    }
+
+    console.log("📧 Employee registration invitation:", {
+      to: toAddr,
+      resendAvailable: isResendConfigured(),
+    });
+
+    if (isResendConfigured()) {
+      const resendOut = await sendHtmlViaResend({
+        to: toAddr,
+        subject: t.subject,
+        html: emailHtml,
+      });
+      if (resendOut.success) {
+        console.log("✅ Employee registration invitation via Resend:", toAddr);
+        return true;
+      }
+      console.warn("⚠️ Resend failed, fallback SMTP:", resendOut.error);
+    }
+
+    await getTransporter().sendMail({
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: toAddr,
+      subject: t.subject,
+      html: emailHtml,
+    });
+    console.log("✅ Employee registration invitation via SMTP:", toAddr);
     return true;
   } catch (error) {
     console.error('Error sending employee registration invitation email:', error);
