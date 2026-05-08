@@ -75,7 +75,7 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const [databaseFilter, setDatabaseFilter] = useState<"all" | "personal" | "business">("all");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid"); // Default to grid (current view)
+  const [viewMode, setViewMode] = useState<ViewMode>("alphabetical");
   const alphabetRef = useRef<HTMLDivElement>(null);
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
