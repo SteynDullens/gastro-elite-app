@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { displayRecipeImageUrl } from "@/lib/recipe-image-url";
+import { recipeMatchesSearchQuery } from "@/lib/recipe-search";
 import RecipeImagePlaceholder from "@/components/RecipeImagePlaceholder";
 
 const TrashIcon = (props: { className?: string }) => (
@@ -262,15 +263,9 @@ export default function RecipeList({ recipes }: RecipeListProps) {
   const isPersonalUser = !isCompanyOwner && !isEmployee;
 
   const filteredRecipes = recipes.filter((recipe) => {
-    const ingredients = recipe.ingredients ?? [];
     const categories = recipe.categories ?? [];
-    const nameSafe = recipe.name ?? "";
 
-    const matchesSearch =
-      nameSafe.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ingredients.some((ing) =>
-        (ing?.name ?? "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    const matchesSearch = recipeMatchesSearchQuery(recipe, searchTerm);
 
     const recipeCategories = categories.map((cat: any) =>
       typeof cat === "string" ? cat : cat?.name || cat
