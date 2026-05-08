@@ -17,7 +17,8 @@
     "ensure-company-membership": "node scripts/ensure-company-membership-table.js || true",
     "ensure-daily-backup": "node scripts/ensure-daily-backup-table.js || true",
     "social-screenshots": "node scripts/capture-social-screenshots.mjs",
-    "social-chic": "node scripts/generate-chic-social-posts.mjs"
+    "social-chic": "node scripts/generate-chic-social-posts.mjs",
+    "social-carousel": "node scripts/capture-app-carousel.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
