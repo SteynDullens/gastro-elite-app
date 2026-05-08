@@ -62,6 +62,13 @@ function RegisterPageContent() {
     setMounted(true);
   }, []);
 
+  /** Teamuitnodiging: alleen persoonlijk account; automatische koppeling na registratie */
+  useEffect(() => {
+    if (invitationId && companyId) {
+      setAccountType("personal");
+    }
+  }, [invitationId, companyId]);
+
   useEffect(() => {
     const handleScroll = () => {
       setShowBackArrow(window.scrollY > 100);
@@ -321,11 +328,25 @@ function RegisterPageContent() {
             {t.register || "Registreren"}
           </h1>
           <p className="text-gray-600 text-lg">
-            Maak een account aan om te beginnen
+            {invitationId && companyId
+              ? "Maak een persoonlijk account aan om bij het team te horen."
+              : "Maak een account aan om te beginnen"}
           </p>
         </div>
 
-        {/* Account Type Selection */}
+        {invitationId && companyId && (
+          <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50/90 px-5 py-4 text-center shadow-sm">
+            <p className="font-semibold text-gray-900">Teamuitnodiging</p>
+            <p className="mt-2 text-sm text-gray-700 leading-relaxed">
+              Je wordt uitgenodigd als medewerker. Registreer hier met het{" "}
+              <strong>zelfde e-mailadres</strong> als waar de uitnodiging naartoe is gestuurd. Na
+              registratie word je automatisch aan het team gekoppeld (geen aparte acceptatieknop).
+            </p>
+          </div>
+        )}
+
+        {/* Account Type Selection — verborgen bij uitnodiging (alleen persoonlijk) */}
+        {!(invitationId && companyId) && (
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Selecteer accounttype
@@ -377,6 +398,7 @@ function RegisterPageContent() {
             </button>
           </div>
         </div>
+        )}
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-6 md:p-8">

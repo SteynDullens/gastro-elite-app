@@ -59,8 +59,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check for invitation ID in registration data (from URL parameter)
-    const { invitationId, companyId } = registrationData;
+    // Employee invitation (register via link from team invite) — only valid for personal accounts
+    const { invitationId, companyId } = registrationData as {
+      invitationId?: string;
+      companyId?: string;
+    };
+    if (invitationId || companyId) {
+      if (!invitationId || !companyId) {
+        return NextResponse.json(
+          { error: 'Ongeldige uitnodigingslink (ontbrekende gegevens).' },
+          { status: 400 }
+        );
+      }
+      if (role === 'business') {
+        return NextResponse.json(
+          {
+            error:
+              'Je bent uitgenodigd als medewerker. Registreer een persoonlijk account (niet als bedrijf).',
+          },
+          { status: 400 }
+        );
+      }
+    }
     
     // Check if user already exists
     console.log('🔍 Checking if user exists:', email);
@@ -141,6 +161,8 @@ export async function POST(request: NextRequest) {
       // Create personal user
       const result = await safeDbOperation(async (prisma) => {
         return await prisma.$transaction(async (tx) => {
+          const emailNorm = email.toLowerCase().trim();
+
           const newUser = await tx.user.create({
             data: {
               firstName,
@@ -153,28 +175,65 @@ export async function POST(request: NextRequest) {
               emailVerificationToken: verificationToken,
             }
           });
-          
-          // If registration came from an employee invitation, link the invitation to the user
+
+          // Teamuitnodiging: na registratie direct medewerker (zelfde effect als "Accepteren" in de mail)
           if (invitationId && companyId) {
-            try {
-              await tx.employeeInvitation.updateMany({
-                where: {
-                  id: invitationId,
-                  email: email.toLowerCase().trim(),
-                  companyId: companyId,
-                  status: 'pending'
-                },
+            const invitation = await tx.employeeInvitation.findFirst({
+              where: {
+                id: invitationId,
+                companyId,
+                email: emailNorm,
+                status: 'pending',
+              },
+            });
+
+            if (invitation) {
+              await tx.employeeInvitation.update({
+                where: { id: invitation.id },
                 data: {
-                  invitedUserId: newUser.id
-                }
+                  status: 'accepted',
+                  invitedUserId: newUser.id,
+                },
               });
-              console.log('✅ Linked employee invitation to new user:', { invitationId, userId: newUser.id });
-            } catch (invError: any) {
-              console.warn('⚠️ Could not link invitation (may not exist):', invError.message);
-              // Don't fail registration if invitation linking fails
+
+              await tx.user.update({
+                where: { id: newUser.id },
+                data: { companyId },
+              });
+
+              try {
+                await tx.companyMembership.upsert({
+                  where: {
+                    userId_companyId: {
+                      userId: newUser.id,
+                      companyId,
+                    },
+                  },
+                  create: {
+                    userId: newUser.id,
+                    companyId,
+                  },
+                  update: {},
+                });
+              } catch (memErr: unknown) {
+                console.warn(
+                  '⚠️ CompanyMembership upsert niet uitgevoerd:',
+                  memErr instanceof Error ? memErr.message : memErr
+                );
+              }
+
+              console.log('✅ Medewerker gekoppeld bij registratie:', {
+                invitationId: invitation.id,
+                companyId,
+                userId: newUser.id,
+              });
+            } else {
+              console.warn(
+                '⚠️ Geen passende openstaande uitnodiging voor dit e-mailadres — alleen account aangemaakt.'
+              );
             }
           }
-          
+
           return newUser;
         });
       });

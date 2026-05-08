@@ -112,10 +112,15 @@ export async function GET(request: NextRequest) {
     if (action === 'accept') {
       // Only process if user exists (for existing users)
       if (!invitation.invitedUserId) {
-        return new NextResponse(renderErrorPage('Deze uitnodiging is voor een nieuwe gebruiker. Maak eerst een account aan.'), {
-          status: 400,
-          headers: { 'Content-Type': 'text/html; charset=utf-8' }
-        });
+        return new NextResponse(
+          renderErrorPage(
+            'Deze uitnodiging geldt voor een nieuw e-mailadres. Open de uitnodigingsmail en gebruik de link «Account aanmaken» — na registratie word je automatisch teamlid. Als je al een account hebt met dit adres, log dan in en accepteer de uitnodiging vanuit je account.'
+          ),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          }
+        );
       }
 
       // Store in variable to ensure TypeScript knows it's not null

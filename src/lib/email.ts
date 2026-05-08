@@ -1281,35 +1281,55 @@ export async function sendEmployeeInvitationToNewUser(
     // Include invitation ID and company ID in registration URL so we can track it
     const registerUrl = `${appUrl}/register?invitation=${invitationId}&company=${companyId}`;
     
-    const translations: Record<string, { subject: string; greeting: string; message: string; whatGet: string; benefits: string[]; cta: string; footer: string }> = {
+    const translations: Record<
+      string,
+      {
+        subject: string;
+        greeting: string;
+        introNoAccount: string;
+        message: string;
+        autoJoin: string;
+        whatGet: string;
+        benefits: string[];
+        cta: string;
+        footer: string;
+      }
+    > = {
       nl: {
-        subject: `Registreer en word lid van het team van ${companyName}!`,
-        greeting: `Beste toekomstige collega,`,
-        message: `<strong>${companyOwnerName}</strong> van <strong style="color: #FF8C00;">${companyName}</strong> heeft je uitgenodigd om deel uit te maken van hun team op Gastro-Elite.`,
-        whatGet: 'Wat krijg je?',
+        subject: `${companyName} nodigt je uit — maak je account aan`,
+        greeting: `Hallo,`,
+        introNoAccount: `We zien dat je nog geen account hebt op Gastro-Elite. Dat is geen probleem:`,
+        message: `<strong>${companyOwnerName}</strong> van <strong style="color: #FF8C00;">${companyName}</strong> wil je als <strong>medewerker</strong> aan het team toevoegen.`,
+        autoJoin:
+          '<strong style="color:#15803d;">Registreer via de knop hieronder met dit e-mailadres.</strong> Zodra je account klaar is, word je automatisch aan het team gekoppeld — je hoeft niets extra\'s te accepteren.',
+        whatGet: 'Na registratie',
         benefits: [
-          `Toegang tot alle recepten van ${companyName}`,
-          'Samenwerken met je teamleden',
-          'Gratis persoonlijk account',
-          'Professioneel receptenbeheer'
+          `Toegang tot de recepten van ${companyName}`,
+          'Samenwerken met je collega\'s',
+          'Je persoonlijke recepten blijven van jou',
+          'Eén account — ook geschikt als je nog geen Gastro-Elite had'
         ],
-        cta: 'Account Aanmaken',
-        footer: 'Maak een gratis account aan om de uitnodiging te accepteren en direct te beginnen.'
+        cta: 'Account aanmaken & team joinen',
+        footer:
+          'Gebruik bij registratie hetzelfde e-mailadres als waar deze uitnodiging naartoe is gestuurd.',
       },
       en: {
-        subject: `Register and join ${companyName}'s team!`,
-        greeting: `Dear future colleague,`,
-        message: `<strong>${companyOwnerName}</strong> from <strong style="color: #FF8C00;">${companyName}</strong> has invited you to join their team on Gastro-Elite.`,
-        whatGet: 'What do you get?',
+        subject: `${companyName} invites you — create your account`,
+        greeting: `Hello,`,
+        introNoAccount: `You don’t have a Gastro-Elite account yet — that’s fine:`,
+        message: `<strong>${companyOwnerName}</strong> from <strong style="color: #FF8C00;">${companyName}</strong> wants to add you as a <strong>team member</strong>.`,
+        autoJoin:
+          '<strong style="color:#15803d;">Register using the button below with this email address.</strong> When your account is created, you’ll automatically join the team — no extra acceptance step.',
+        whatGet: 'After you register',
         benefits: [
-          `Access to all recipes from ${companyName}`,
-          'Collaborate with your team members',
-          'Free personal account',
-          'Professional recipe management'
+          `Access to ${companyName}'s recipes`,
+          'Collaborate with colleagues',
+          'Your personal recipes stay yours',
+          'One simple flow if you’re new here'
         ],
-        cta: 'Create Account',
-        footer: 'Create a free account to accept the invitation and get started right away.'
-      }
+        cta: 'Create account & join team',
+        footer: 'Use the same email address this invitation was sent to when you register.',
+      },
     };
 
     const t = translations[language] || translations.nl;
@@ -1330,12 +1350,18 @@ export async function sendEmployeeInvitationToNewUser(
           <!-- Content -->
           <div style="padding: 40px 30px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
             
-            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
               ${t.greeting}
             </p>
-            
             <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              ${t.introNoAccount}
+            </p>
+            
+            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
               ${t.message}
+            </p>
+            <p style="color: #374151; font-size: 15px; line-height: 1.65; margin: 0 0 24px;">
+              ${t.autoJoin}
             </p>
 
             <!-- Benefits Card -->

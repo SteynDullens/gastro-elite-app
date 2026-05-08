@@ -470,12 +470,16 @@ export async function POST(
           console.log('✅ Invitation record created:', invitation.id);
         } catch (invitationError: any) {
           console.warn('⚠️ Could not create invitation record:', invitationError.code || invitationError.message);
-          // If model doesn't exist or other database error, continue without invitation tracking
-          // Don't throw - we can still send the email
           invitation = null;
         }
 
-        // Send registration invitation
+        if (!invitation?.id) {
+          throw new Error(
+            'Kon geen uitnodiging aanmaken in de database. Controleer migraties (EmployeeInvitation) en probeer opnieuw.'
+          );
+        }
+
+        // Send registration invitation (alleen met geldige invitationId in de registratielink)
         try {
           const ownerName = `${company.owner.firstName} ${company.owner.lastName}`;
           const userLanguage = language || 'nl';
@@ -491,7 +495,7 @@ export async function POST(
             email,
             company.name,
             ownerName,
-            invitation?.id || '',
+            invitation.id,
             company.id,
             userLanguage
           );

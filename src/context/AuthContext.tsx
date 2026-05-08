@@ -61,6 +61,8 @@ interface RegisterData {
   phone?: string;
   role?: 'user' | 'business';
   companyName?: string;
+  invitationId?: string;
+  companyId?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
