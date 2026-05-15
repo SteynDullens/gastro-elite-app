@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import SimpleFloatingNav from "@/components/SimpleFloatingNav";
 import DesktopSidebar from "@/components/DesktopSidebar";
 import AdminNotifications from "@/components/AdminNotifications";
+import OwnerNotifications from "@/components/OwnerNotifications";
 import { RecipeProvider } from "@/context/RecipeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -69,6 +70,7 @@ export default function RootLayout({
               <RecipeProvider>
                 {/* Admin Notifications Bell */}
                 <AdminNotifications />
+                <OwnerNotifications />
                 
                 <div className="flex">
                   {/* Desktop Sidebar */}

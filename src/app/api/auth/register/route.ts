@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { safeDbOperation } from '@/lib/prisma';
+import { notifyOwnerEmployeeJoinedTeam } from '@/lib/notify-owner-employee-joined';
 import { 
   sendBusinessRegistrationNotification, 
   sendPersonalRegistrationConfirmation,
@@ -245,6 +246,27 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create user' },
         { status: 500 }
       );
+    }
+
+    if (
+      role !== 'business' &&
+      invitationId &&
+      companyId &&
+      user.companyId === companyId
+    ) {
+      try {
+        await notifyOwnerEmployeeJoinedTeam({
+          companyId,
+          employee: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Register team join: owner notify failed:', notifyErr);
+      }
     }
 
     // Send appropriate email notifications (only if email is configured)

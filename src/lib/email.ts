@@ -1105,6 +1105,90 @@ export async function sendPasswordResetEmail(
   }
 }
 
+/** Bedrijfseigenaar: mail bij nieuw teamlid na geaccepteerde uitnodiging */
+export async function sendEmployeeJoinedTeamEmailToOwner(params: {
+  toEmail: string;
+  ownerFirstName: string;
+  companyName: string;
+  employeeName: string;
+  employeeEmail: string;
+}): Promise<boolean> {
+  try {
+    const emailConfig = getEmailConfig();
+    const appUrl = getAppUrl();
+    const toAddr = normalizeEmailForSMTP(params.toEmail);
+    if (!isProbablyValidEmail(params.toEmail)) {
+      console.error('sendEmployeeJoinedTeamEmailToOwner: ongeldig adres', params.toEmail);
+      return false;
+    }
+
+    const esc = (s: string) =>
+      String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    const ownerFn = esc(params.ownerFirstName || 'daar');
+    const company = esc(params.companyName);
+    const empName = esc(params.employeeName);
+    const empMailSafe = esc(params.employeeEmail);
+    const mailtoHref = `mailto:${encodeURIComponent(params.employeeEmail)}`;
+
+    const subject = `${params.companyName}: nieuw teamlid — ${params.employeeName}`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+        <div style="background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); padding: 36px 28px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 600;">
+            Iemand is bij je team gekomen
+          </h1>
+        </div>
+        <div style="padding: 36px 28px; background-color: #f9fafb; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+          <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 18px;">
+            Hallo ${ownerFn},
+          </p>
+          <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 18px;">
+            <strong>${empName}</strong> (<a href="${mailtoHref}" style="color:#ea580c;">${empMailSafe}</a>)
+            heeft de uitnodiging voor <strong style="color:#ea580c;">${company}</strong> geaccepteerd en is nu gekoppeld aan je bedrijf op Gastro-Elite.
+          </p>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${appUrl}/company"
+               style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; font-weight: 600;">
+              Team bekijken
+            </a>
+          </div>
+        </div>
+        <div style="background-color: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+          <p style="color: #9ca3af; margin: 0; font-size: 12px;">
+            © ${new Date().getFullYear()} Gastro-Elite
+          </p>
+        </div>
+      </div>`;
+
+    if (isResendConfigured()) {
+      const resendOut = await sendHtmlViaResend({ to: toAddr, subject, html });
+      if (resendOut.success) {
+        console.log('✅ Employee joined notification via Resend:', toAddr);
+        return true;
+      }
+      console.warn('⚠️ Resend failed for employee-joined mail:', resendOut.error);
+    }
+
+    await getTransporter().sendMail({
+      from: `"Gastro-Elite" <${emailConfig.auth.user}>`,
+      to: toAddr,
+      subject,
+      html,
+    });
+    console.log('✅ Employee joined notification via SMTP:', toAddr);
+    return true;
+  } catch (error) {
+    console.error('sendEmployeeJoinedTeamEmailToOwner:', error);
+    return false;
+  }
+}
+
 // Send employee invitation to existing user
 export async function sendEmployeeInvitationToExistingUser(
   employeeEmail: string,

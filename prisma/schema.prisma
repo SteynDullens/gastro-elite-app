@@ -24,6 +24,7 @@ model User {
   // Many-to-many relationship: users can belong to multiple companies
   companyMemberships     CompanyMembership[]
   invitations            EmployeeInvitation[]
+  appNotifications       AppNotification[]
   personalRecipes        PersonalRecipe[]
   companyRecipesCreated  CompanyRecipe[]      @relation("CompanyRecipeCreator")
   isBlocked              Boolean              @default(false)
@@ -93,6 +94,22 @@ model EmployeeInvitation {
 
   @@index([companyId])
   @@index([email])
+}
+
+/// In-app notifications for users (e.g. bedrijfseigenaar bij nieuw teamlid)
+model AppNotification {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      String // employee_joined_team, ...
+  title     String
+  body      String    @db.Text
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 model Category {

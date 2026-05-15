@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
+import { notifyOwnerEmployeeJoinedTeam } from '@/lib/notify-owner-employee-joined';
 import crypto from 'crypto';
 
 // Verify action token
@@ -155,6 +156,23 @@ export async function GET(request: NextRequest) {
         });
       });
 
+      const invited = invitation.invitedUser;
+      if (invited) {
+        try {
+          await notifyOwnerEmployeeJoinedTeam({
+            companyId,
+            employee: {
+              id: invitedUserId,
+              firstName: invited.firstName,
+              lastName: invited.lastName,
+              email: invited.email,
+            },
+          });
+        } catch (notifyErr) {
+          console.error('Employee accept: owner notify failed:', notifyErr);
+        }
+      }
+
       // Return JSON for account page, HTML for email links
       if (!token) {
         return NextResponse.json({ success: true, message: 'Invitation accepted' });
@@ -179,12 +197,7 @@ export async function GET(request: NextRequest) {
       if (!token) {
         return NextResponse.json({ success: true, message: 'Invitation declined' });
       }
-      
-      // Return JSON for account page, HTML for email links
-      if (!token) {
-        return NextResponse.json({ success: true, message: 'Invitation declined' });
-      }
-      
+
       return new NextResponse(renderSuccessPage(invitation.company.name, 'declined'), {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
