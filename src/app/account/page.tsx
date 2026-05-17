@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import DeviceLockSettings from "@/components/DeviceLockSettings";
+import { displayRecipeImageUrl } from "@/lib/recipe-image-url";
 
 // Tab types for business account
 type BusinessTab = 'edit-details' | 'language' | 'device-lock' | 'employees' | 'logout';
@@ -218,8 +219,14 @@ export default function AccountPage() {
         phone: user.phone || "",
         company: String(user.companyId || ""),
         address: (user as any).address || "",
-        avatar: (user as any).avatar || null,
+        avatar: (user as { avatarUrl?: string | null }).avatarUrl || null,
       }));
+
+      setNotificationSettings({
+        pushNotifications: Boolean((user as { pushNotifications?: boolean }).pushNotifications),
+        emailNotifications:
+          (user as { emailNotifications?: boolean }).emailNotifications !== false,
+      });
       
       // Update edit form data
       setEditFormData({
@@ -228,10 +235,10 @@ export default function AccountPage() {
         email: user.email || "",
         phone: user.phone || "",
         company: String(user.companyId || ""),
-        country: (user as any).country || "",
-        postalCode: (user as any).postalCode || "",
-        street: (user as any).street || "",
-        city: (user as any).city || "",
+        country: (user as { country?: string | null }).country || "",
+        postalCode: (user as { postalCode?: string | null }).postalCode || "",
+        street: (user as { street?: string | null }).street || "",
+        city: (user as { city?: string | null }).city || "",
       });
 
       // Fetch company data for business users
@@ -530,16 +537,17 @@ export default function AccountPage() {
 
             const response = await fetch('/api/auth/upload-photo', {
               method: 'POST',
+              credentials: 'include',
               body: formData,
             });
 
-            if (response.ok) {
-              const data = await response.json();
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.success && data.avatar) {
               setUserProfile(prev => ({ ...prev, avatar: data.avatar }));
               setShowPhotoEditor(false);
               setSelectedImage(null);
               setCropData({ x: 0, y: 0, scale: 1 });
-              router.refresh();
+              await refreshUser();
               alert('Profielfoto succesvol bijgewerkt!');
             } else {
               const errorData = await response.json().catch(() => ({ message: 'Server error' }));
@@ -574,6 +582,10 @@ export default function AccountPage() {
           lastName: editFormData.lastName,
           email: editFormData.email,
           phone: editFormData.phone,
+          country: editFormData.country,
+          postalCode: editFormData.postalCode,
+          street: editFormData.street,
+          city: editFormData.city,
         }),
       });
 
@@ -586,6 +598,14 @@ export default function AccountPage() {
           lastName: data.user.lastName,
           email: data.user.email,
           phone: data.user.phone ?? prev.phone,
+          avatar: data.user.avatarUrl ?? prev.avatar,
+        }));
+        setEditFormData((prev) => ({
+          ...prev,
+          country: data.user.country ?? "",
+          postalCode: data.user.postalCode ?? "",
+          street: data.user.street ?? "",
+          city: data.user.city ?? "",
         }));
         setShowEditModal(false);
         await refreshUser();
@@ -629,34 +649,46 @@ export default function AccountPage() {
     }
   };
 
-  // Handle postal code lookup
-  const handlePostalCodeChange = async (postalCode: string) => {
-    setEditFormData(prev => ({ ...prev, postalCode }));
-    
-    if (postalCode.length >= 4) {
-      try {
-        // In a real app, you would call a postal code API here
-        // For now, we'll simulate with a simple lookup
-        const response = await fetch(`/api/postal-lookup?code=${postalCode}`);
-        if (response.ok) {
-          try {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              const data = await response.json();
-              setEditFormData(prev => ({ 
-                ...prev, 
-                street: data.street || '',
-                city: data.city || ''
-              }));
-            }
-          } catch (parseError) {
-            console.error('Failed to parse postal lookup response:', parseError);
-          }
-        }
-      } catch (error) {
-        console.log('Postal code lookup not available');
+  const lookupDutchAddress = async (postalCode: string, street: string) => {
+    const cleanPostal = postalCode.replace(/\s+/g, "").toUpperCase();
+    if (!/^\d{4}[A-Z]{2}$/.test(cleanPostal)) return;
+    const houseMatch = street.match(/(\d+[a-zA-Z-]*)/);
+    const houseNumber = houseMatch?.[1];
+    if (!houseNumber) return;
+
+    try {
+      const params = new URLSearchParams({
+        postalCode: cleanPostal,
+        houseNumber,
+      });
+      const response = await fetch(`/api/address/lookup?${params}`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.street || data.city) {
+        setEditFormData((prev) => ({
+          ...prev,
+          street: data.street || prev.street,
+          city: data.city || prev.city,
+          postalCode: data.postalCode || cleanPostal,
+        }));
       }
+    } catch {
+      // lookup optional
     }
+  };
+
+  const handlePostalCodeChange = async (postalCode: string) => {
+    setEditFormData((prev) => {
+      void lookupDutchAddress(postalCode, prev.street);
+      return { ...prev, postalCode };
+    });
+  };
+
+  const handleStreetChange = async (street: string) => {
+    setEditFormData((prev) => {
+      void lookupDutchAddress(prev.postalCode, street);
+      return { ...prev, street };
+    });
   };
 
   // Handle notification settings
@@ -674,6 +706,7 @@ export default function AccountPage() {
 
       if (response.ok && data.success) {
         setShowNotificationsModal(false);
+        await refreshUser();
         alert('Notificatie-instellingen opgeslagen');
       } else {
         alert(data.error || 'Notificatie-instellingen konden niet worden opgeslagen');
@@ -958,7 +991,7 @@ export default function AccountPage() {
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg mx-auto relative group">
             {userProfile.avatar ? (
               <NextImage
-                src={userProfile.avatar}
+                src={displayRecipeImageUrl(userProfile.avatar)}
                 alt="Profile"
                 fill
                   sizes="96px"
@@ -1251,7 +1284,7 @@ export default function AccountPage() {
                           <input
                             type="text"
                             value={editFormData.street}
-                            onChange={(e) => setEditFormData({...editFormData, street: e.target.value})}
+                            onChange={(e) => handleStreetChange(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
                         </div>
@@ -1697,7 +1730,7 @@ export default function AccountPage() {
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-gray-100 shadow-md relative">
               {userProfile.avatar ? (
                 <NextImage
-                  src={userProfile.avatar}
+                  src={displayRecipeImageUrl(userProfile.avatar)}
                   alt="Profile"
                   fill
                   sizes="96px"
@@ -1974,7 +2007,7 @@ export default function AccountPage() {
                     <input
                       type="text"
                       value={editFormData.street}
-                      onChange={(e) => setEditFormData({...editFormData, street: e.target.value})}
+                      onChange={(e) => handleStreetChange(e.target.value)}
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                         placeholder={t.exampleStreet}
                     />

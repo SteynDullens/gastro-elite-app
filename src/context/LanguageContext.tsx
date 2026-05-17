@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 interface Translations {
   // Navigation
@@ -1675,25 +1676,46 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState("nl"); // Default to Dutch
+  const { user } = useAuth();
+  const [language, setLanguage] = useState("nl");
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    // Load language from localStorage if available (only on client)
-    if (typeof window !== 'undefined') {
-      const savedLanguage = localStorage.getItem("language");
-      if (savedLanguage && translations[savedLanguage]) {
-        setLanguage(savedLanguage);
-      }
+    if (typeof window === "undefined") return;
+    const fromUser = (user as { preferredLanguage?: string } | null)?.preferredLanguage;
+    if (fromUser && translations[fromUser]) {
+      setLanguage(fromUser);
+      localStorage.setItem("language", fromUser);
+      return;
     }
-  }, []);
+    const savedLanguage = localStorage.getItem("language");
+    if (savedLanguage && translations[savedLanguage]) {
+      setLanguage(savedLanguage);
+    }
+  }, [user?.id, (user as { preferredLanguage?: string } | null)?.preferredLanguage]);
+
+  const persistLanguage = useCallback(async (lang: string) => {
+    if (!user) return;
+    try {
+      await fetch("/api/auth/update-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ preferredLanguage: lang }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [user]);
 
   const handleSetLanguage = (lang: string) => {
+    if (!translations[lang]) return;
     setLanguage(lang);
-    if (isClient && typeof window !== 'undefined') {
+    if (isClient && typeof window !== "undefined") {
       localStorage.setItem("language", lang);
     }
+    void persistLanguage(lang);
   };
 
   const t = getTranslations(language);

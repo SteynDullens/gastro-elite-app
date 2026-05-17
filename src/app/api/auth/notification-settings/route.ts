@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { safeDbOperation } from '@/lib/prisma';
 
-/** Notification preferences are not persisted yet — do not fake success. */
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('auth-token')?.value;
@@ -14,15 +14,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ongeldige sessie' }, { status: 401 });
     }
 
-    await request.json();
+    const body = await request.json();
+    const { pushNotifications, emailNotifications } = body;
 
-    return NextResponse.json(
-      {
-        error:
-          'Notificatie-instellingen worden binnenkort opgeslagen. Deze optie is nog niet gekoppeld aan de database.',
-      },
-      { status: 501 }
+    if (typeof pushNotifications !== 'boolean' || typeof emailNotifications !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Ongeldige notificatie-instellingen' },
+        { status: 400 }
+      );
+    }
+
+    const updated = await safeDbOperation(async (prisma) =>
+      prisma.user.update({
+        where: { id: decoded.id },
+        data: { pushNotifications, emailNotifications },
+        select: {
+          pushNotifications: true,
+          emailNotifications: true,
+        },
+      })
     );
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: 'Kon notificatie-instellingen niet opslaan.' },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Notification settings updated successfully',
+      settings: updated,
+    });
   } catch (error) {
     console.error('Notification settings error:', error);
     return NextResponse.json(
