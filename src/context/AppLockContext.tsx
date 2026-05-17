@@ -13,6 +13,7 @@ import { authenticatePlatformBiometric } from "@/lib/app-biometric";
 import {
   getDeviceLockMode,
   hasDeviceLock,
+  sanitizeDeviceLockState,
   type DeviceLockMode,
 } from "@/lib/device-lock";
 import {
@@ -49,6 +50,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     }
 
     const uid = user.id;
+    sanitizeDeviceLockState(uid);
     const mode = getDeviceLockMode(uid);
     setLockMode(mode);
 

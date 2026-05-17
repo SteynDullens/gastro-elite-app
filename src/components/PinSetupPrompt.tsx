@@ -15,6 +15,8 @@ import {
   setPinForUser,
   setSessionUnlocked,
 } from "@/lib/app-pin";
+import { isDeviceStorageAvailable } from "@/lib/device-storage";
+import PinKeypad from "@/components/PinKeypad";
 
 interface PinSetupPromptProps {
   onDismiss: () => void;
@@ -38,8 +40,10 @@ export default function PinSetupPrompt({
   const [second, setSecond] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [storageOk, setStorageOk] = useState(true);
 
   useEffect(() => {
+    setStorageOk(isDeviceStorageAvailable());
     void isPlatformBiometricAvailable().then(setBiometricAvailable);
   }, []);
 
@@ -62,15 +66,30 @@ export default function PinSetupPrompt({
   };
 
   const handleBiometricSetup = async () => {
+    if (!storageOk) {
+      setError(t.lockStorageUnavailable);
+      setStep("choose");
+      return;
+    }
     setBusy(true);
     setError("");
     const result = await registerPlatformBiometric(user.id, user.email, displayName);
     setBusy(false);
     if (result.ok) {
       clearPinForUser(user.id);
-      setDeviceLockMode(user.id, "biometric");
+      if (!setDeviceLockMode(user.id, "biometric")) {
+        clearBiometricForUser(user.id);
+        setError(t.lockStorageUnavailable);
+        setStep("choose");
+        return;
+      }
       setSessionUnlocked();
       onComplete();
+      return;
+    }
+    if (result.error === "storage" || result.error === "insecure") {
+      setError(t.lockStorageUnavailable);
+      setStep("choose");
       return;
     }
     if (result.error === "cancelled") {
@@ -106,36 +125,25 @@ export default function PinSetupPrompt({
       setError(t.pinMismatch);
       return;
     }
+    if (!storageOk) {
+      setError(t.lockStorageUnavailable);
+      return;
+    }
     setBusy(true);
     try {
       clearBiometricForUser(user.id);
-      await setPinForUser(user.id, second);
-      setDeviceLockMode(user.id, "pin");
+      const saved = await setPinForUser(user.id, second);
+      if (!saved || !setDeviceLockMode(user.id, "pin")) {
+        clearPinForUser(user.id);
+        setError(t.lockStorageUnavailable);
+        return;
+      }
       setSessionUnlocked();
       onComplete();
     } finally {
       setBusy(false);
     }
   };
-
-  const keypad = (which: 1 | 2) => (
-    <div className="grid grid-cols-3 gap-2">
-      {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((key, idx) => (
-        <button
-          key={`${key}-${idx}`}
-          type="button"
-          disabled={busy || key === ""}
-          onClick={() => {
-            if (key === "⌫") back(which);
-            else if (key) append(key, which);
-          }}
-          className="rounded-xl py-3 text-lg font-medium text-gray-800 transition hover:bg-gray-100 disabled:invisible"
-        >
-          {key}
-        </button>
-      ))}
-    </div>
-  );
 
   const dots = (len: number) => (
     <div className="flex justify-center gap-2 min-h-[36px]">
@@ -162,8 +170,14 @@ export default function PinSetupPrompt({
               {variant === "settings" ? t.lockSettingsManageDescription : t.lockSetupDescription}
             </p>
 
+            {!storageOk && (
+              <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                {t.lockStorageUnavailable}
+              </p>
+            )}
+
             <div className="mt-6 space-y-3">
-              {biometricAvailable && (
+              {biometricAvailable && storageOk && (
                 <button
                   type="button"
                   disabled={busy}
@@ -258,7 +272,11 @@ export default function PinSetupPrompt({
             <h2 className="text-lg font-semibold text-gray-900">{t.pinEnterNew}</h2>
             {dots(first.length)}
             {error && <p className="text-center text-sm text-red-600">{error}</p>}
-            {keypad(1)}
+            <PinKeypad
+              disabled={busy}
+              onDigit={(d) => append(d, 1)}
+              onBackspace={() => back(1)}
+            />
             <button
               type="button"
               onClick={handleFirstNext}
@@ -276,7 +294,11 @@ export default function PinSetupPrompt({
             <p className="text-sm font-medium text-gray-700">{t.pinConfirmLabel}</p>
             {dots(second.length)}
             {error && <p className="text-center text-sm text-red-600">{error}</p>}
-            {keypad(2)}
+            <PinKeypad
+              disabled={busy}
+              onDigit={(d) => append(d, 2)}
+              onBackspace={() => back(2)}
+            />
             <div className="flex gap-2">
               <button
                 type="button"

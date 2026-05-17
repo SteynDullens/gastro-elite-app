@@ -5,6 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { isValidPinFormat } from "@/lib/app-pin";
 import type { DeviceLockMode } from "@/lib/device-lock";
+import PinKeypad from "@/components/PinKeypad";
 
 interface PinUnlockOverlayProps {
   lockMode: DeviceLockMode;
@@ -107,22 +108,11 @@ export default function PinUnlockOverlay({
 
             {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
-            <div className="grid grid-cols-3 gap-2">
-              {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((key, idx) => (
-                <button
-                  key={`${key}-${idx}`}
-                  type="button"
-                  disabled={submitting || key === ""}
-                  onClick={() => {
-                    if (key === "⌫") backspace();
-                    else if (key) append(key);
-                  }}
-                  className="rounded-xl py-4 text-lg font-medium text-gray-800 transition hover:bg-gray-100 disabled:invisible"
-                >
-                  {key}
-                </button>
-              ))}
-            </div>
+            <PinKeypad
+              disabled={submitting}
+              onDigit={append}
+              onBackspace={backspace}
+            />
 
             <button
               type="submit"

@@ -106,6 +106,14 @@ export default function AccountPage() {
   const [businessSuccess, setBusinessSuccess] = useState("");
   const [leavingCompany, setLeavingCompany] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Sluit medewerker-menu bij scroll (voorkomt onzichtbare overlay die tikken blokkeert)
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => setOpenMenuId(null);
+    window.addEventListener("scroll", close, { passive: true, capture: true });
+    return () => window.removeEventListener("scroll", close, { capture: true });
+  }, [openMenuId]);
   
   // Pending invitation notification
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);

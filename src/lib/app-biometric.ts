@@ -3,6 +3,12 @@
  * Works in Safari/Chrome on iOS/Android when the site is served over HTTPS (or localhost).
  */
 
+import {
+  deviceStorageGet,
+  deviceStorageRemove,
+  deviceStorageSet,
+} from '@/lib/device-storage';
+
 const CRED_PREFIX = 'gastro_webauthn_cred_';
 
 function bufferToBase64url(buffer: ArrayBuffer): string {
@@ -51,11 +57,7 @@ function getRpId(): string {
 }
 
 export function getStoredCredentialId(userId: string): string | null {
-  try {
-    return localStorage.getItem(CRED_PREFIX + userId);
-  } catch {
-    return null;
-  }
+  return deviceStorageGet(CRED_PREFIX + userId);
 }
 
 export function hasBiometric(userId: string): boolean {
@@ -63,11 +65,7 @@ export function hasBiometric(userId: string): boolean {
 }
 
 export function clearBiometricForUser(userId: string): void {
-  try {
-    localStorage.removeItem(CRED_PREFIX + userId);
-  } catch {
-    /* ignore */
-  }
+  deviceStorageRemove(CRED_PREFIX + userId);
 }
 
 export async function registerPlatformBiometric(
@@ -77,6 +75,10 @@ export async function registerPlatformBiometric(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isWebAuthnSupported()) {
     return { ok: false, error: 'unsupported' };
+  }
+
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return { ok: false, error: 'insecure' };
   }
 
   const available = await isPlatformBiometricAvailable();
@@ -119,7 +121,9 @@ export async function registerPlatformBiometric(
     }
 
     const id = bufferToBase64url(credential.rawId);
-    localStorage.setItem(CRED_PREFIX + userId, id);
+    if (!deviceStorageSet(CRED_PREFIX + userId, id)) {
+      return { ok: false, error: 'storage' };
+    }
     return { ok: true };
   } catch (e: unknown) {
     const name = e instanceof DOMException ? e.name : '';

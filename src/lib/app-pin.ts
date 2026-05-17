@@ -3,6 +3,12 @@
  * Suitable for PWA / in-app browser; native shells can swap storage for Keychain.
  */
 
+import {
+  deviceStorageGet,
+  deviceStorageRemove,
+  deviceStorageSet,
+} from '@/lib/device-storage';
+
 const STORAGE_PREFIX = 'gastro_pin_hash_';
 const SESSION_UNLOCK_KEY = 'gastro_session_unlocked';
 
@@ -17,24 +23,16 @@ export async function hashPin(pin: string, userId: string): Promise<string> {
 
 export function getStoredPinHash(userId: string): string | null {
   if (typeof window === 'undefined') return null;
-  try {
-    return localStorage.getItem(STORAGE_PREFIX + userId);
-  } catch {
-    return null;
-  }
+  return deviceStorageGet(STORAGE_PREFIX + userId);
 }
 
-export async function setPinForUser(userId: string, pin: string): Promise<void> {
+export async function setPinForUser(userId: string, pin: string): Promise<boolean> {
   const hash = await hashPin(pin, userId);
-  localStorage.setItem(STORAGE_PREFIX + userId, hash);
+  return deviceStorageSet(STORAGE_PREFIX + userId, hash);
 }
 
 export function clearPinForUser(userId: string): void {
-  try {
-    localStorage.removeItem(STORAGE_PREFIX + userId);
-  } catch {
-    /* ignore */
-  }
+  deviceStorageRemove(STORAGE_PREFIX + userId);
 }
 
 export function hasPin(userId: string): boolean {

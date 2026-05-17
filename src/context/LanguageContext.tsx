@@ -312,6 +312,7 @@ interface Translations {
   lockBiometricRegistering: string;
   lockUnlockBiometricSubtitle: string;
   lockBiometricFailed: string;
+  lockStorageUnavailable: string;
   emailVerifiedLoginHint: string;
   lockSettingsSection: string;
   lockSettingsManageTitle: string;
@@ -521,6 +522,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Volg de melding op uw scherm…",
     lockUnlockBiometricSubtitle: "Gebruik Face ID, Touch ID of uw vingerafdruk.",
     lockBiometricFailed: "Biometrie mislukt. Tik opnieuw om het te proberen.",
+    lockStorageUnavailable:
+      "Opslag op dit apparaat werkt niet (privé-modus of browser in e-mail/WhatsApp). Open https://gastro-elite-app.vercel.app in Safari of Chrome (geen privévenster) en stel het opnieuw in.",
     emailVerifiedLoginHint: "Uw e-mail is geverifieerd. Log in om verder te gaan.",
     lockSettingsSection: "App-vergrendeling",
     lockSettingsManageTitle: "Face ID / pincode voor deze app",
@@ -687,6 +690,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Follow the prompt on your screen…",
     lockUnlockBiometricSubtitle: "Use Face ID, Touch ID, or your fingerprint.",
     lockBiometricFailed: "Biometrics failed. Tap to try again.",
+    lockStorageUnavailable:
+      "Storage is blocked on this device (private mode or in-app browser). Open https://gastro-elite-app.vercel.app in Safari or Chrome (not private) and set up again.",
     emailVerifiedLoginHint: "Your email is verified. Sign in to continue.",
     lockSettingsSection: "App lock",
     lockSettingsManageTitle: "Face ID / PIN for this app",
@@ -845,6 +850,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Folgen Sie der Meldung auf dem Bildschirm…",
     lockUnlockBiometricSubtitle: "Face ID, Touch ID oder Fingerabdruck verwenden.",
     lockBiometricFailed: "Biometrie fehlgeschlagen. Erneut tippen.",
+    lockStorageUnavailable:
+      "Speicher blockiert (Privatmodus/In-App-Browser). Öffnen Sie https://gastro-elite-app.vercel.app in Safari oder Chrome.",
     emailVerifiedLoginHint: "E-Mail bestätigt. Bitte anmelden.",
     lockSettingsSection: "App-Sperre",
     lockSettingsManageTitle: "Face ID / PIN für diese App",
@@ -1001,6 +1008,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Suivez l’invite à l’écran…",
     lockUnlockBiometricSubtitle: "Utilisez Face ID, Touch ID ou votre empreinte.",
     lockBiometricFailed: "Échec biométrique. Réessayez.",
+    lockStorageUnavailable:
+      "Stockage bloqué (navigation privée / navigateur intégré). Ouvrez https://gastro-elite-app.vercel.app dans Safari ou Chrome.",
     emailVerifiedLoginHint: "E-mail vérifié. Connectez-vous pour continuer.",
     lockSettingsSection: "Verrouillage de l’app",
     lockSettingsManageTitle: "Face ID / code PIN",
@@ -1157,6 +1166,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Sigue el aviso en pantalla…",
     lockUnlockBiometricSubtitle: "Usa Face ID, Touch ID o huella.",
     lockBiometricFailed: "Biometría fallida. Toca para reintentar.",
+    lockStorageUnavailable:
+      "Almacenamiento bloqueado. Abra https://gastro-elite-app.vercel.app en Safari o Chrome (sin modo privado).",
     emailVerifiedLoginHint: "Correo verificado. Inicia sesión para continuar.",
     lockSettingsSection: "Bloqueo de la app",
     lockSettingsManageTitle: "Face ID / PIN",
@@ -1313,6 +1324,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Segui il messaggio sullo schermo…",
     lockUnlockBiometricSubtitle: "Usa Face ID, Touch ID o impronta.",
     lockBiometricFailed: "Biometria non riuscita. Tocca per riprovare.",
+    lockStorageUnavailable:
+      "Memoria bloccata. Apri https://gastro-elite-app.vercel.app in Safari o Chrome.",
     emailVerifiedLoginHint: "Email verificata. Accedi per continuare.",
     lockSettingsSection: "Blocco app",
     lockSettingsManageTitle: "Face ID / PIN",
@@ -1469,6 +1482,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Siga o aviso no ecrã…",
     lockUnlockBiometricSubtitle: "Use Face ID, Touch ID ou impressão digital.",
     lockBiometricFailed: "Biometria falhou. Toque para tentar novamente.",
+    lockStorageUnavailable:
+      "Armazenamento bloqueado. Abra https://gastro-elite-app.vercel.app no Safari ou Chrome.",
     emailVerifiedLoginHint: "E-mail verificado. Inicie sessão para continuar.",
     lockSettingsSection: "Bloqueio da app",
     lockSettingsManageTitle: "Face ID / PIN",
@@ -1625,6 +1640,8 @@ const translations: Record<string, Translations> = {
     lockBiometricRegistering: "Ndiqni njoftimin në ekran…",
     lockUnlockBiometricSubtitle: "Përdorni Face ID, Touch ID ose gjurmën e gishtit.",
     lockBiometricFailed: "Biometria dështoi. Prekni për të provuar përsëri.",
+    lockStorageUnavailable:
+      "Ruajtja është bllokuar. Hapni https://gastro-elite-app.vercel.app në Safari ose Chrome.",
     emailVerifiedLoginHint: "Emaili u verifikua. Hyni për të vazhduar.",
     lockSettingsSection: "Kyçja e aplikacionit",
     lockSettingsManageTitle: "Face ID / PIN",
