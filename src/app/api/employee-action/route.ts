@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { notifyOwnerEmployeeJoinedTeam } from '@/lib/notify-owner-employee-joined';
+import { getAppUrl } from '@/lib/app-url';
 import crypto from 'crypto';
 
 // Verify action token
@@ -12,10 +13,6 @@ function verifyActionToken(companyId: string, invitationId: string, action: stri
     .digest('hex')
     .substring(0, 32);
   return token === expectedToken;
-}
-
-function getAppUrl(): string {
-  return (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 }
 
 export async function GET(request: NextRequest) {

@@ -10,6 +10,7 @@ import {
   PersonalRegistrationData
 } from '@/lib/email';
 import crypto from 'crypto';
+import { emailLookupWhere, normalizeEmailForSMTP } from '@/lib/email-address';
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,11 +84,13 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    const emailNorm = normalizeEmailForSMTP(email);
+
     // Check if user already exists
-    console.log('🔍 Checking if user exists:', email);
+    console.log('🔍 Checking if user exists:', emailNorm);
     const existingUser = await safeDbOperation(async (prisma) => {
-      return await prisma.user.findUnique({
-      where: { email }
+      return await prisma.user.findFirst({
+        where: emailLookupWhere(email),
       });
     });
 
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
           data: {
             firstName,
             lastName,
-            email,
+            email: emailNorm,
             password: hashedPassword,
             phone: phone || '',
             isAdmin: false,
@@ -162,13 +165,11 @@ export async function POST(request: NextRequest) {
       // Create personal user
       const result = await safeDbOperation(async (prisma) => {
         return await prisma.$transaction(async (tx) => {
-          const emailNorm = email.toLowerCase().trim();
-
           const newUser = await tx.user.create({
             data: {
               firstName,
               lastName,
-              email,
+              email: emailNorm,
               password: hashedPassword,
               phone: phone || '',
               isAdmin: false,

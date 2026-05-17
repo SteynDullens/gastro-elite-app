@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, generateToken } from '@/lib/auth';
+import { emailLookupWhere } from '@/lib/email-address';
 import { safeDbOperation } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   console.log('🔐 Login attempt started');
   
   try {
-    const { email, password } = await request.json();
+    const { email: rawEmail, password: rawPassword } = await request.json();
+    const email = typeof rawEmail === 'string' ? rawEmail.trim() : '';
+    const password = typeof rawPassword === 'string' ? rawPassword : '';
     console.log('📧 Login for:', email);
 
     if (!email || !password) {
@@ -19,8 +22,8 @@ export async function POST(request: NextRequest) {
     // Find user using Prisma with graceful error handling
     console.log('🔍 Looking up user in database...');
     const user = await safeDbOperation(async (prisma) => {
-      return await prisma.user.findUnique({
-        where: { email },
+      return await prisma.user.findFirst({
+        where: emailLookupWhere(email),
         include: {
           ownedCompany: {
             select: {

@@ -12,3 +12,14 @@ export function isProbablyValidEmail(raw: string): boolean {
   const n = normalizeEmailForSMTP(raw);
   return n.length <= 254 && BASIC.test(n);
 }
+
+/** Prisma `where` voor e-maillookup (hoofdletterongevoelig, getrimd). */
+export function emailLookupWhere(raw: string) {
+  const normalized = normalizeEmailForSMTP(raw);
+  return {
+    email: {
+      equals: normalized,
+      mode: 'insensitive' as const,
+    },
+  };
+}

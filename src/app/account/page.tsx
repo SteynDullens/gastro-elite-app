@@ -6,9 +6,10 @@ import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
+import DeviceLockSettings from "@/components/DeviceLockSettings";
 
 // Tab types for business account
-type BusinessTab = 'edit-details' | 'language' | 'employees' | 'logout';
+type BusinessTab = 'edit-details' | 'language' | 'device-lock' | 'employees' | 'logout';
 
 export default function AccountPage() {
   const { t, language, setLanguage } = useLanguage();
@@ -1028,6 +1029,21 @@ export default function AccountPage() {
                 <span className="text-sm font-medium">{t.language}</span>
               </button>
 
+              {/* App lock / Face ID */}
+              <button
+                onClick={() => setActiveTab('device-lock')}
+                className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 ${
+                  activeTab === 'device-lock'
+                    ? 'bg-orange-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="mr-3 flex-shrink-0">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+                <span className="text-sm font-medium">{t.lockSettingsSection}</span>
+              </button>
+
               {/* Employees Tab */}
               <button
                 onClick={() => setActiveTab('employees')}
@@ -1326,6 +1342,13 @@ export default function AccountPage() {
                   </form>
             </div>
           )}
+
+              {/* Device lock */}
+              {activeTab === 'device-lock' && (
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <DeviceLockSettings variant="panel" />
+                </div>
+              )}
 
               {/* Language Content */}
               {activeTab === 'language' && (
@@ -1717,7 +1740,7 @@ export default function AccountPage() {
       {/* Settings Section */}
       <section>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">{t.settings}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {/* Gegevens wijzigen */}
           <button 
             onClick={() => setShowEditModal(true)}
@@ -1759,6 +1782,8 @@ export default function AccountPage() {
             <h3 className="font-medium text-gray-900 text-sm">{t.password}</h3>
             <p className="text-xs text-gray-500 mt-1">{t.changePasswordShort}</p>
           </button>
+
+          <DeviceLockSettings variant="card" />
 
           {/* Uitloggen */}
           <button 

@@ -9,6 +9,7 @@ import {
   isResendConfigured,
   sendHtmlViaResend,
 } from '@/lib/email-resend';
+import { getAppUrl } from '@/lib/app-url';
 
 // Get email configuration (called at runtime to ensure env vars are loaded)
 // Note: .trim() removes any newline characters that may have been added by environment variable tools
@@ -39,9 +40,6 @@ function getTransporter() {
 // Admin email configuration (runtime)
 function getAdminEmail() {
   return process.env.ADMIN_EMAIL || 'admin@gastro-elite.com';
-}
-function getAppUrl() {
-  return (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 }
 
 export interface BusinessRegistrationData {

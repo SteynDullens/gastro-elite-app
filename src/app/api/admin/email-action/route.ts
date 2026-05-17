@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { sendBusinessApprovalNotification, sendBusinessRejectionNotification } from '@/lib/email';
+import { getAppUrl } from '@/lib/app-url';
 import crypto from 'crypto';
 
 // Verify action token (simple HMAC-based verification)
@@ -366,8 +367,3 @@ function renderRejectConfirmPage(companyName: string, companyId: string, token: 
 </body>
 </html>`;
 }
-
-function getAppUrl(): string {
-  return (process.env.APP_URL || 'https://gastro-elite-app.vercel.app').replace(/\/$/, '');
-}
-

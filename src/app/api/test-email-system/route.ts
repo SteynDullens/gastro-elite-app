@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { getAppUrl } from '@/lib/app-url';
 
 export async function POST(request: Request) {
   try {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
     // Send verification email (same as registration)
     const verificationToken = 'test-token-' + Date.now();
-    const verificationUrl = `${process.env.APP_URL || 'https://gastro-elite-app-steyn-dullens-projects.vercel.app'}/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${getAppUrl()}/verify-email?token=${verificationToken}`;
     
     const info = await transporter.sendMail({
       from: `"Gastro-Elite" <${process.env.SMTP_USER}>`,

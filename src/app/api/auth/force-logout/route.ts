@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { getAppUrl } from '@/lib/app-url';
 
 // Force logout by clearing the auth cookie
 export async function GET() {
-  const response = NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_APP_URL || 'https://gastro-elite-app-steyn-dullens-projects.vercel.app'));
+  const response = NextResponse.redirect(new URL('/', getAppUrl()));
   
   // Clear the auth token cookie
   response.cookies.set('token', '', {

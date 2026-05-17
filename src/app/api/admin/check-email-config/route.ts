@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { getAppUrl } from '@/lib/app-url';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
       SMTP_PASS: process.env.SMTP_PASS ? `SET (${process.env.SMTP_PASS.length} characters)` : 'NOT SET',
       ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'NOT SET',
       APP_URL: process.env.APP_URL || 'NOT SET',
+      APP_URL_RESOLVED: getAppUrl(),
       NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'NOT SET'
     };
 

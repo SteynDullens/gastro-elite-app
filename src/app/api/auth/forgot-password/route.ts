@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { safeDbOperation } from '@/lib/prisma';
 import { sendPasswordResetEmail } from '@/lib/email';
+import { emailLookupWhere } from '@/lib/email-address';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -16,8 +17,8 @@ export async function POST(request: NextRequest) {
 
     // Find user by email
     const user = await safeDbOperation(async (prisma) => {
-      return await prisma.user.findUnique({
-        where: { email: email.toLowerCase().trim() }
+      return await prisma.user.findFirst({
+        where: emailLookupWhere(email),
       });
     });
 

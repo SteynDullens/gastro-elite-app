@@ -79,7 +79,7 @@ function ResetPasswordContent() {
                 Uw wachtwoord is succesvol gewijzigd. U kunt nu inloggen met uw nieuwe wachtwoord.
               </p>
               <Link 
-                href="/account" 
+                href="/login" 
                 className="inline-block px-6 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
               >
                 Naar Inloggen

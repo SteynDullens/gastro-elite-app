@@ -54,6 +54,16 @@ function LoginScreenInner({ enableBackButton = true }: LoginScreenProps) {
     }
   }, [showFormFields]);
 
+  const emailVerified = searchParams.get("verified") === "true";
+  const wantsLockSetup = searchParams.get("setupPin") === "1";
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (wantsLockSetup) {
+      setShowFormFields(true);
+    }
+  }, [mounted, wantsLockSetup]);
+
   const handleBackClick = () => {
     if (!enableBackButton) return;
 
@@ -162,6 +172,11 @@ function LoginScreenInner({ enableBackButton = true }: LoginScreenProps) {
       <div className="flex-1 flex items-start md:items-center justify-center px-4 pb-8">
         <div className="w-full max-w-sm">
           <div className="login-card-enter bg-white rounded-2xl shadow-xl p-6 md:p-8">
+            {emailVerified && (
+              <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                {t.emailVerifiedLoginHint}
+              </div>
+            )}
             {/* Show only button initially */}
             {!showFormFields ? (
               <div className="space-y-6">
