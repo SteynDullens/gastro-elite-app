@@ -1,38 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth';
 
+/** Notification preferences are not persisted yet — do not fake success. */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { pushNotifications, emailNotifications } = body;
+    const token = request.cookies.get('auth-token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 });
+    }
 
-    // For now, we'll just return success since we don't have user authentication set up
-    // In a real app, you would:
-    // 1. Get the user ID from the session/token
-    // 2. Update the user's notification preferences in the database
-    // 3. Handle push notification registration if needed
+    const decoded = verifyToken(token);
+    if (!decoded?.id) {
+      return NextResponse.json({ error: 'Ongeldige sessie' }, { status: 401 });
+    }
 
-    console.log('Notification settings update:', { pushNotifications, emailNotifications });
+    await request.json();
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Notification settings updated successfully',
-      settings: {
-        pushNotifications,
-        emailNotifications
-      }
-    });
-
+    return NextResponse.json(
+      {
+        error:
+          'Notificatie-instellingen worden binnenkort opgeslagen. Deze optie is nog niet gekoppeld aan de database.',
+      },
+      { status: 501 }
+    );
   } catch (error) {
     console.error('Notification settings error:', error);
     return NextResponse.json(
-      { error: 'Failed to update notification settings', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to update notification settings' },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-

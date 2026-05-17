@@ -500,6 +500,13 @@ export async function PUT(
       }
     }
 
+    if (!updatedRecipe) {
+      return NextResponse.json(
+        { error: 'Kon recept niet opslaan. Probeer het later opnieuw.' },
+        { status: 503 }
+      );
+    }
+
     console.log('✅ Recipe update successful:', recipeId);
     return NextResponse.json({ recipe: updatedRecipe });
   } catch (error) {

@@ -568,27 +568,30 @@ export default function AccountPage() {
       const response = await fetch('/api/auth/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData),
+        credentials: 'include',
+        body: JSON.stringify({
+          firstName: editFormData.firstName,
+          lastName: editFormData.lastName,
+          email: editFormData.email,
+          phone: editFormData.phone,
+        }),
       });
 
-      if (response.ok) {
-        setUserProfile(prev => ({ ...prev, ...editFormData }));
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.success && data.user) {
+        setUserProfile((prev) => ({
+          ...prev,
+          firstName: data.user.firstName,
+          lastName: data.user.lastName,
+          email: data.user.email,
+          phone: data.user.phone ?? prev.phone,
+        }));
         setShowEditModal(false);
-        router.refresh();
+        await refreshUser();
         alert('Profiel succesvol bijgewerkt!');
       } else {
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            alert(`Fout bij bijwerken: ${errorData.message || 'Onbekende fout'}`);
-          } else {
-            alert(`Fout bij bijwerken: ${response.statusText || 'Server fout'}`);
-          }
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          alert(`Fout bij bijwerken: ${response.statusText || 'Onbekende fout'}`);
-        }
+        alert(`Fout bij bijwerken: ${data.error || data.message || 'Onbekende fout'}`);
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -608,15 +611,18 @@ export default function AccountPage() {
       const response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(passwordFormData),
       });
 
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.success) {
         setShowPasswordModal(false);
         setPasswordFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-        alert('Password updated successfully');
+        alert('Wachtwoord succesvol gewijzigd');
       } else {
-        alert('Failed to update password');
+        alert(data.error || 'Wachtwoord wijzigen mislukt');
       }
     } catch (error) {
       console.error('Password change error:', error);
@@ -660,12 +666,17 @@ export default function AccountPage() {
       const response = await fetch('/api/auth/notification-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(notificationSettings),
       });
 
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.success) {
         setShowNotificationsModal(false);
-        alert('Notification settings updated');
+        alert('Notificatie-instellingen opgeslagen');
+      } else {
+        alert(data.error || 'Notificatie-instellingen konden niet worden opgeslagen');
       }
     } catch (error) {
       console.error('Notification settings error:', error);
