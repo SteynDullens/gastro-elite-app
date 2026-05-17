@@ -1,5 +1,5 @@
 /** Canonical production URL when env is missing or points at a preview deployment. */
-const PRODUCTION_DEFAULT = 'https://gastro-elite.com';
+const PRODUCTION_DEFAULT = 'https://gastro-elite-app.vercel.app';
 
 /** Vercel team preview hostnames (e.g. *-steyn-dullens-projects.vercel.app) — not for user-facing emails. */
 function isVercelTeamPreviewHost(hostname: string): boolean {
