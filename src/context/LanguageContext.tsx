@@ -1677,23 +1677,23 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const preferredLanguage = (user as { preferredLanguage?: string } | null)?.preferredLanguage;
   const [language, setLanguage] = useState("nl");
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
     if (typeof window === "undefined") return;
-    const fromUser = (user as { preferredLanguage?: string } | null)?.preferredLanguage;
-    if (fromUser && translations[fromUser]) {
-      setLanguage(fromUser);
-      localStorage.setItem("language", fromUser);
+    if (preferredLanguage && translations[preferredLanguage]) {
+      setLanguage(preferredLanguage);
+      localStorage.setItem("language", preferredLanguage);
       return;
     }
     const savedLanguage = localStorage.getItem("language");
     if (savedLanguage && translations[savedLanguage]) {
       setLanguage(savedLanguage);
     }
-  }, [user?.id, (user as { preferredLanguage?: string } | null)?.preferredLanguage]);
+  }, [user?.id, preferredLanguage]);
 
   const persistLanguage = useCallback(async (lang: string) => {
     if (!user) return;

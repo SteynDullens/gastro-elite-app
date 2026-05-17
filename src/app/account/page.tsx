@@ -29,7 +29,15 @@ export default function AccountPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const [userProfile, setUserProfile] = useState({
+  const [userProfile, setUserProfile] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    company: string;
+    address: string;
+    avatar: string | null;
+  }>({
     firstName: "",
     lastName: "",
     email: "",
