@@ -9,6 +9,7 @@ import {
 } from "./constants";
 import { countCompanyEmployees } from "./employees";
 import { formatMollieAmount, getMollieClient } from "./mollie";
+import { issueInvoiceForMolliePayment } from "./invoice-service";
 
 export async function ensureUserSubscriptionRow(userId: string) {
   return safeDbOperation(async (prisma) =>
@@ -298,6 +299,19 @@ export async function handleMolliePaymentUpdate(
 
   if (kind === "personal_first" && userId) {
     await activatePersonalSubscription(userId, customerId);
+    try {
+      await issueInvoiceForMolliePayment({
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        paidAt: payment.paidAt,
+        metadata: (meta ?? undefined) as Record<string, string> | undefined,
+        subscriptionId: payment.subscriptionId,
+        customerId: payment.customerId,
+      });
+    } catch (e) {
+      console.error("Invoice after personal_first:", e);
+    }
     return;
   }
 
@@ -308,16 +322,55 @@ export async function handleMolliePaymentUpdate(
         parseInt(meta?.employeeCount ?? "0", 10) || 0
       );
     await activateBusinessSubscription(companyId, customerId, amount);
+    try {
+      await issueInvoiceForMolliePayment({
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        paidAt: payment.paidAt,
+        metadata: (meta ?? undefined) as Record<string, string> | undefined,
+        subscriptionId: payment.subscriptionId,
+        customerId: payment.customerId,
+      });
+    } catch (e) {
+      console.error("Invoice after business_first:", e);
+    }
     return;
   }
 
-  await handleRecurringSubscriptionPayment(payment);
+  await handleRecurringSubscriptionPayment({
+    id: payment.id,
+    subscriptionId: payment.subscriptionId,
+    status: payment.status,
+    amount: payment.amount,
+    metadata: meta as Record<string, string> | undefined,
+    customerId: payment.customerId,
+  });
+
+  try {
+    await issueInvoiceForMolliePayment({
+      id: payment.id,
+      amount: payment.amount,
+      method: payment.method,
+      paidAt: payment.paidAt,
+      metadata: meta ?? undefined,
+      subscriptionId: payment.subscriptionId,
+      customerId: payment.customerId,
+    });
+  } catch (e) {
+    console.error("Invoice after recurring payment:", e);
+  }
 }
 
 /** Maandelijkse incasso (iDEAL/Wero/SEPA via Mollie subscription) — verleng periode in DB. */
-async function handleRecurringSubscriptionPayment(
-  payment: { subscriptionId?: string | null; status: string }
-): Promise<void> {
+async function handleRecurringSubscriptionPayment(payment: {
+  id: string;
+  subscriptionId?: string | null;
+  status: string;
+  amount?: { value: string; currency?: string } | null;
+  metadata?: Record<string, string> | null;
+  customerId?: string | null;
+}): Promise<void> {
   const subId =
     typeof payment.subscriptionId === "string" ? payment.subscriptionId : null;
   if (!subId || payment.status !== "paid") return;
@@ -367,6 +420,18 @@ async function handleRecurringSubscriptionPayment(
         where: { id: userRow.id },
         data: { status: "active", currentPeriodEnd: end },
       });
+      await prisma.billingPayment.upsert({
+        where: { molliePaymentId: payment.id },
+        create: {
+          id: `ge_recurring_${payment.id}`,
+          molliePaymentId: payment.id,
+          userId: userRow.userId,
+          kind: "personal_recurring",
+          amount: payment.amount?.value ?? PRICE_PERSONAL_MONTHLY,
+          status: "paid",
+        },
+        update: { status: "paid" },
+      });
       return;
     }
     const companyRow = await prisma.companySubscription.findFirst({
@@ -377,6 +442,26 @@ async function handleRecurringSubscriptionPayment(
         where: { id: companyRow.id },
         data: { status: "active", currentPeriodEnd: end },
       });
+      const company = await prisma.company.findUnique({
+        where: { id: companyRow.companyId },
+        select: { ownerId: true },
+      });
+      if (company) {
+        await prisma.billingPayment.upsert({
+          where: { molliePaymentId: payment.id },
+          create: {
+            id: `ge_recurring_${payment.id}`,
+            molliePaymentId: payment.id,
+            userId: company.ownerId,
+            companyId: companyRow.companyId,
+            kind: "business_recurring",
+            amount: payment.amount?.value ?? companyRow.monthlyAmount ?? "12.95",
+            status: "paid",
+          },
+          update: { status: "paid" },
+        });
+      }
+      return;
     }
   });
 }

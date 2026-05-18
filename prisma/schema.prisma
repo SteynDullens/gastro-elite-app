@@ -37,6 +37,7 @@ model User {
   companyRecipesCreated  CompanyRecipe[]      @relation("CompanyRecipeCreator")
   userSubscription       UserSubscription?
   billingPayments        BillingPayment[]     @relation("UserBillingPayments")
+  subscriptionInvoices   SubscriptionInvoice[]
   isBlocked              Boolean              @default(false)
   isAdmin                Boolean              @default(false)
   emailVerificationToken String?
@@ -71,6 +72,7 @@ model Company {
   companyRecipes       CompanyRecipe[]
   companySubscription  CompanySubscription?
   billingPayments      BillingPayment[]     @relation("CompanyBillingPayments")
+  subscriptionInvoices SubscriptionInvoice[]
   deletedAt            DateTime?            // Soft delete
   deletedBy       String?              // Who deleted (user ID)
   createdAt       DateTime             @default(now())
@@ -302,4 +304,38 @@ model BillingPayment {
   @@index([userId])
   @@index([companyId])
   @@index([status])
+}
+
+model SubscriptionInvoice {
+  id               String   @id @default(cuid())
+  invoiceNumber    String   @unique
+  molliePaymentId  String   @unique
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  companyId        String?
+  company          Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  planType         String   // personal | business
+  description      String
+  amountInclVat    String
+  amountExclVat    String
+  vatAmount        String
+  vatRatePercent   String   @default("21")
+  currency         String   @default("EUR")
+  periodStart      DateTime
+  periodEnd        DateTime
+  buyerName        String
+  buyerEmail       String
+  buyerAddress     String?
+  buyerVatNumber   String?
+  sellerSnapshot   String   @db.Text
+  pdfUrl           String?
+  pdfPathname      String?
+  paymentMethod    String?
+  issuedAt         DateTime @default(now())
+  emailSentAt      DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([issuedAt])
 }

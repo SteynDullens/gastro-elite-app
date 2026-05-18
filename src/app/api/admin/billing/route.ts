@@ -66,6 +66,22 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const invoices = await prisma.subscriptionInvoice.findMany({
+      orderBy: { issuedAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        buyerEmail: true,
+        buyerName: true,
+        amountInclVat: true,
+        planType: true,
+        issuedAt: true,
+        emailSentAt: true,
+        molliePaymentId: true,
+      },
+    });
+
     const activePersonal = userSubs.filter(
       (s) => s.status === "active" && s.plan === "personal"
     ).length;
@@ -73,7 +89,16 @@ export async function GET(request: NextRequest) {
     const activeBusiness = companySubs.filter((s) => s.status === "active").length;
     const paidPayments = payments.filter((p) => p.status === "paid").length;
 
-    return { userSubs, companySubs, payments, activePersonal, waived, activeBusiness, paidPayments };
+    return {
+      userSubs,
+      companySubs,
+      payments,
+      invoices,
+      activePersonal,
+      waived,
+      activeBusiness,
+      paidPayments,
+    };
   });
 
   if (!data) {
@@ -127,6 +152,16 @@ export async function GET(request: NextRequest) {
       billedEmployeeCount: cs.billedEmployeeCount,
       mollieSubscriptionId: cs.mollieSubscriptionId,
       currentPeriodEnd: cs.currentPeriodEnd?.toISOString() ?? null,
+    })),
+    invoices: data.invoices.map((inv) => ({
+      invoiceNumber: inv.invoiceNumber,
+      buyerName: inv.buyerName,
+      buyerEmail: inv.buyerEmail,
+      planType: inv.planType,
+      amountInclVat: inv.amountInclVat,
+      issuedAt: inv.issuedAt.toISOString(),
+      emailSent: Boolean(inv.emailSentAt),
+      molliePaymentId: inv.molliePaymentId,
     })),
     recentPayments: data.payments.map((p) => ({
       id: p.id,

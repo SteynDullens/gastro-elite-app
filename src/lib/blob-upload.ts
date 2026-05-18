@@ -88,6 +88,16 @@ export async function uploadImageToBlob(
   };
 }
 
+/** Upload PDF/document bytes to Vercel Blob (private). */
+export async function uploadPdfToBlob(
+  pathnamePrefix: string,
+  buffer: Buffer,
+  filename: string
+): Promise<BlobUploadResult> {
+  const ext = filename.endsWith(".pdf") ? "pdf" : "pdf";
+  return uploadImageToBlob(pathnamePrefix, buffer, "application/pdf", ext);
+}
+
 export function extensionFromMime(mime: string, filename?: string): string {
   const t = (mime || "").toLowerCase();
   if (t.includes("png")) return "png";

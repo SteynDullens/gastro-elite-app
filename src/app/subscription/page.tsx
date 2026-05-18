@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import SubscriptionPlans from "@/components/billing/SubscriptionPlans";
+import SubscriptionInvoicesList from "@/components/billing/SubscriptionInvoicesList";
 import Link from "next/link";
 
 export default function SubscriptionPage() {
@@ -59,6 +60,8 @@ export default function SubscriptionPage() {
       </header>
 
       <SubscriptionPlans embedded />
+
+      <SubscriptionInvoicesList />
 
       <p className="mt-8 text-center text-sm text-gray-500">
         <Link href="/account" className="text-[#ff6b35] hover:underline">
