@@ -308,5 +308,75 @@ export async function handleMolliePaymentUpdate(
         parseInt(meta?.employeeCount ?? "0", 10) || 0
       );
     await activateBusinessSubscription(companyId, customerId, amount);
+    return;
   }
+
+  await handleRecurringSubscriptionPayment(payment);
+}
+
+/** Maandelijkse incasso (iDEAL/Wero/SEPA via Mollie subscription) — verleng periode in DB. */
+async function handleRecurringSubscriptionPayment(
+  payment: { subscriptionId?: string | null; status: string }
+): Promise<void> {
+  const subId =
+    typeof payment.subscriptionId === "string" ? payment.subscriptionId : null;
+  if (!subId || payment.status !== "paid") return;
+
+  const mollie = getMollieClient();
+  let periodEnd: Date | null = null;
+  if (mollie) {
+    try {
+      const userSub = await safeDbOperation(async (prisma) =>
+        prisma.userSubscription.findFirst({
+          where: { mollieSubscriptionId: subId },
+        })
+      );
+      if (userSub?.mollieCustomerId) {
+        const mSub = await mollie.customerSubscriptions.get(subId, {
+          customerId: userSub.mollieCustomerId,
+        });
+        if (mSub.nextPaymentDate) periodEnd = new Date(mSub.nextPaymentDate);
+      } else {
+        const companySub = await safeDbOperation(async (prisma) =>
+          prisma.companySubscription.findFirst({
+            where: { mollieSubscriptionId: subId },
+          })
+        );
+        if (companySub?.mollieCustomerId) {
+          const mSub = await mollie.customerSubscriptions.get(subId, {
+            customerId: companySub.mollieCustomerId,
+          });
+          if (mSub.nextPaymentDate) periodEnd = new Date(mSub.nextPaymentDate);
+        }
+      }
+    } catch (e) {
+      console.error("Recurring subscription lookup:", e);
+    }
+  }
+
+  const nextMonth = new Date();
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const end = periodEnd ?? nextMonth;
+
+  await safeDbOperation(async (prisma) => {
+    const userRow = await prisma.userSubscription.findFirst({
+      where: { mollieSubscriptionId: subId },
+    });
+    if (userRow) {
+      await prisma.userSubscription.update({
+        where: { id: userRow.id },
+        data: { status: "active", currentPeriodEnd: end },
+      });
+      return;
+    }
+    const companyRow = await prisma.companySubscription.findFirst({
+      where: { mollieSubscriptionId: subId },
+    });
+    if (companyRow) {
+      await prisma.companySubscription.update({
+        where: { id: companyRow.id },
+        data: { status: "active", currentPeriodEnd: end },
+      });
+    }
+  });
 }

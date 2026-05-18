@@ -19,6 +19,16 @@ interface ErrorLog {
   createdAt: string;
 }
 
+interface UserSubscriptionInfo {
+  kind: string;
+  label: string;
+  status: string;
+  plan?: string | null;
+  monthlyAmount?: string | null;
+  currentPeriodEnd?: string | null;
+  mollieSubscriptionId?: string | null;
+}
+
 interface User {
   id: string | number;
   email: string;
@@ -30,8 +40,20 @@ interface User {
   emailVerified: boolean;
   companyName?: string;
   companyStatus?: string | null; // pending, approved, rejected
+  subscription?: UserSubscriptionInfo;
   createdAt: string;
   updatedAt: string;
+}
+
+interface BillingOverview {
+  testMode: boolean;
+  summary: {
+    activePersonal: number;
+    activeBusiness: number;
+    employeeWaived: number;
+    paidPayments: number;
+    totalUserSubscriptionRows: number;
+  };
 }
 
 interface AdminPanelProps {
@@ -84,6 +106,7 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'business' | 'logs' | 'backup' | 'recovery'>(initialTab);
   const [users, setUsers] = useState<User[]>([]);
+  const [billingOverview, setBillingOverview] = useState<BillingOverview | null>(null);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [businessApplications, setBusinessApplications] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -99,12 +122,29 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
   const [loadingDailyBackups, setLoadingDailyBackups] = useState(false);
   const [runningDailyBackup, setRunningDailyBackup] = useState(false);
 
+  const fetchBillingOverview = async () => {
+    try {
+      const response = await fetch("/api/admin/billing", { credentials: "include" });
+      if (response.ok) {
+        const data = await response.json();
+        setBillingOverview({
+          testMode: data.testMode,
+          summary: data.summary,
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/users", {
-        credentials: "include",
-      });
+      const [usersRes] = await Promise.all([
+        fetch("/api/admin/users", { credentials: "include" }),
+        fetchBillingOverview(),
+      ]);
+      const response = usersRes;
       
       if (!response.ok) {
         console.error("Failed to fetch users - HTTP error:", response.status, response.statusText);
@@ -868,15 +908,33 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
       {/* Users Tab */}
       {activeTab === "users" && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">User Management</h2>
-            <button
-              onClick={fetchUsers}
-              className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-              disabled={loading}
-            >
-              {loading ? 'Laden...' : '🔄 Vernieuwen'}
-            </button>
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-lg font-semibold">User Management</h2>
+              <button
+                onClick={fetchUsers}
+                className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                disabled={loading}
+              >
+                {loading ? "Laden..." : "🔄 Vernieuwen"}
+              </button>
+            </div>
+            {billingOverview && (
+              <p className="mt-2 text-xs text-gray-600">
+                {billingOverview.testMode && (
+                  <span className="inline-block mr-2 px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-medium">
+                    Mollie testomgeving
+                  </span>
+                )}
+                Actief persoonlijk: <strong>{billingOverview.summary.activePersonal}</strong>
+                {" · "}
+                Actief bedrijf: <strong>{billingOverview.summary.activeBusiness}</strong>
+                {" · "}
+                Werknemers (waived): <strong>{billingOverview.summary.employeeWaived}</strong>
+                {" · "}
+                Betaalde betalingen: <strong>{billingOverview.summary.paidPayments}</strong>
+              </p>
+            )}
           </div>
           {loading && users.length === 0 ? (
             <div className="text-center py-12">
@@ -902,6 +960,9 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Abonnement
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -936,6 +997,41 @@ export default function AdminPanel({ initialTab = 'dashboard' }: AdminPanelProps
                       }`}>
                         {user.account_type}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.subscription ? (
+                        <div>
+                          <span
+                            className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                              user.subscription.kind === "personal" ||
+                              user.subscription.kind === "business"
+                                ? user.subscription.status === "active"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-amber-100 text-amber-800"
+                                : user.subscription.kind === "employee_waived"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : user.subscription.kind === "admin"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-700"
+                            }`}
+                            title={
+                              user.subscription.mollieSubscriptionId
+                                ? `Mollie: ${user.subscription.mollieSubscriptionId}`
+                                : undefined
+                            }
+                          >
+                            {user.subscription.label}
+                          </span>
+                          {user.subscription.currentPeriodEnd && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              t/m{" "}
+                              {user.subscription.currentPeriodEnd.split("T")[0]}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {(() => {

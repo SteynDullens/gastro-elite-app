@@ -83,6 +83,11 @@ export default function SubscriptionPlans({ embedded }: Props) {
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
       {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
 
+      <p className="mb-4 text-xs text-gray-500">
+        Maandelijkse verlenging via Mollie: na de eerste betaling (iDEAL, Wero of creditcard)
+        wordt het bedrag automatisch geïncasseerd zolang uw abonnement actief is.
+      </p>
+
       <div className="grid md:grid-cols-3 gap-4">
         <PlanCard
           title="Gratis"

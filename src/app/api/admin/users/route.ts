@@ -11,6 +11,7 @@ import {
   sendBusinessConversionSetupEmail,
   type EmailSendResult,
 } from '@/lib/email';
+import { formatSubscriptionForAdmin } from '@/lib/billing/subscription-label';
 
 function createBusinessConversionToken(userId: string): string {
   const secret = process.env.JWT_SECRET || process.env.DWT_SECRET || 'gastro-elite-secret';
@@ -47,10 +48,24 @@ export async function GET(request: NextRequest) {
         include: {
           ownedCompany: {
             select: {
+              id: true,
               name: true,
-              status: true
-            }
-          }
+              status: true,
+              companySubscription: true,
+            },
+          },
+          userSubscription: true,
+          companyMemberships: {
+            include: {
+              company: {
+                select: {
+                  id: true,
+                  name: true,
+                  companySubscription: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc'
@@ -66,22 +81,39 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to match expected format
-    const transformedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone || '',
-      account_type: user.isAdmin
-        ? 'admin'
-        : (user.ownedCompany && user.ownedCompany.status !== 'draft_kvk' ? 'business' : 'user'),
-      isActive: !user.isBlocked,
-      emailVerified: user.emailVerified,
-      companyName: user.ownedCompany?.name || null,
-      companyStatus: user.ownedCompany?.status || null, // pending, approved, rejected
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString()
-    }));
+    const transformedUsers = users.map((user) => {
+      const membership = user.companyMemberships?.[0];
+      const employerCompany = membership?.company;
+      const subscription = formatSubscriptionForAdmin({
+        isAdmin: user.isAdmin,
+        ownedCompany: user.ownedCompany,
+        companyId: user.companyId,
+        companyMemberships: user.companyMemberships,
+        userSubscription: user.userSubscription,
+        companySubscription: user.ownedCompany?.companySubscription ?? null,
+        employerCompanyName: employerCompany?.name ?? null,
+      });
+
+      return {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone || '',
+        account_type: user.isAdmin
+          ? 'admin'
+          : user.ownedCompany && user.ownedCompany.status !== 'draft_kvk'
+            ? 'business'
+            : 'user',
+        isActive: !user.isBlocked,
+        emailVerified: user.emailVerified,
+        companyName: user.ownedCompany?.name || employerCompany?.name || null,
+        companyStatus: user.ownedCompany?.status || null,
+        subscription,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      };
+    });
 
     return NextResponse.json({
       success: true,
