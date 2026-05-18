@@ -268,6 +268,15 @@ export async function POST(request: NextRequest) {
       } catch (notifyErr) {
         console.error('Register team join: owner notify failed:', notifyErr);
       }
+
+      try {
+        const { applyEmployeeBillingWaiver } = await import('@/lib/billing/waiver');
+        await applyEmployeeBillingWaiver(user.id, companyId);
+        const { syncCompanySubscriptionBilling } = await import('@/lib/billing/company-sync');
+        await syncCompanySubscriptionBilling(companyId);
+      } catch (billingErr) {
+        console.error('Register: billing waiver failed:', billingErr);
+      }
     }
 
     // Send appropriate email notifications (only if email is configured)

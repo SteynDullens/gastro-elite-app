@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:network": "next dev --hostname 0.0.0.0",
-    "build": "prisma generate && npm run ensure-table && npm run ensure-recipe-tables && npm run ensure-company-membership && npm run ensure-daily-backup && npm run ensure-user-profile && next build",
+    "build": "prisma generate && npm run ensure-table && npm run ensure-recipe-tables && npm run ensure-company-membership && npm run ensure-daily-backup && npm run ensure-user-profile && npm run ensure-billing && next build",
     "start": "next start",
     "lint": "eslint",
     "init-db": "tsx src/lib/init-db.ts",
@@ -17,11 +17,13 @@
     "ensure-company-membership": "node scripts/ensure-company-membership-table.js || true",
     "ensure-daily-backup": "node scripts/ensure-daily-backup-table.js || true",
     "ensure-user-profile": "node scripts/ensure-user-profile-columns.js || true",
+    "ensure-billing": "node scripts/ensure-billing-tables.js || true",
     "social-screenshots": "node scripts/capture-social-screenshots.mjs",
     "social-chic": "node scripts/generate-chic-social-posts.mjs",
     "social-carousel": "node scripts/capture-app-carousel.mjs"
   },
   "dependencies": {
+    "@mollie/api-client": "^4.5.0",
     "@prisma/client": "^6.16.3",
     "@prisma/extension-accelerate": "^3.0.1",
     "@types/bcryptjs": "^2.4.6",

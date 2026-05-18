@@ -168,7 +168,8 @@ export async function DELETE(
       return { 
         success: true,
         recipesReassigned: recipesToReassign.length,
-        employeeEmail: employee.email
+        employeeEmail: employee.email,
+        employeeId,
       };
     });
 
@@ -178,6 +179,20 @@ export async function DELETE(
         { error: 'Database operation failed' },
         { status: 500 }
       );
+    }
+
+    try {
+      const { revokeEmployeeBillingWaiver } = await import('@/lib/billing/waiver');
+      await revokeEmployeeBillingWaiver(result.employeeId);
+    } catch (waiverErr) {
+      console.error('Billing waiver revoke on employee remove:', waiverErr);
+    }
+
+    try {
+      const { syncCompanySubscriptionBilling } = await import('@/lib/billing/company-sync');
+      await syncCompanySubscriptionBilling(companyId);
+    } catch (syncErr) {
+      console.error('Company subscription sync after remove:', syncErr);
     }
 
     return NextResponse.json({ success: true });

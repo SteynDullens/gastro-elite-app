@@ -219,6 +219,45 @@ export async function POST(request: NextRequest) {
       console.log('✅ Employee: Using chosen saveTo:', saveTo);
     }
 
+    const billingUser = await import('@/lib/billing/access').then((m) =>
+      m.loadUserForBilling(user.id)
+    );
+    if (billingUser) {
+      const { getBillingAccessForUser } = await import('@/lib/billing/access');
+      const billing = await getBillingAccessForUser(billingUser);
+      if (billing.enforcementEnabled) {
+        if (!billing.canCreateRecipe) {
+          return NextResponse.json(
+            {
+              error:
+                billing.message ||
+                'Abonnement vereist om meer recepten toe te voegen.',
+              billingRequired: true,
+              code: 'RECIPE_LIMIT_REACHED',
+            },
+            { status: 402 }
+          );
+        }
+        const needsBusinessForSave =
+          saveTo === 'business' || saveTo === 'both';
+        if (
+          needsBusinessForSave &&
+          (isCompanyOwner || isEmployee) &&
+          !billing.hasFullAccess
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                'Een actief bedrijfsabonnement is vereist voor bedrijfsrecepten.',
+              billingRequired: true,
+              code: 'BUSINESS_SUBSCRIPTION_REQUIRED',
+            },
+            { status: 402 }
+          );
+        }
+      }
+    }
+
     if (!name || !Array.isArray(ingredients) || !Array.isArray(steps)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }

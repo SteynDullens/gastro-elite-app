@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import DeviceLockSettings from "@/components/DeviceLockSettings";
 import { displayRecipeImageUrl } from "@/lib/recipe-image-url";
+import { useSubscription } from "@/context/SubscriptionContext";
 
 // Tab types for business account
 type BusinessTab = 'edit-details' | 'language' | 'device-lock' | 'employees' | 'logout';
@@ -15,6 +16,7 @@ type BusinessTab = 'edit-details' | 'language' | 'device-lock' | 'employees' | '
 export default function AccountPage() {
   const { t, language, setLanguage } = useLanguage();
   const { user, logout, loading, isBusiness, login, refreshUser } = useAuth();
+  const { openPlans, access } = useSubscription();
   const router = useRouter();
   
   // Active tab state for business users
@@ -1104,6 +1106,16 @@ export default function AccountPage() {
                 <span className="text-sm font-medium">{t.lockSettingsSection}</span>
               </button>
 
+              <Link
+                href="/subscription"
+                className="w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-gray-200 mb-2"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff6b35" className="mr-3 flex-shrink-0">
+                  <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                </svg>
+                <span className="text-sm font-medium">Abonnement</span>
+              </Link>
+
               {/* Employees Tab */}
               <button
                 onClick={() => setActiveTab('employees')}
@@ -1813,6 +1825,30 @@ export default function AccountPage() {
             </div>
             <h3 className="font-medium text-gray-900 text-sm">{t.editDetails}</h3>
             <p className="text-xs text-gray-500 mt-1">{t.adjustProfile}</p>
+          </button>
+
+          {/* Abonnement */}
+          <Link
+            href="/subscription"
+            className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-orange-200 transition-all duration-200 text-left block"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff6b35">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+            </div>
+            <h3 className="font-medium text-gray-900 text-sm">Abonnement</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              {access?.hasFullAccess ? "Actief plan" : "Upgrade of beheer"}
+            </p>
+          </Link>
+
+          <button
+            type="button"
+            onClick={openPlans}
+            className="bg-white rounded-xl border border-dashed border-orange-300 p-4 hover:shadow-md transition-all duration-200 text-left sm:hidden"
+          >
+            <h3 className="font-medium text-[#ff6b35] text-sm">Abonnement wijzigen</h3>
           </button>
 
           {/* Taal wijzigen */}

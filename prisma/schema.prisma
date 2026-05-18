@@ -35,6 +35,8 @@ model User {
   appNotifications       AppNotification[]
   personalRecipes        PersonalRecipe[]
   companyRecipesCreated  CompanyRecipe[]      @relation("CompanyRecipeCreator")
+  userSubscription       UserSubscription?
+  billingPayments        BillingPayment[]     @relation("UserBillingPayments")
   isBlocked              Boolean              @default(false)
   isAdmin                Boolean              @default(false)
   emailVerificationToken String?
@@ -66,8 +68,10 @@ model Company {
   // Many-to-many relationship: companies can have multiple employees
   memberships     CompanyMembership[]
   invitations     EmployeeInvitation[]
-  companyRecipes  CompanyRecipe[]
-  deletedAt       DateTime?            // Soft delete
+  companyRecipes       CompanyRecipe[]
+  companySubscription  CompanySubscription?
+  billingPayments      BillingPayment[]     @relation("CompanyBillingPayments")
+  deletedAt            DateTime?            // Soft delete
   deletedBy       String?              // Who deleted (user ID)
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -241,4 +245,61 @@ model AuditLog {
   @@index([entityId])
   @@index([userId])
   @@index([createdAt])
+}
+
+// ——— Abonnementen (Mollie) ———
+
+model UserSubscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 String    @default("free") // free | personal
+  status               String    @default("free") // free | active | pending | cancelled | past_due | waived
+  mollieCustomerId     String?
+  mollieSubscriptionId String?
+  waivedByCompanyId    String?
+  currentPeriodEnd     DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([status])
+  @@index([mollieCustomerId])
+}
+
+model CompanySubscription {
+  id                   String    @id @default(cuid())
+  companyId            String    @unique
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status               String    @default("inactive") // inactive | active | pending | cancelled | past_due
+  mollieCustomerId     String?
+  mollieSubscriptionId String?
+  billedEmployeeCount  Int       @default(0)
+  monthlyAmount        String?   // EUR decimal string, e.g. "12.95"
+  currentPeriodEnd     DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([status])
+  @@index([mollieCustomerId])
+}
+
+model BillingPayment {
+  id              String   @id @default(cuid())
+  molliePaymentId String   @unique
+  userId          String?
+  user            User?    @relation("UserBillingPayments", fields: [userId], references: [id], onDelete: SetNull)
+  companyId       String?
+  company         Company? @relation("CompanyBillingPayments", fields: [companyId], references: [id], onDelete: SetNull)
+  kind            String   // personal_first | personal_recurring | business_first | business_recurring
+  amount          String
+  currency        String   @default("EUR")
+  status          String   @default("open") // open | paid | failed | canceled | expired
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([status])
 }

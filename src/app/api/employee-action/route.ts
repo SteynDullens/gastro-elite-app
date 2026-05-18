@@ -151,7 +151,24 @@ export async function GET(request: NextRequest) {
           where: { id: invitedUserId },
           data: { companyId: companyId }
         });
+
+        await prisma.companyMembership.upsert({
+          where: {
+            userId_companyId: { userId: invitedUserId, companyId },
+          },
+          create: { userId: invitedUserId, companyId },
+          update: {},
+        });
       });
+
+      try {
+        const { applyEmployeeBillingWaiver } = await import('@/lib/billing/waiver');
+        await applyEmployeeBillingWaiver(invitedUserId, companyId);
+        const { syncCompanySubscriptionBilling } = await import('@/lib/billing/company-sync');
+        await syncCompanySubscriptionBilling(companyId);
+      } catch (waiverErr) {
+        console.error('Billing waiver on employee accept:', waiverErr);
+      }
 
       const invited = invitation.invitedUser;
       if (invited) {

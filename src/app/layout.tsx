@@ -7,6 +7,9 @@ import { RecipeProvider } from "@/context/RecipeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppLockProvider } from "@/context/AppLockContext";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
+import SubscriptionPlansModal from "@/components/billing/SubscriptionPlansModal";
+import SubscriptionBanner from "@/components/billing/SubscriptionBanner";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 
@@ -67,6 +70,7 @@ export default function RootLayout({
           <AuthProvider>
             <LanguageProvider>
               <AppLockProvider>
+              <SubscriptionProvider>
               <RecipeProvider>
                 {/* Admin Notifications Bell */}
                 <AdminNotifications />
@@ -78,6 +82,7 @@ export default function RootLayout({
                   
                   {/* Main content area */}
                   <main className="main-content flex-1 min-w-0 w-full">
+                    <SubscriptionBanner />
                     <div className="app-shell max-w-7xl mx-auto w-full animate-app-enter">
                       {children}
                     </div>
@@ -86,7 +91,9 @@ export default function RootLayout({
                 
                 {/* Mobile Navigation */}
                 <SimpleFloatingNav />
+                <SubscriptionPlansModal />
               </RecipeProvider>
+              </SubscriptionProvider>
               </AppLockProvider>
             </LanguageProvider>
           </AuthProvider>

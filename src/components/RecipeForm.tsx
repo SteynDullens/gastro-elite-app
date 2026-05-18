@@ -490,6 +490,15 @@ export default function RecipeForm({ recipeId, initialData }: RecipeFormProps = 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         console.error(`Recipe ${isEditing ? 'update' : 'creation'} failed:`, err);
+        if (response.status === 402 && err.billingRequired) {
+          const upgrade = confirm(
+            `${err.error || "Abonnement vereist."}\n\nWilt u nu uw abonnement bekijken?`
+          );
+          if (upgrade && typeof window !== "undefined") {
+            window.location.href = "/subscription";
+          }
+          return;
+        }
         alert(err.error || t.saveFailed);
         return;
       }
